@@ -2,7 +2,13 @@ using System.Diagnostics;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class GameSessionTracker : IDisposable
+public interface IGameSessionTracker : IDisposable
+{
+    void ConfigureDiscord(string clientId);
+    Task<GameSessionResult> TrackAsync(Process process, string profileName);
+}
+
+public sealed class GameSessionTracker : IGameSessionTracker
 {
     private DiscordPresenceService _discordPresence = new(string.Empty);
 

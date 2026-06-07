@@ -5,7 +5,16 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class ProfileLauncher
+public interface IProfileLauncher
+{
+    Task<Process> LaunchAsync(
+        string gamePath,
+        ModProfile profile,
+        IProgress<string> progress,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed class ProfileLauncher : IProfileLauncher
 {
     private const int ErrorElevationRequired = 740;
     private const string AutoLoadBeginMarker = "-- STALKER_MOD_LAUNCHER_AUTOLOAD_BEGIN";

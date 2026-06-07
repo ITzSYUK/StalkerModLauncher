@@ -32,6 +32,8 @@ src/
       GameInstallationValidator.cs
       WorkspaceBuilder.cs
       ProfileLauncher.cs
+      LaunchCoordinator.cs
+      GameSessionTracker.cs
       ModScannerService.cs
       DiscordPresenceService.cs
       DialogService.cs
@@ -53,7 +55,8 @@ tests/
 - **Хранилище:** JSON в `%AppData%\StalkerModLauncher\settings.json`.
 - **Workspaces:** управляемая папка лаунчера. Если игра находится на диске вроде `D:\`, новые профили по умолчанию используют `D:\StalkerModLauncher\Workspaces`, чтобы Windows могла делать hard links вместо полной копии базы. Резервный путь: `%LocalAppData%\StalkerModLauncher\Workspaces`.
 - **Валидация игры:** проверяется корневая папка SoC GOG, `fsgame.ltx` и известные исполняемые файлы.
-- **Запуск:** `WorkspaceBuilder` пересоздает `current` внутри workspace профиля, подключает базовую игру ссылками, накладывает включенные моды по порядку и передает готовый путь в `ProfileLauncher`.
+- **Запуск:** `WorkspaceBuilder` готовит изолированный workspace, `ProfileLauncher` запускает процесс игры, а `LaunchCoordinator` связывает запуск с отслеживанием игровой сессии.
+- **Тесты безопасности:** интеграционные тесты проверяют порядок наложения модов, неизменность исходных файлов, изоляцию `userdata`, кэш workspace и защиту от удаления неуправляемых директорий.
 - **Автономные профили:** крупные моды со своим движком запускаются непосредственно из папки мода без создания overlay-workspace.
 - **Дополнительные возможности:** импорт/экспорт профилей, поиск модов, заметки, просмотр скриншотов, учет игрового времени и Discord Rich Presence.
 

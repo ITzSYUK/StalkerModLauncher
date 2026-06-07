@@ -14,14 +14,13 @@ public sealed class MainViewModel : ObservableObject
     private readonly SettingsStore _settingsStore;
     private readonly GameInstallationValidator _gameValidator;
     private readonly WorkspaceBuilder _workspaceBuilder;
-    private readonly ProfileLauncher _profileLauncher;
+    private readonly LaunchCoordinator _launchCoordinator;
     private readonly DialogService _dialogService;
     private readonly ModConflictAnalyzer _modConflictAnalyzer;
     private readonly ProfileTransferService _profileTransferService;
     private readonly ModScannerService _modScannerService;
     private readonly ModListEditor _modListEditor;
     private readonly DebouncedAsyncAction _autoSave;
-    private readonly GameSessionTracker _gameSessionTracker;
     private CancellationTokenSource? _conflictAnalysisCancellation;
     private string _gameInstallPath = string.Empty;
     private ModProfile? _selectedProfile;
@@ -40,12 +39,11 @@ public sealed class MainViewModel : ObservableObject
         _gameValidator = new GameInstallationValidator();
         _dialogService = new DialogService();
         _workspaceBuilder = new WorkspaceBuilder(_paths);
-        _profileLauncher = new ProfileLauncher(_workspaceBuilder);
+        _launchCoordinator = new LaunchCoordinator(new ProfileLauncher(_workspaceBuilder), new GameSessionTracker());
         _modConflictAnalyzer = new ModConflictAnalyzer();
         _profileTransferService = new ProfileTransferService();
         _modScannerService = new ModScannerService();
         _modListEditor = new ModListEditor();
-        _gameSessionTracker = new GameSessionTracker();
         _autoSave = new DebouncedAsyncAction(SaveAsync, TimeSpan.FromMilliseconds(500));
 
         Profiles.CollectionChanged += ProfilesOnCollectionChanged;
@@ -272,7 +270,7 @@ public sealed class MainViewModel : ObservableObject
 
             if (!string.IsNullOrWhiteSpace(settings.DiscordClientId))
             {
-                _gameSessionTracker.ConfigureDiscord(settings.DiscordClientId);
+                _launchCoordinator.ConfigureDiscord(settings.DiscordClientId);
             }
 
             Profiles.Clear();
@@ -729,13 +727,13 @@ public sealed class MainViewModel : ObservableObject
                 gamePath = _gameInstallPath;
             }
 
-            var process = await _profileLauncher.LaunchAsync(gamePath, SelectedProfile, progress);
+            var session = await _launchCoordinator.StartAsync(gamePath, SelectedProfile, progress);
             await SaveAsync();
-            Log($"Game process started. PID: {process.Id}");
+            Log($"Game process started. PID: {session.ProcessId}");
             SelectedProfile.IsRunning = true;
             RaiseCommandStates();
 
-            _ = CompleteGameSessionAsync(_gameSessionTracker.TrackAsync(process, SelectedProfile.Name), SelectedProfile);
+            _ = CompleteGameSessionAsync(session.Completion, SelectedProfile);
         }
         catch (Exception ex)
         {
@@ -1176,6 +1174,6 @@ public sealed class MainViewModel : ObservableObject
         _autoSave.Dispose();
         _conflictAnalysisCancellation?.Cancel();
         _conflictAnalysisCancellation?.Dispose();
-        _gameSessionTracker.Dispose();
+        _launchCoordinator.Dispose();
     }
 }
