@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Diagnostics;
 using Microsoft.Win32;
 using StalkerModLauncher.Infrastructure;
 using StalkerModLauncher.Models;
@@ -21,7 +20,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly ProfileTransferService _profileTransferService;
     private readonly ModScannerService _modScannerService;
     private readonly DebouncedAsyncAction _autoSave;
-    private DiscordPresenceService _discordPresence = new(string.Empty);
+    private readonly GameSessionTracker _gameSessionTracker;
     private CancellationTokenSource? _conflictAnalysisCancellation;
     private string _gameInstallPath = string.Empty;
     private ModProfile? _selectedProfile;
@@ -44,6 +43,7 @@ public sealed class MainViewModel : ObservableObject
         _modConflictAnalyzer = new ModConflictAnalyzer();
         _profileTransferService = new ProfileTransferService();
         _modScannerService = new ModScannerService();
+        _gameSessionTracker = new GameSessionTracker();
         _autoSave = new DebouncedAsyncAction(SaveAsync, TimeSpan.FromMilliseconds(500));
 
         Profiles.CollectionChanged += ProfilesOnCollectionChanged;
@@ -288,9 +288,7 @@ public sealed class MainViewModel : ObservableObject
 
             if (!string.IsNullOrWhiteSpace(settings.DiscordClientId))
             {
-                _discordPresence.Dispose();
-                _discordPresence = new DiscordPresenceService(settings.DiscordClientId);
-                _discordPresence.Initialize();
+                _gameSessionTracker.ConfigureDiscord(settings.DiscordClientId);
             }
 
             Profiles.Clear();
@@ -781,11 +779,10 @@ public sealed class MainViewModel : ObservableObject
             var process = await _profileLauncher.LaunchAsync(gamePath, SelectedProfile, progress);
             await SaveAsync();
             Log($"Game process started. PID: {process.Id}");
-            _discordPresence.SetPlaying(SelectedProfile.Name);
             SelectedProfile.IsRunning = true;
             RaiseCommandStates();
 
-            _ = TrackPlaytimeAsync(process, SelectedProfile);
+            _ = CompleteGameSessionAsync(_gameSessionTracker.TrackAsync(process, SelectedProfile.Name), SelectedProfile);
         }
         catch (Exception ex)
         {
@@ -800,15 +797,11 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    private async Task TrackPlaytimeAsync(Process process, ModProfile profile)
+    private async Task CompleteGameSessionAsync(Task<GameSessionResult> sessionTask, ModProfile profile)
     {
         try
         {
-            var startTime = DateTime.UtcNow;
-
-            await process.WaitForExitAsync();
-
-            _discordPresence.Clear();
+            var result = await sessionTask;
 
             await App.Current.Dispatcher.InvokeAsync(() =>
             {
@@ -816,17 +809,16 @@ public sealed class MainViewModel : ObservableObject
                 RaiseCommandStates();
             });
 
-            var elapsed = (DateTime.UtcNow - startTime).TotalSeconds;
-            if (elapsed < 5)
+            if (!result.ShouldRecord)
             {
                 return;
             }
 
             await App.Current.Dispatcher.InvokeAsync(() =>
             {
-                profile.TotalPlaytimeSeconds += elapsed;
+                profile.TotalPlaytimeSeconds += result.Duration.TotalSeconds;
                 profile.LastPlayedAt = DateTime.Now;
-                Log($"Playtime recorded: {TimeSpan.FromSeconds(elapsed):g} (total: {profile.PlaytimeDisplay})");
+                Log($"Playtime recorded: {result.Duration:g} (total: {profile.PlaytimeDisplay})");
             });
 
             await SaveAsync();
@@ -834,10 +826,11 @@ public sealed class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log($"Playtime tracking failed: {ex.Message}");
-        }
-        finally
-        {
-            process.Dispose();
+            await App.Current.Dispatcher.InvokeAsync(() =>
+            {
+                profile.IsRunning = false;
+                RaiseCommandStates();
+            });
         }
     }
 
@@ -1240,6 +1233,6 @@ public sealed class MainViewModel : ObservableObject
         _autoSave.Dispose();
         _conflictAnalysisCancellation?.Cancel();
         _conflictAnalysisCancellation?.Dispose();
-        _discordPresence.Dispose();
+        _gameSessionTracker.Dispose();
     }
 }
