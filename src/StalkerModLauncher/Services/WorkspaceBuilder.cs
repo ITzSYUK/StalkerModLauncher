@@ -7,7 +7,12 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class WorkspaceBuilder
+public interface IProfileWorkspaceManager
+{
+    void DeleteProfileWorkspace(ModProfile profile, string gamePath);
+}
+
+public sealed class WorkspaceBuilder : IProfileWorkspaceManager
 {
     private const string MarkerFileName = ".stalker-launcher-workspace";
     private const string ManifestFileName = "build-manifest.json";

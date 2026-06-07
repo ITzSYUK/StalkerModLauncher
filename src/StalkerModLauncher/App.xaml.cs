@@ -9,6 +9,8 @@ namespace StalkerModLauncher;
 
 public partial class App : Application
 {
+    private readonly AppServices _services = new();
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -39,7 +41,7 @@ public partial class App : Application
 
         if (bitmap is null)
         {
-            var main = new Views.MainWindow();
+            var main = CreateMainWindow();
             main.Show();
             _ = ShowAboutIfNeededAsync();
             return;
@@ -75,7 +77,7 @@ public partial class App : Application
             var timer = new DoubleAnimation(1, 1, TimeSpan.FromMilliseconds(1500));
             timer.Completed += async (_, _) =>
             {
-                var main = new Views.MainWindow();
+                var main = CreateMainWindow();
                 main.Show();
                 splash.Close();
                 await ShowAboutIfNeededAsync();
@@ -85,11 +87,18 @@ public partial class App : Application
         splash.BeginAnimation(UIElement.OpacityProperty, fadeIn);
     }
 
-    private static async Task ShowAboutIfNeededAsync()
+    private Views.MainWindow CreateMainWindow()
     {
-        var paths = new AppPaths();
-        var settingsStore = new SettingsStore(paths);
-        var settings = await settingsStore.LoadAsync();
+        return new Views.MainWindow(
+            _services.CreateMainViewModel(),
+            _services.Paths,
+            _services.DialogService,
+            _services.SettingsStore);
+    }
+
+    private async Task ShowAboutIfNeededAsync()
+    {
+        var settings = await _services.SettingsStore.LoadAsync();
 
         if (!settings.DontShowAboutOnStartup)
         {
@@ -102,7 +111,7 @@ public partial class App : Application
             if (about.DontShowAgain)
             {
                 settings.DontShowAboutOnStartup = true;
-                await settingsStore.SaveAsync(settings);
+                await _services.SettingsStore.SaveAsync(settings);
             }
         }
     }

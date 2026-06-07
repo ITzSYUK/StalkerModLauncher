@@ -29,13 +29,18 @@ public partial class MainWindow : Window
     private nint _keyboardHook;
     private HookProc? _keyboardHookProc;
     private bool _isClosingAfterCleanup;
+    private readonly AppPaths _paths;
+    private readonly DialogService _dialogService;
+    private readonly SettingsStore _settingsStore;
 
-    public MainWindow()
+    public MainWindow(MainViewModel viewModel, AppPaths paths, DialogService dialogService, SettingsStore settingsStore)
     {
         InitializeComponent();
-        var vm = new MainViewModel();
-        vm.PropertyChanged += ViewModel_PropertyChanged;
-        DataContext = vm;
+        _paths = paths;
+        _dialogService = dialogService;
+        _settingsStore = settingsStore;
+        viewModel.PropertyChanged += ViewModel_PropertyChanged;
+        DataContext = viewModel;
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -111,7 +116,7 @@ public partial class MainWindow : Window
 
     private void ShowNotesForProfile(ModProfile profile, Action<NotesWindow>? configureWindow = null)
     {
-        var notesVm = new NotesViewModel(profile, new AppPaths(), new DialogService());
+        var notesVm = new NotesViewModel(profile, _paths, _dialogService);
         _notesWindow = new NotesWindow(notesVm);
         configureWindow?.Invoke(_notesWindow);
         _notesProfileId = profile.Id;
@@ -498,9 +503,7 @@ public partial class MainWindow : Window
         var aboutWindow = new AboutWindow();
         if (ViewModel is not null)
         {
-            var paths = new AppPaths();
-            var settingsStore = new SettingsStore(paths);
-            var settings = await settingsStore.LoadAsync();
+            var settings = await _settingsStore.LoadAsync();
             aboutWindow.DontShowAgain = settings.DontShowAboutOnStartup;
             aboutWindow.ShowDialog();
             if (aboutWindow.DontShowAgain != settings.DontShowAboutOnStartup)

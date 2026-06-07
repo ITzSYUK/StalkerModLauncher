@@ -13,13 +13,13 @@ public sealed class MainViewModel : ObservableObject
     private readonly AppPaths _paths;
     private readonly SettingsStore _settingsStore;
     private readonly GameInstallationValidator _gameValidator;
-    private readonly WorkspaceBuilder _workspaceBuilder;
     private readonly LaunchCoordinator _launchCoordinator;
     private readonly DialogService _dialogService;
     private readonly ModConflictAnalyzer _modConflictAnalyzer;
     private readonly ProfileTransferService _profileTransferService;
     private readonly ModScannerService _modScannerService;
     private readonly ModListEditor _modListEditor;
+    private readonly ProfileManager _profileManager;
     private readonly DebouncedAsyncAction _autoSave;
     private CancellationTokenSource? _conflictAnalysisCancellation;
     private string _gameInstallPath = string.Empty;
@@ -32,24 +32,35 @@ public sealed class MainViewModel : ObservableObject
     private string _buildProgressText = string.Empty;
     private bool _isLogVisible = true;
 
-    public MainViewModel()
+    public MainViewModel(
+        AppPaths paths,
+        SettingsStore settingsStore,
+        GameInstallationValidator gameValidator,
+        LaunchCoordinator launchCoordinator,
+        DialogService dialogService,
+        ModConflictAnalyzer modConflictAnalyzer,
+        ProfileTransferService profileTransferService,
+        ModScannerService modScannerService,
+        ModListEditor modListEditor,
+        ProfileManager profileManager)
     {
-        _paths = new AppPaths();
-        _settingsStore = new SettingsStore(_paths);
-        _gameValidator = new GameInstallationValidator();
-        _dialogService = new DialogService();
-        _workspaceBuilder = new WorkspaceBuilder(_paths);
-        _launchCoordinator = new LaunchCoordinator(new ProfileLauncher(_workspaceBuilder), new GameSessionTracker());
-        _modConflictAnalyzer = new ModConflictAnalyzer();
-        _profileTransferService = new ProfileTransferService();
-        _modScannerService = new ModScannerService();
-        _modListEditor = new ModListEditor();
+        _paths = paths;
+        _settingsStore = settingsStore;
+        _gameValidator = gameValidator;
+        _launchCoordinator = launchCoordinator;
+        _dialogService = dialogService;
+        _modConflictAnalyzer = modConflictAnalyzer;
+        _profileTransferService = profileTransferService;
+        _modScannerService = modScannerService;
+        _modListEditor = modListEditor;
+        _profileManager = profileManager;
         _autoSave = new DebouncedAsyncAction(SaveAsync, TimeSpan.FromMilliseconds(500));
 
         Profiles.CollectionChanged += ProfilesOnCollectionChanged;
 
         ChooseGameFolderCommand = new RelayCommand(ChooseGameFolder);
         NewProfileCommand = new RelayCommand(NewProfile);
+        DuplicateProfileCommand = new RelayCommand(DuplicateProfile, () => SelectedProfile is not null);
         DeleteProfileCommand = new RelayCommand(DeleteProfile, () => SelectedProfile is not null);
         BrowseExecutableCommand = new RelayCommand(BrowseExecutable, () => SelectedProfile is not null);
         AddModCommand = new RelayCommand(AddMod, CanAddMod);
@@ -202,6 +213,7 @@ public sealed class MainViewModel : ObservableObject
 
     public RelayCommand ChooseGameFolderCommand { get; }
     public RelayCommand NewProfileCommand { get; }
+    public RelayCommand DuplicateProfileCommand { get; }
     public RelayCommand DeleteProfileCommand { get; }
     public RelayCommand BrowseExecutableCommand { get; }
     public RelayCommand AddModCommand { get; }
@@ -276,7 +288,7 @@ public sealed class MainViewModel : ObservableObject
             Profiles.Clear();
             foreach (var profile in settings.Profiles)
             {
-                EnsureProfileDefaults(profile);
+                _profileManager.EnsureDefaults(profile);
                 Profiles.Add(profile);
             }
 
@@ -373,7 +385,7 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             var profile = _profileTransferService.Import(dialog.FileName);
-            profile.Name = GetUniqueProfileName(profile.Name);
+            _profileManager.PrepareImported(Profiles, profile);
 
             Profiles.Add(profile);
             SelectedProfile = profile;
@@ -479,32 +491,25 @@ public sealed class MainViewModel : ObservableObject
 
     private void NewProfile()
     {
-        var name = GetUniqueProfileName($"Profile {Profiles.Count + 1}");
-        var profile = new ModProfile
-        {
-            Name = name,
-            Description = "S.T.A.L.K.E.R. mod profile",
-            GameInstallPath = GameInstallPath,
-            WorkspacePath = Path.Combine(_paths.GetPreferredWorkspaceRoot(GameInstallPath), $"Profile-{Guid.NewGuid():N}")
-        };
-
+        var profile = _profileManager.Create(Profiles, GameInstallPath);
         Profiles.Add(profile);
         SelectedProfile = profile;
         Log($"Profile created: {profile.Name}");
         _ = SaveAsync();
     }
 
-    private string GetUniqueProfileName(string requestedName)
+    private void DuplicateProfile()
     {
-        var baseName = string.IsNullOrWhiteSpace(requestedName) ? $"Profile {Profiles.Count + 1}" : requestedName.Trim();
-        var name = baseName;
-        var counter = 1;
-        while (Profiles.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        if (SelectedProfile is null)
         {
-            name = $"{baseName} ({++counter})";
+            return;
         }
 
-        return name;
+        var profile = _profileManager.Duplicate(Profiles, SelectedProfile);
+        Profiles.Add(profile);
+        SelectedProfile = profile;
+        Log($"Profile duplicated: {profile.Name}");
+        _ = SaveAsync();
     }
 
     private void DeleteProfile()
@@ -525,9 +530,7 @@ public sealed class MainViewModel : ObservableObject
 
         try
         {
-            _workspaceBuilder.DeleteProfileWorkspace(profile, profile.GameInstallPath);
-            Profiles.Remove(profile);
-            SelectedProfile = Profiles.FirstOrDefault();
+            SelectedProfile = _profileManager.Delete(Profiles, profile);
             Log(profile.IsStandalone ? $"Profile deleted: {profile.Name}" : $"Profile and workspace deleted: {profile.Name}");
             _ = SaveAsync();
         }
@@ -1054,6 +1057,7 @@ public sealed class MainViewModel : ObservableObject
     private void RaiseCommandStates()
     {
         DeleteProfileCommand.RaiseCanExecuteChanged();
+        DuplicateProfileCommand.RaiseCanExecuteChanged();
         BrowseExecutableCommand.RaiseCanExecuteChanged();
         AddModCommand.RaiseCanExecuteChanged();
         RemoveModCommand.RaiseCanExecuteChanged();
@@ -1107,21 +1111,6 @@ public sealed class MainViewModel : ObservableObject
         }
 
         return null;
-    }
-
-    private static void EnsureProfileDefaults(ModProfile profile)
-    {
-        profile.IsRunning = false;
-
-        if (string.IsNullOrWhiteSpace(profile.Id))
-        {
-            profile.Id = Guid.NewGuid().ToString("N");
-        }
-
-        if (string.IsNullOrWhiteSpace(profile.ExecutableRelativePath))
-        {
-            profile.ExecutableRelativePath = @"bin\xr_3da.exe";
-        }
     }
 
     public ProfileSettingsViewModel? CreateProfileSettingsViewModel()
