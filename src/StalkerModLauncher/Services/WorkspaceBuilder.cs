@@ -155,9 +155,11 @@ public sealed class WorkspaceBuilder
             workspacePath = Path.Combine(preferredRoot, $"{FileSystemSafety.SanitizeName(profile.Name)}-{profile.Id}");
         }
 
-        if (!managedRoots.Any(root => FileSystemSafety.IsDirectoryInside(workspacePath, root)))
+        if (!managedRoots.Any(root =>
+                FileSystemSafety.IsDirectoryInside(workspacePath, root) &&
+                !FileSystemSafety.IsSameDirectory(workspacePath, root)))
         {
-            throw new InvalidOperationException($"Profile workspace must be inside a managed launcher workspace root: {workspacePath}");
+            throw new InvalidOperationException($"Profile workspace must be a profile-specific folder inside a managed launcher workspace root: {workspacePath}");
         }
 
         Directory.CreateDirectory(workspacePath);

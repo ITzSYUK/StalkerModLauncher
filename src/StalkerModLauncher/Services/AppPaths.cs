@@ -2,6 +2,8 @@ namespace StalkerModLauncher.Services;
 
 public sealed class AppPaths
 {
+    private readonly bool _preferGameDriveWorkspace;
+
     public AppPaths()
         : this(
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "StalkerModLauncher"),
@@ -9,11 +11,12 @@ public sealed class AppPaths
     {
     }
 
-    public AppPaths(string configDirectory, string workspaceRoot)
+    public AppPaths(string configDirectory, string workspaceRoot, bool preferGameDriveWorkspace = true)
     {
         ConfigDirectory = configDirectory;
         SettingsFile = Path.Combine(ConfigDirectory, "settings.json");
         WorkspaceRoot = workspaceRoot;
+        _preferGameDriveWorkspace = preferGameDriveWorkspace;
     }
 
     public string ConfigDirectory { get; }
@@ -22,6 +25,11 @@ public sealed class AppPaths
 
     public string GetPreferredWorkspaceRoot(string? gameInstallPath)
     {
+        if (!_preferGameDriveWorkspace)
+        {
+            return WorkspaceRoot;
+        }
+
         if (!string.IsNullOrWhiteSpace(gameInstallPath))
         {
             try
