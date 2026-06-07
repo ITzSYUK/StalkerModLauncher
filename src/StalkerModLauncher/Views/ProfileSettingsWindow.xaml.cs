@@ -21,10 +21,12 @@ public partial class ProfileSettingsWindow : Window
         ApplyDarkWindowFrame();
     }
 
-    private void CloseButton_OnClick(object sender, RoutedEventArgs e)
+    private async void CloseButton_OnClick(object sender, RoutedEventArgs e)
     {
-        _viewModel.ApplyToProfile();
-        Close();
+        if (await _viewModel.TrySaveAsync())
+        {
+            Close();
+        }
     }
 
     private void ApplyDarkWindowFrame()

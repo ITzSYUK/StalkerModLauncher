@@ -12,6 +12,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     private readonly Func<Task> _onSave;
     private readonly Func<string, string?> _convertToRelativePath;
     private readonly Func<string, bool> _isNameTaken;
+    private readonly ProfileSettingsValidator _validator;
     private string _profileName;
     private string _profileDescription;
     private string _executableRelativePath;
@@ -27,6 +28,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         _onSave = onSave;
         _convertToRelativePath = convertToRelativePath;
         _isNameTaken = isNameTaken;
+        _validator = new ProfileSettingsValidator();
         _profileName = profile.Name.Trim();
         _profileDescription = profile.Description;
         _executableRelativePath = profile.ExecutableRelativePath;
@@ -35,17 +37,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         _isEnabled = profile.IsEnabled;
         _isStandalone = profile.IsStandalone;
 
-        SaveCommand = new RelayCommand(async () =>
-        {
-            if (_isNameTaken(ProfileName.Trim()))
-            {
-                _dialogService.ShowError("Ошибка", "Профиль с таким именем уже существует.");
-                return;
-            }
-
-            ApplyToProfile();
-            await _onSave();
-        });
+        SaveCommand = new AsyncRelayCommand(async () => await TrySaveAsync());
         BrowseExecutableCommand = new RelayCommand(BrowseExecutable);
         OpenProfileFolderCommand = new RelayCommand(OpenProfileFolder);
     }
@@ -96,9 +88,23 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     public ICommand BrowseExecutableCommand { get; }
     public ICommand OpenProfileFolderCommand { get; }
 
-    public void ApplyToProfile()
+    public async Task<bool> TrySaveAsync()
     {
-        _profile.Name = ProfileName;
+        var validation = _validator.Validate(ProfileName, ExecutableRelativePath, _isNameTaken);
+        if (!validation.IsValid)
+        {
+            _dialogService.ShowError("Некорректные настройки профиля", string.Join(Environment.NewLine, validation.Messages));
+            return false;
+        }
+
+        ApplyToProfile();
+        await _onSave();
+        return true;
+    }
+
+    private void ApplyToProfile()
+    {
+        _profile.Name = ProfileName.Trim();
         _profile.Description = ProfileDescription;
         _profile.ExecutableRelativePath = ExecutableRelativePath;
         _profile.LaunchArguments = LaunchArguments;
