@@ -19,6 +19,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly ModConflictAnalyzer _modConflictAnalyzer;
     private readonly ProfileTransferService _profileTransferService;
     private readonly ModScannerService _modScannerService;
+    private readonly ModListEditor _modListEditor;
     private readonly DebouncedAsyncAction _autoSave;
     private readonly GameSessionTracker _gameSessionTracker;
     private CancellationTokenSource? _conflictAnalysisCancellation;
@@ -43,6 +44,7 @@ public sealed class MainViewModel : ObservableObject
         _modConflictAnalyzer = new ModConflictAnalyzer();
         _profileTransferService = new ProfileTransferService();
         _modScannerService = new ModScannerService();
+        _modListEditor = new ModListEditor();
         _gameSessionTracker = new GameSessionTracker();
         _autoSave = new DebouncedAsyncAction(SaveAsync, TimeSpan.FromMilliseconds(500));
 
@@ -225,30 +227,20 @@ public sealed class MainViewModel : ObservableObject
 
         foreach (var path in paths.Where(Directory.Exists))
         {
-            AddModFromPath(path);
+            SelectedMod = _modListEditor.Add(SelectedProfile, path);
         }
 
-        RenumberMods();
         RefreshValidation();
         _ = SaveAsync();
     }
 
     public void MoveMod(ModEntry source, ModEntry target)
     {
-        if (SelectedProfile is null || source == target)
+        if (SelectedProfile is null || !_modListEditor.Move(SelectedProfile, source, target))
         {
             return;
         }
 
-        var oldIndex = SelectedProfile.Mods.IndexOf(source);
-        var newIndex = SelectedProfile.Mods.IndexOf(target);
-        if (oldIndex < 0 || newIndex < 0)
-        {
-            return;
-        }
-
-        SelectedProfile.Mods.Move(oldIndex, newIndex);
-        RenumberMods();
         SelectedMod = source;
         RecalculateLockedMods();
         _ = SaveAsync();
@@ -256,19 +248,11 @@ public sealed class MainViewModel : ObservableObject
 
     public void MoveModToEnd(ModEntry source)
     {
-        if (SelectedProfile is null)
+        if (SelectedProfile is null || !_modListEditor.MoveToEnd(SelectedProfile, source))
         {
             return;
         }
 
-        var oldIndex = SelectedProfile.Mods.IndexOf(source);
-        if (oldIndex < 0 || oldIndex == SelectedProfile.Mods.Count - 1)
-        {
-            return;
-        }
-
-        SelectedProfile.Mods.Move(oldIndex, SelectedProfile.Mods.Count - 1);
-        RenumberMods();
         SelectedMod = source;
         RecalculateLockedMods();
         _ = SaveAsync();
@@ -314,7 +298,10 @@ public sealed class MainViewModel : ObservableObject
 
         try
         {
-            RenumberMods();
+            foreach (var profile in Profiles)
+            {
+                _modListEditor.Renumber(profile);
+            }
             var existing = await _settingsStore.LoadAsync();
             var settings = new AppSettings
             {
@@ -455,19 +442,12 @@ public sealed class MainViewModel : ObservableObject
                         continue;
                     }
 
-                    SelectedProfile.Mods.Add(new ModEntry
-                    {
-                        Name = mod.Name,
-                        SourcePath = mod.Path,
-                        IsEnabled = true,
-                        Order = SelectedProfile.Mods.Count
-                    });
+                    _modListEditor.Add(SelectedProfile, mod.Path, mod.Name);
 
                     existingPaths.Add(mod.Path);
                     added++;
                 }
 
-                RenumberMods();
                 RefreshValidation();
                 _ = SaveAsync();
                 Log($"Added {added} mod(s) from scan.");
@@ -562,14 +542,18 @@ public sealed class MainViewModel : ObservableObject
 
     private void AddMod()
     {
+        if (SelectedProfile is null)
+        {
+            return;
+        }
+
         var selected = _dialogService.PickFolder("Choose mod folder");
         if (selected is null)
         {
             return;
         }
 
-        AddModFromPath(selected);
-        RenumberMods();
+        SelectedMod = _modListEditor.Add(SelectedProfile, selected);
         RefreshValidation();
         Log($"Mod added: {selected}");
         _ = SaveAsync();
@@ -640,25 +624,6 @@ public sealed class MainViewModel : ObservableObject
         Log($"Standalone executable auto-detected: {found}");
     }
 
-    private void AddModFromPath(string path)
-    {
-        if (SelectedProfile is null)
-        {
-            return;
-        }
-
-        var mod = new ModEntry
-        {
-            Name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)),
-            SourcePath = path,
-            IsEnabled = true,
-            Order = SelectedProfile.Mods.Count + 1
-        };
-
-        SelectedProfile.Mods.Add(mod);
-        SelectedMod = mod;
-    }
-
     public void RemoveMods(IReadOnlyList<ModEntry> mods)
     {
         if (SelectedProfile is null || mods.Count == 0)
@@ -666,14 +631,9 @@ public sealed class MainViewModel : ObservableObject
             return;
         }
 
-        foreach (var mod in mods)
-        {
-            SelectedProfile.Mods.Remove(mod);
-        }
-
-        RenumberMods();
+        var removed = _modListEditor.Remove(SelectedProfile, mods);
         RefreshValidation();
-        Log($"Removed {mods.Count} mod(s).");
+        Log($"Removed {removed} mod(s).");
         _ = SaveAsync();
     }
 
@@ -685,8 +645,7 @@ public sealed class MainViewModel : ObservableObject
         }
 
         var removed = SelectedMod;
-        SelectedProfile.Mods.Remove(removed);
-        RenumberMods();
+        _modListEditor.Remove(SelectedProfile, [removed]);
         RefreshValidation();
         Log($"Mod removed: {removed.Name}");
         _ = SaveAsync();
@@ -699,15 +658,11 @@ public sealed class MainViewModel : ObservableObject
             return;
         }
 
-        var oldIndex = SelectedProfile.Mods.IndexOf(SelectedMod);
-        var newIndex = oldIndex + direction;
-        if (oldIndex < 0 || newIndex < 0 || newIndex >= SelectedProfile.Mods.Count)
+        if (!_modListEditor.MoveByOffset(SelectedProfile, SelectedMod, direction))
         {
             return;
         }
 
-        SelectedProfile.Mods.Move(oldIndex, newIndex);
-        RenumberMods();
         RecalculateLockedMods();
         _ = SaveAsync();
         RaiseCommandStates();
@@ -720,9 +675,7 @@ public sealed class MainViewModel : ObservableObject
             return false;
         }
 
-        var index = SelectedProfile.Mods.IndexOf(SelectedMod);
-        var target = index + direction;
-        return index >= 0 && target >= 0 && target < SelectedProfile.Mods.Count;
+        return _modListEditor.CanMoveByOffset(SelectedProfile, SelectedMod, direction);
     }
 
     private bool CanLaunch()
@@ -1018,7 +971,10 @@ public sealed class MainViewModel : ObservableObject
             }
         }
 
-        RenumberMods();
+        if (SelectedProfile is not null)
+        {
+            _modListEditor.Renumber(SelectedProfile);
+        }
         RecalculateLockedMods();
         RefreshValidation();
         _autoSave.Schedule();
@@ -1047,19 +1003,6 @@ public sealed class MainViewModel : ObservableObject
         if (e.PropertyName == nameof(ModEntry.IsEnabled))
         {
             RecalculateLockedMods();
-        }
-    }
-
-    private void RenumberMods()
-    {
-        if (SelectedProfile is null)
-        {
-            return;
-        }
-
-        for (var index = 0; index < SelectedProfile.Mods.Count; index++)
-        {
-            SelectedProfile.Mods[index].Order = index + 1;
         }
     }
 
