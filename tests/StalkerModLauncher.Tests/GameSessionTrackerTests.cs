@@ -10,10 +10,12 @@ public sealed class GameSessionTrackerTests
     {
         var started = new DateTime(2026, 6, 7, 10, 0, 0, DateTimeKind.Utc);
 
-        var result = GameSessionTracker.CreateResult(started, started.AddSeconds(5));
+        var result = GameSessionTracker.CreateResult(started, started.AddSeconds(5), 7);
 
         Assert.True(result.ShouldRecord);
         Assert.Equal(TimeSpan.FromSeconds(5), result.Duration);
+        Assert.Equal(7, result.ExitCode);
+        Assert.Equal(started, result.StartedAtUtc);
     }
 
     [Fact]

@@ -20,6 +20,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly ModScannerService _modScannerService;
     private readonly ModListEditor _modListEditor;
     private readonly ProfileManager _profileManager;
+    private readonly GameExitDiagnosticsService _gameExitDiagnosticsService;
     private readonly DebouncedAsyncAction _autoSave;
     private CancellationTokenSource? _conflictAnalysisCancellation;
     private string _gameInstallPath = string.Empty;
@@ -42,7 +43,8 @@ public sealed class MainViewModel : ObservableObject
         ProfileTransferService profileTransferService,
         ModScannerService modScannerService,
         ModListEditor modListEditor,
-        ProfileManager profileManager)
+        ProfileManager profileManager,
+        GameExitDiagnosticsService gameExitDiagnosticsService)
     {
         _paths = paths;
         _settingsStore = settingsStore;
@@ -54,6 +56,7 @@ public sealed class MainViewModel : ObservableObject
         _modScannerService = modScannerService;
         _modListEditor = modListEditor;
         _profileManager = profileManager;
+        _gameExitDiagnosticsService = gameExitDiagnosticsService;
         _autoSave = new DebouncedAsyncAction(SaveAsync, TimeSpan.FromMilliseconds(500));
 
         Profiles.CollectionChanged += ProfilesOnCollectionChanged;
@@ -761,6 +764,7 @@ public sealed class MainViewModel : ObservableObject
             {
                 profile.IsRunning = false;
                 RaiseCommandStates();
+                LogGameExitDiagnostics(profile, result);
             });
 
             if (!result.ShouldRecord)
@@ -785,6 +789,30 @@ public sealed class MainViewModel : ObservableObject
                 profile.IsRunning = false;
                 RaiseCommandStates();
             });
+        }
+    }
+
+    private void LogGameExitDiagnostics(ModProfile profile, GameSessionResult result)
+    {
+        var diagnostics = _gameExitDiagnosticsService.Analyze(profile, result);
+        if (diagnostics.IsQuickExit)
+        {
+            var exitCode = diagnostics.ExitCode.HasValue ? $" Exit code: {diagnostics.ExitCode}." : string.Empty;
+            Log($"Game exited shortly after launch ({result.Duration:g}).{exitCode}");
+        }
+        else if (diagnostics.ExitCode is not null and not 0)
+        {
+            Log($"Game process exited with code {diagnostics.ExitCode}.");
+        }
+
+        if (diagnostics.IsSuspiciousExit && diagnostics.LatestLogPath is not null)
+        {
+            Log($"Latest game log: {diagnostics.LatestLogPath}");
+        }
+
+        if (diagnostics.LatestCrashDumpPath is not null)
+        {
+            Log($"Crash dump detected: {diagnostics.LatestCrashDumpPath}");
         }
     }
 

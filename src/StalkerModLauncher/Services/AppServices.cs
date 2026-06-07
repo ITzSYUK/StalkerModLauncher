@@ -18,6 +18,7 @@ public sealed class AppServices
         ProfileTransferService = new ProfileTransferService();
         ModScannerService = new ModScannerService();
         ModListEditor = new ModListEditor();
+        GameExitDiagnosticsService = new GameExitDiagnosticsService();
     }
 
     public AppPaths Paths { get; }
@@ -30,6 +31,7 @@ public sealed class AppServices
     public ProfileTransferService ProfileTransferService { get; }
     public ModScannerService ModScannerService { get; }
     public ModListEditor ModListEditor { get; }
+    public GameExitDiagnosticsService GameExitDiagnosticsService { get; }
 
     public MainViewModel CreateMainViewModel()
     {
@@ -43,6 +45,7 @@ public sealed class AppServices
             ProfileTransferService,
             ModScannerService,
             ModListEditor,
-            ProfileManager);
+            ProfileManager,
+            GameExitDiagnosticsService);
     }
 }

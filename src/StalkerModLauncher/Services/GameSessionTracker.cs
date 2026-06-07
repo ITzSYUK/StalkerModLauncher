@@ -27,7 +27,7 @@ public sealed class GameSessionTracker : IGameSessionTracker
         try
         {
             await process.WaitForExitAsync();
-            return CreateResult(startedAtUtc, DateTime.UtcNow);
+            return CreateResult(startedAtUtc, DateTime.UtcNow, process.ExitCode);
         }
         finally
         {
@@ -36,7 +36,7 @@ public sealed class GameSessionTracker : IGameSessionTracker
         }
     }
 
-    public static GameSessionResult CreateResult(DateTime startedAtUtc, DateTime endedAtUtc)
+    public static GameSessionResult CreateResult(DateTime startedAtUtc, DateTime endedAtUtc, int? exitCode = null)
     {
         var duration = endedAtUtc - startedAtUtc;
         if (duration < TimeSpan.Zero)
@@ -44,7 +44,7 @@ public sealed class GameSessionTracker : IGameSessionTracker
             duration = TimeSpan.Zero;
         }
 
-        return new GameSessionResult(duration, duration >= TimeSpan.FromSeconds(5));
+        return new GameSessionResult(duration, duration >= TimeSpan.FromSeconds(5), exitCode, startedAtUtc, endedAtUtc);
     }
 
     public void Dispose()
@@ -53,4 +53,9 @@ public sealed class GameSessionTracker : IGameSessionTracker
     }
 }
 
-public sealed record GameSessionResult(TimeSpan Duration, bool ShouldRecord);
+public sealed record GameSessionResult(
+    TimeSpan Duration,
+    bool ShouldRecord,
+    int? ExitCode = null,
+    DateTime? StartedAtUtc = null,
+    DateTime? EndedAtUtc = null);
