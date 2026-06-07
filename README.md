@@ -83,6 +83,12 @@ dotnet test .\StalkerModLauncher.sln -c Release
 dotnet publish .\src\StalkerModLauncher\StalkerModLauncher.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none
 ```
 
+## GitLab CI
+
+Файл `.gitlab-ci.yml` автоматически запускает тесты и публикует self-contained `StalkerModLauncher.exe` как артефакт pipeline.
+
+WPF-приложение и тесты нацелены на `net8.0-windows`, поэтому для pipeline нужен GitLab Runner на Windows с установленным .NET 8 SDK и тегом `windows`. Без такого runner задачи будут находиться в состоянии Pending. Готовый EXE сохраняется в артефакте задачи `publish` на 14 дней.
+
 ## Использование
 
 1. Выберите папку GOG-игры, например `D:\Games\S.T.A.L.K.E.R. Shadow of Chernobyl`.

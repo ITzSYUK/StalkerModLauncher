@@ -5,6 +5,7 @@ obj/
 *.suo
 TestResults/
 publish/
+artifacts/
 session-ses_*.md
 opencode.txt
 /ModLauncherLogo*.png

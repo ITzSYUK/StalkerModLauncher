@@ -1,0 +1,28 @@
+stages:
+  - verify
+  - publish
+
+variables:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+default:
+  tags:
+    - windows
+  before_script:
+    - dotnet --info
+
+verify:
+  stage: verify
+  script:
+    - dotnet test .\StalkerModLauncher.sln -c Release
+
+publish:
+  stage: publish
+  script:
+    - dotnet publish .\src\StalkerModLauncher\StalkerModLauncher.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -o .\artifacts\win-x64
+  artifacts:
+    name: "StalkerModLauncher-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - artifacts/win-x64/StalkerModLauncher.exe
+    expire_in: 14 days
