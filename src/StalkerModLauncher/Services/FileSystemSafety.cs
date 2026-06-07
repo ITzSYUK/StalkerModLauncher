@@ -85,7 +85,7 @@ public static class FileSystemSafety
     {
         var invalid = Path.GetInvalidFileNameChars();
         var chars = value.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray();
-        var sanitized = new string(chars).Trim();
+        var sanitized = new string(chars).Trim(' ', '.');
         return string.IsNullOrWhiteSpace(sanitized) ? "Profile" : sanitized;
     }
 }

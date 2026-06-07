@@ -24,7 +24,7 @@ public sealed class ProfileManagerTests
 
         Assert.Equal("Profile 2 (2)", created.Name);
         Assert.Equal(@"D:\Games\STALKER", created.GameInstallPath);
-        Assert.Contains(created.Id, created.WorkspacePath);
+        Assert.EndsWith($"Profile 2 (2)-{created.Id[..8]}", created.WorkspacePath);
     }
 
     [Fact]
@@ -46,12 +46,26 @@ public sealed class ProfileManagerTests
         Assert.Equal("Zona — копия", duplicate.Name);
         Assert.NotEqual(source.Id, duplicate.Id);
         Assert.NotEqual(source.WorkspacePath, duplicate.WorkspacePath);
+        Assert.EndsWith($"Zona — копия-{duplicate.Id[..8]}", duplicate.WorkspacePath);
         Assert.Equal(0, duplicate.TotalPlaytimeSeconds);
         Assert.Null(duplicate.LastPlayedAt);
         Assert.Single(duplicate.Mods);
         Assert.NotSame(source.Mods[0], duplicate.Mods[0]);
         Assert.NotEqual(source.Mods[0].Id, duplicate.Mods[0].Id);
         Assert.Equal(source.Mods[0].SourcePath, duplicate.Mods[0].SourcePath);
+    }
+
+    [Fact]
+    public void Duplicate_SanitizesAndLimitsReadableWorkspaceName()
+    {
+        var source = new ModProfile { Name = new string('A', 100) + ": invalid." };
+
+        var duplicate = _manager.Duplicate([source], source);
+        var directoryName = Path.GetFileName(duplicate.WorkspacePath);
+
+        Assert.DoesNotContain(':', directoryName);
+        Assert.True(directoryName.Length <= 89);
+        Assert.EndsWith(duplicate.Id[..8], directoryName);
     }
 
     [Fact]

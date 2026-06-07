@@ -110,6 +110,13 @@ public sealed class ProfileManager
 
     private string CreateWorkspacePath(ModProfile profile, string gameInstallPath)
     {
-        return Path.Combine(_paths.GetPreferredWorkspaceRoot(gameInstallPath), $"Profile-{profile.Id}");
+        var readableName = FileSystemSafety.SanitizeName(profile.Name);
+        if (readableName.Length > 80)
+        {
+            readableName = readableName[..80].TrimEnd(' ', '.');
+        }
+
+        var shortId = profile.Id.Length > 8 ? profile.Id[..8] : profile.Id;
+        return Path.Combine(_paths.GetPreferredWorkspaceRoot(gameInstallPath), $"{readableName}-{shortId}");
     }
 }
