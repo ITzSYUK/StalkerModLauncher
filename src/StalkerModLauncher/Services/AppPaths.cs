@@ -3,13 +3,17 @@ namespace StalkerModLauncher.Services;
 public sealed class AppPaths
 {
     public AppPaths()
+        : this(
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "StalkerModLauncher"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StalkerModLauncher", "Workspaces"))
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+    }
 
-        ConfigDirectory = Path.Combine(appData, "StalkerModLauncher");
+    public AppPaths(string configDirectory, string workspaceRoot)
+    {
+        ConfigDirectory = configDirectory;
         SettingsFile = Path.Combine(ConfigDirectory, "settings.json");
-        WorkspaceRoot = Path.Combine(localAppData, "StalkerModLauncher", "Workspaces");
+        WorkspaceRoot = workspaceRoot;
     }
 
     public string ConfigDirectory { get; }

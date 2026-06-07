@@ -7,14 +7,15 @@ namespace StalkerModLauncher.ViewModels;
 
 public sealed class NotesViewModel : ObservableObject
 {
-    private readonly string _notesFile;
+    private readonly ModProfile _profile;
+    private readonly ProfileNotesStore _notesStore;
     private readonly DialogService _dialogService;
     private string _notesText;
 
     public NotesViewModel(ModProfile profile, AppPaths paths, DialogService dialogService)
     {
-        var name = FileSystemSafety.SanitizeName(profile.Name);
-        _notesFile = Path.Combine(paths.ConfigDirectory, $"notes-{name}.txt");
+        _profile = profile;
+        _notesStore = new ProfileNotesStore(paths);
         _dialogService = dialogService;
         _notesText = LoadFromFile();
 
@@ -39,9 +40,7 @@ public sealed class NotesViewModel : ObservableObject
     {
         try
         {
-            return File.Exists(_notesFile)
-                ? File.ReadAllText(_notesFile)
-                : string.Empty;
+            return _notesStore.Load(_profile);
         }
         catch
         {
@@ -53,13 +52,7 @@ public sealed class NotesViewModel : ObservableObject
     {
         try
         {
-            var dir = Path.GetDirectoryName(_notesFile);
-            if (dir is not null)
-            {
-                Directory.CreateDirectory(dir);
-            }
-
-            File.WriteAllText(_notesFile, _notesText);
+            _notesStore.Save(_profile, _notesText);
         }
         catch
         {
@@ -71,12 +64,8 @@ public sealed class NotesViewModel : ObservableObject
     {
         try
         {
-            var dir = Path.GetDirectoryName(_notesFile);
-            if (dir is not null)
-            {
-                Directory.CreateDirectory(dir);
-                _dialogService.OpenFolder(dir);
-            }
+            Directory.CreateDirectory(_notesStore.NotesDirectory);
+            _dialogService.OpenFolder(_notesStore.NotesDirectory);
         }
         catch
         {
