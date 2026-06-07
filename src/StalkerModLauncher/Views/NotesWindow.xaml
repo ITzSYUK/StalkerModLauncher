@@ -1,0 +1,47 @@
+<Window x:Class="StalkerModLauncher.Views.NotesWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Заметки"
+        Width="520"
+        Height="400"
+        MinWidth="360"
+        MinHeight="260"
+        Background="{StaticResource WindowBackgroundBrush}"
+        Foreground="{StaticResource TextBrush}"
+        SourceInitialized="Window_OnSourceInitialized"
+        WindowStartupLocation="CenterScreen"
+        Loaded="NotesWindow_OnLoaded">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource StrokeBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="12">
+            <TextBox x:Name="NotesTextBox"
+                     Text="{Binding NotesText, UpdateSourceTrigger=PropertyChanged}"
+                     Background="{StaticResource FieldBackgroundBrush}"
+                     Foreground="{StaticResource TextBrush}"
+                     BorderThickness="0"
+                     TextWrapping="Wrap"
+                     AcceptsReturn="True"
+                     VerticalScrollBarVisibility="Auto"
+                     CaretBrush="{StaticResource TextBrush}"/>
+        </Border>
+
+        <WrapPanel Grid.Row="1" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="Открыть папку"
+                    Command="{Binding OpenNotesFolderCommand}"
+                    Margin="0,0,8,0"/>
+            <Button Content="Готово"
+                    Click="CloseButton_OnClick"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    MinWidth="96"/>
+        </WrapPanel>
+    </Grid>
+</Window>

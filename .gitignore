@@ -1,0 +1,11 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+TestResults/
+publish/
+session-ses_*.md
+opencode.txt
+/ModLauncherLogo*.png
+/radiation_*.png

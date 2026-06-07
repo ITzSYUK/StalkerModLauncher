@@ -1,0 +1,1284 @@
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Text.Json;
+using Microsoft.Win32;
+using StalkerModLauncher.Infrastructure;
+using StalkerModLauncher.Models;
+using StalkerModLauncher.Services;
+
+namespace StalkerModLauncher.ViewModels;
+
+public sealed class MainViewModel : ObservableObject
+{
+    private readonly AppPaths _paths;
+    private readonly SettingsStore _settingsStore;
+    private readonly GameInstallationValidator _gameValidator;
+    private readonly WorkspaceBuilder _workspaceBuilder;
+    private readonly ProfileLauncher _profileLauncher;
+    private readonly DialogService _dialogService;
+    private DiscordPresenceService _discordPresence = new(string.Empty);
+    private string _gameInstallPath = string.Empty;
+    private ModProfile? _selectedProfile;
+    private ModEntry? _selectedMod;
+    private string _validationSummary = "Выберите папку с установленной игрой.";
+    private string _logText = string.Empty;
+    private bool _isGameValid;
+    private bool _isBuilding;
+    private string _buildProgressText = string.Empty;
+    private bool _isLogVisible = true;
+
+    public MainViewModel()
+    {
+        _paths = new AppPaths();
+        _settingsStore = new SettingsStore(_paths);
+        _gameValidator = new GameInstallationValidator();
+        _dialogService = new DialogService();
+        _workspaceBuilder = new WorkspaceBuilder(_paths);
+        _profileLauncher = new ProfileLauncher(_workspaceBuilder);
+
+        Profiles.CollectionChanged += ProfilesOnCollectionChanged;
+
+        ChooseGameFolderCommand = new RelayCommand(ChooseGameFolder);
+        NewProfileCommand = new RelayCommand(NewProfile);
+        DeleteProfileCommand = new RelayCommand(DeleteProfile, () => SelectedProfile is not null);
+        BrowseExecutableCommand = new RelayCommand(BrowseExecutable, () => SelectedProfile is not null);
+        AddModCommand = new RelayCommand(AddMod, CanAddMod);
+        RemoveModCommand = new RelayCommand(RemoveMod, () => SelectedProfile is not null && SelectedMod is not null);
+        MoveModUpCommand = new RelayCommand(() => MoveSelectedMod(-1), () => CanMoveSelectedMod(-1));
+        MoveModDownCommand = new RelayCommand(() => MoveSelectedMod(1), () => CanMoveSelectedMod(1));
+        LaunchCommand = new AsyncRelayCommand(LaunchAsync, CanLaunch);
+        SaveCommand = new AsyncRelayCommand(SaveAsync);
+        OpenProfileFolderCommand = new RelayCommand(OpenProfileFolder, () => SelectedProfile is not null);
+        OpenSelectedModFolderCommand = new RelayCommand(OpenSelectedModFolder, () => SelectedMod is not null);
+        ExportProfileCommand = new RelayCommand(ExportProfile, () => SelectedProfile is not null);
+        ImportProfileCommand = new RelayCommand(ImportProfile);
+        ScanForModsCommand = new RelayCommand(ScanForMods, () => SelectedProfile is not null && !SelectedProfile.IsStandalone);
+        ToggleLogCommand = new RelayCommand(() => IsLogVisible = !IsLogVisible);
+
+        _ = LoadAsync();
+    }
+
+    public ObservableCollection<ModProfile> Profiles { get; } = new();
+
+    public ObservableCollection<string> LogEntries { get; } = new();
+
+    public string GameInstallPath
+    {
+        get => SelectedProfile?.GameInstallPath ?? _gameInstallPath;
+        set
+        {
+            _gameInstallPath = value;
+            if (SelectedProfile is not null)
+            {
+                if (SelectedProfile.GameInstallPath != value)
+                {
+                    SelectedProfile.GameInstallPath = value;
+                    OnPropertyChanged(nameof(GameInstallPath));
+                    RefreshValidation();
+                    _ = SaveAsync();
+                }
+            }
+            else
+            {
+                OnPropertyChanged(nameof(GameInstallPath));
+                RefreshValidation();
+                _ = SaveAsync();
+            }
+        }
+    }
+
+    public ModProfile? SelectedProfile
+    {
+        get => _selectedProfile;
+        set
+        {
+            var oldProfile = _selectedProfile;
+            if (SetProperty(ref _selectedProfile, value))
+            {
+                if (oldProfile is not null)
+                {
+                    oldProfile.PropertyChanged -= OnSelectedProfilePropertyChanged;
+                }
+
+                SelectedMod = null;
+                RecalculateLockedMods();
+                RefreshValidation();
+                RaiseCommandStates();
+                OnPropertyChanged(nameof(GameInstallPath));
+
+                if (_selectedProfile is not null)
+                {
+                    _selectedProfile.PropertyChanged += OnSelectedProfilePropertyChanged;
+                }
+            }
+        }
+    }
+
+    private void OnSelectedProfilePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ModProfile.IsStandalone))
+        {
+            if (SelectedProfile is { IsStandalone: true })
+            {
+                AutoDetectStandaloneExecutable();
+            }
+
+            RaiseCommandStates();
+            _ = SaveAsync();
+        }
+    }
+
+    public ModEntry? SelectedMod
+    {
+        get => _selectedMod;
+        set
+        {
+            if (SetProperty(ref _selectedMod, value))
+            {
+                RaiseCommandStates();
+            }
+        }
+    }
+
+    public string ValidationSummary
+    {
+        get => _validationSummary;
+        private set => SetProperty(ref _validationSummary, value);
+    }
+
+    public string LogText
+    {
+        get => _logText;
+        private set => SetProperty(ref _logText, value);
+    }
+
+    public bool IsGameValid
+    {
+        get => _isGameValid;
+        private set => SetProperty(ref _isGameValid, value);
+    }
+
+    public bool IsBuilding
+    {
+        get => _isBuilding;
+        private set => SetProperty(ref _isBuilding, value);
+    }
+
+    public string BuildProgressText
+    {
+        get => _buildProgressText;
+        private set => SetProperty(ref _buildProgressText, value);
+    }
+
+    public bool IsLogVisible
+    {
+        get => _isLogVisible;
+        set
+        {
+            if (SetProperty(ref _isLogVisible, value))
+            {
+                OnPropertyChanged(nameof(LogToggleText));
+                OnPropertyChanged(nameof(LogRowHeight));
+                _ = SaveAsync();
+            }
+        }
+    }
+
+    public string LogToggleText => IsLogVisible ? "Скрыть журнал" : "Показать журнал";
+
+    public System.Windows.GridLength LogRowHeight => IsLogVisible ? new System.Windows.GridLength(125) : new System.Windows.GridLength(0);
+
+    public RelayCommand ToggleLogCommand { get; }
+
+    public RelayCommand ChooseGameFolderCommand { get; }
+    public RelayCommand NewProfileCommand { get; }
+    public RelayCommand DeleteProfileCommand { get; }
+    public RelayCommand BrowseExecutableCommand { get; }
+    public RelayCommand AddModCommand { get; }
+    public RelayCommand RemoveModCommand { get; }
+    public RelayCommand MoveModUpCommand { get; }
+    public RelayCommand MoveModDownCommand { get; }
+    public AsyncRelayCommand LaunchCommand { get; }
+    public AsyncRelayCommand SaveCommand { get; }
+    public RelayCommand OpenProfileFolderCommand { get; }
+    public RelayCommand OpenSelectedModFolderCommand { get; }
+    public RelayCommand ExportProfileCommand { get; }
+    public RelayCommand ImportProfileCommand { get; }
+    public RelayCommand ScanForModsCommand { get; }
+
+    public void AddDroppedMods(IEnumerable<string> paths)
+    {
+        if (SelectedProfile is null)
+        {
+            return;
+        }
+
+        foreach (var path in paths.Where(Directory.Exists))
+        {
+            AddModFromPath(path);
+        }
+
+        RenumberMods();
+        RefreshValidation();
+        _ = SaveAsync();
+    }
+
+    public void MoveMod(ModEntry source, ModEntry target)
+    {
+        if (SelectedProfile is null || source == target)
+        {
+            return;
+        }
+
+        var oldIndex = SelectedProfile.Mods.IndexOf(source);
+        var newIndex = SelectedProfile.Mods.IndexOf(target);
+        if (oldIndex < 0 || newIndex < 0)
+        {
+            return;
+        }
+
+        SelectedProfile.Mods.Move(oldIndex, newIndex);
+        RenumberMods();
+        SelectedMod = source;
+        RecalculateLockedMods();
+        _ = SaveAsync();
+    }
+
+    public void MoveModToEnd(ModEntry source)
+    {
+        if (SelectedProfile is null)
+        {
+            return;
+        }
+
+        var oldIndex = SelectedProfile.Mods.IndexOf(source);
+        if (oldIndex < 0 || oldIndex == SelectedProfile.Mods.Count - 1)
+        {
+            return;
+        }
+
+        SelectedProfile.Mods.Move(oldIndex, SelectedProfile.Mods.Count - 1);
+        RenumberMods();
+        SelectedMod = source;
+        RecalculateLockedMods();
+        _ = SaveAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            var settings = await _settingsStore.LoadAsync();
+            _gameInstallPath = settings.GameInstallPath;
+            OnPropertyChanged(nameof(GameInstallPath));
+            _isLogVisible = settings.IsLogVisible;
+            OnPropertyChanged(nameof(IsLogVisible));
+            OnPropertyChanged(nameof(LogToggleText));
+            OnPropertyChanged(nameof(LogRowHeight));
+
+            if (!string.IsNullOrWhiteSpace(settings.DiscordClientId))
+            {
+                _discordPresence.Dispose();
+                _discordPresence = new DiscordPresenceService(settings.DiscordClientId);
+                _discordPresence.Initialize();
+            }
+
+            Profiles.Clear();
+            foreach (var profile in settings.Profiles)
+            {
+                EnsureProfileDefaults(profile);
+                Profiles.Add(profile);
+            }
+
+            SelectedProfile = Profiles.FirstOrDefault();
+            RefreshValidation();
+            Log("Settings loaded.");
+        }
+        catch (Exception ex)
+        {
+            Log($"Settings load failed: {ex.Message}");
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            RenumberMods();
+            var existing = await _settingsStore.LoadAsync();
+            var settings = new AppSettings
+            {
+                GameInstallPath = _gameInstallPath,
+                Profiles = Profiles.ToList(),
+                DontShowAboutOnStartup = existing.DontShowAboutOnStartup,
+                IsLogVisible = _isLogVisible,
+                DiscordClientId = existing.DiscordClientId
+            };
+            await _settingsStore.SaveAsync(settings);
+            Log("Settings saved.");
+        }
+        catch (Exception ex)
+        {
+            Log($"Settings save failed: {ex.Message}");
+        }
+    }
+
+    public async Task SaveAboutPreferenceAsync(bool dontShowAgain)
+    {
+        var settings = await _settingsStore.LoadAsync();
+        settings.DontShowAboutOnStartup = dontShowAgain;
+        await _settingsStore.SaveAsync(settings);
+    }
+
+    private void ExportProfile()
+    {
+        if (SelectedProfile is null)
+        {
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            Title = "Экспорт профиля",
+            Filter = "Profile files (*.stalkerprofile)|*.stalkerprofile|JSON files (*.json)|*.json|All files (*.*)|*.*",
+            FileName = $"{SelectedProfile.Name}.stalkerprofile"
+        };
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        try
+        {
+            var exported = new ExportedProfile
+            {
+                Name = SelectedProfile.Name,
+                IsEnabled = SelectedProfile.IsEnabled,
+                IsStandalone = SelectedProfile.IsStandalone,
+                ExecutableRelativePath = SelectedProfile.ExecutableRelativePath,
+                LaunchArguments = SelectedProfile.LaunchArguments,
+                WorkingDirectoryRelative = SelectedProfile.WorkingDirectoryRelative,
+                GameInstallPath = SelectedProfile.GameInstallPath,
+                ConfigNotes = SelectedProfile.ConfigNotes,
+                Mods = SelectedProfile.Mods.Select(m => new ExportedMod
+                {
+                    Name = m.Name,
+                    SourcePath = m.SourcePath,
+                    IsEnabled = m.IsEnabled,
+                    Order = m.Order,
+                    Notes = m.Notes
+                }).ToList()
+            };
+
+            var json = JsonSerializer.Serialize(exported, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(dialog.FileName, json);
+            Log($"Profile exported: {dialog.FileName}");
+        }
+        catch (Exception ex)
+        {
+            Log($"Export failed: {ex.Message}");
+            _dialogService.ShowError("Ошибка экспорта", ex.Message);
+        }
+    }
+
+    private void ImportProfile()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Импорт профиля",
+            Filter = "Profile files (*.stalkerprofile)|*.stalkerprofile|JSON files (*.json)|*.json|All files (*.*)|*.*",
+            Multiselect = false
+        };
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        try
+        {
+            var json = File.ReadAllText(dialog.FileName);
+            var exported = JsonSerializer.Deserialize<ExportedProfile>(json);
+            if (exported is null)
+            {
+                return;
+            }
+
+            var profile = new ModProfile
+            {
+                Name = exported.Name,
+                IsEnabled = exported.IsEnabled,
+                IsStandalone = exported.IsStandalone,
+                ExecutableRelativePath = exported.ExecutableRelativePath,
+                LaunchArguments = exported.LaunchArguments,
+                WorkingDirectoryRelative = exported.WorkingDirectoryRelative,
+                GameInstallPath = exported.GameInstallPath,
+                ConfigNotes = exported.ConfigNotes
+            };
+
+            var order = 0;
+            foreach (var exportedMod in exported.Mods.OrderBy(m => m.Order))
+            {
+                profile.Mods.Add(new ModEntry
+                {
+                    Name = exportedMod.Name,
+                    SourcePath = exportedMod.SourcePath,
+                    IsEnabled = exportedMod.IsEnabled,
+                    Order = order++,
+                    Notes = exportedMod.Notes
+                });
+            }
+
+            Profiles.Add(profile);
+            SelectedProfile = profile;
+            _ = SaveAsync();
+            Log($"Profile imported: {exported.Name}");
+        }
+        catch (Exception ex)
+        {
+            Log($"Import failed: {ex.Message}");
+            _dialogService.ShowError("Ошибка импорта", ex.Message);
+        }
+    }
+
+    private void ScanForMods()
+    {
+        if (SelectedProfile is null)
+        {
+            return;
+        }
+
+        var folder = _dialogService.PickFolder("Выберите папку для поиска модов");
+        if (folder is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var scanner = new ModScannerService();
+            var discovered = scanner.ScanFolder(folder);
+
+            if (discovered.Count == 0)
+            {
+                Log("No mods found in selected folder.");
+                _dialogService.ShowError("Не найдено", "В выбранной папке не обнаружено модов.");
+                return;
+            }
+
+            var window = new Views.ScanResultsWindow();
+            foreach (var mod in discovered)
+            {
+                window.Mods.Add(SelectableMod.FromDiscovered(mod));
+            }
+
+            if (window.ShowDialog() == true)
+            {
+                var selected = window.GetSelectedMods();
+                Log($"Scan results: {window.Mods.Count} total, {selected.Count} selected.");
+                if (selected.Count == 0)
+                {
+                    Log("No mods selected.");
+                    return;
+                }
+
+                var existingPaths = new HashSet<string>(SelectedProfile.Mods.Select(m => m.SourcePath), StringComparer.OrdinalIgnoreCase);
+                var added = 0;
+
+                foreach (var mod in selected)
+                {
+                    if (existingPaths.Contains(mod.Path))
+                    {
+                        continue;
+                    }
+
+                    SelectedProfile.Mods.Add(new ModEntry
+                    {
+                        Name = mod.Name,
+                        SourcePath = mod.Path,
+                        IsEnabled = true,
+                        Order = SelectedProfile.Mods.Count
+                    });
+
+                    existingPaths.Add(mod.Path);
+                    added++;
+                }
+
+                RenumberMods();
+                RefreshValidation();
+                _ = SaveAsync();
+                Log($"Added {added} mod(s) from scan.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"Scan failed: {ex.Message}");
+            _dialogService.ShowError("Ошибка сканирования", ex.Message);
+        }
+    }
+
+    private void ChooseGameFolder()
+    {
+        var selected = _dialogService.PickFolder("Choose S.T.A.L.K.E.R. GOG folder", GameInstallPath);
+        if (selected is null)
+        {
+            return;
+        }
+
+        GameInstallPath = selected;
+        RefreshValidation();
+        Log($"Game folder selected: {selected}");
+    }
+
+    private void NewProfile()
+    {
+        var baseName = $"Profile {Profiles.Count + 1}";
+        var name = baseName;
+        var counter = 1;
+        while (Profiles.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        {
+            name = $"{baseName} ({++counter})";
+        }
+
+        var profile = new ModProfile
+        {
+            Name = name,
+            Description = "S.T.A.L.K.E.R. mod profile",
+            GameInstallPath = GameInstallPath,
+            WorkspacePath = Path.Combine(_paths.GetPreferredWorkspaceRoot(GameInstallPath), $"Profile-{Guid.NewGuid():N}")
+        };
+
+        Profiles.Add(profile);
+        SelectedProfile = profile;
+        Log($"Profile created: {profile.Name}");
+        _ = SaveAsync();
+    }
+
+    private void DeleteProfile()
+    {
+        if (SelectedProfile is null)
+        {
+            return;
+        }
+
+        var profile = SelectedProfile;
+        var deleteMessage = profile.IsStandalone
+            ? $"Удалить профиль '{profile.Name}'? Файлы мода останутся нетронутыми."
+            : $"Удалить профиль '{profile.Name}' вместе с его рабочей папкой, сохранениями и логами?";
+        if (!_dialogService.Confirm("Удалить профиль", deleteMessage))
+        {
+            return;
+        }
+
+        try
+        {
+            _workspaceBuilder.DeleteProfileWorkspace(profile, profile.GameInstallPath);
+            Profiles.Remove(profile);
+            SelectedProfile = Profiles.FirstOrDefault();
+            Log(profile.IsStandalone ? $"Profile deleted: {profile.Name}" : $"Profile and workspace deleted: {profile.Name}");
+            _ = SaveAsync();
+        }
+        catch (Exception ex)
+        {
+            Log($"Profile delete failed: {ex.Message}");
+            _dialogService.ShowError("Не удалось удалить профиль", ex.Message);
+        }
+    }
+
+    private void AddMod()
+    {
+        var selected = _dialogService.PickFolder("Choose mod folder");
+        if (selected is null)
+        {
+            return;
+        }
+
+        AddModFromPath(selected);
+        RenumberMods();
+        RefreshValidation();
+        Log($"Mod added: {selected}");
+        _ = SaveAsync();
+    }
+
+    private void BrowseExecutable()
+    {
+        if (SelectedProfile is null)
+        {
+            return;
+        }
+
+        var initialPath = Directory.Exists(SelectedMod?.SourcePath) ? SelectedMod.SourcePath
+            : !string.IsNullOrWhiteSpace(SelectedProfile.GameInstallPath) ? SelectedProfile.GameInstallPath
+            : _gameInstallPath;
+        var selected = _dialogService.PickExecutable("Choose launch executable", initialPath);
+        if (selected is null)
+        {
+            return;
+        }
+
+        var relativePath = TryGetWorkspaceRelativePath(selected);
+        if (relativePath is null)
+        {
+            _dialogService.ShowError(
+                "Executable is outside profile sources",
+                "Choose an executable from the game folder, an enabled mod folder, or the generated profile workspace.");
+            return;
+        }
+
+        SelectedProfile.ExecutableRelativePath = relativePath;
+        Log($"Launch executable selected: {relativePath}");
+        RefreshValidation();
+        _ = SaveAsync();
+    }
+
+    private void AutoDetectStandaloneExecutable()
+    {
+        var modRoot = SelectedProfile?.Mods
+            .FirstOrDefault(m => m.IsEnabled && Directory.Exists(m.SourcePath))
+            ?.SourcePath;
+
+        if (modRoot is null)
+        {
+            return;
+        }
+
+        var currentExe = SelectedProfile!.ExecutableRelativePath;
+        if (!string.IsNullOrWhiteSpace(currentExe) && File.Exists(Path.Combine(modRoot, currentExe)))
+        {
+            return;
+        }
+
+        var found = Directory.EnumerateFiles(modRoot, "*.exe", SearchOption.AllDirectories)
+            .Select(p => Path.GetRelativePath(modRoot, p))
+            .OrderBy(p => Path.GetFileNameWithoutExtension(p).Equals("xrEngine", StringComparison.OrdinalIgnoreCase) ? 0
+                       : Path.GetFileNameWithoutExtension(p).Equals("xr_3da", StringComparison.OrdinalIgnoreCase) ? 1
+                       : 2)
+            .ThenBy(p => p, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+        if (found is null)
+        {
+            return;
+        }
+
+        SelectedProfile.ExecutableRelativePath = found;
+        Log($"Standalone executable auto-detected: {found}");
+    }
+
+    private void AddModFromPath(string path)
+    {
+        if (SelectedProfile is null)
+        {
+            return;
+        }
+
+        var mod = new ModEntry
+        {
+            Name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)),
+            SourcePath = path,
+            IsEnabled = true,
+            Order = SelectedProfile.Mods.Count + 1
+        };
+
+        SelectedProfile.Mods.Add(mod);
+        SelectedMod = mod;
+    }
+
+    public void RemoveMods(IReadOnlyList<ModEntry> mods)
+    {
+        if (SelectedProfile is null || mods.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var mod in mods)
+        {
+            SelectedProfile.Mods.Remove(mod);
+        }
+
+        RenumberMods();
+        RefreshValidation();
+        Log($"Removed {mods.Count} mod(s).");
+        _ = SaveAsync();
+    }
+
+    private void RemoveMod()
+    {
+        if (SelectedProfile is null || SelectedMod is null)
+        {
+            return;
+        }
+
+        var removed = SelectedMod;
+        SelectedProfile.Mods.Remove(removed);
+        RenumberMods();
+        RefreshValidation();
+        Log($"Mod removed: {removed.Name}");
+        _ = SaveAsync();
+    }
+
+    private void MoveSelectedMod(int direction)
+    {
+        if (SelectedProfile is null || SelectedMod is null)
+        {
+            return;
+        }
+
+        var oldIndex = SelectedProfile.Mods.IndexOf(SelectedMod);
+        var newIndex = oldIndex + direction;
+        if (oldIndex < 0 || newIndex < 0 || newIndex >= SelectedProfile.Mods.Count)
+        {
+            return;
+        }
+
+        SelectedProfile.Mods.Move(oldIndex, newIndex);
+        RenumberMods();
+        RecalculateLockedMods();
+        _ = SaveAsync();
+        RaiseCommandStates();
+    }
+
+    private bool CanMoveSelectedMod(int direction)
+    {
+        if (SelectedProfile is null || SelectedMod is null)
+        {
+            return false;
+        }
+
+        var index = SelectedProfile.Mods.IndexOf(SelectedMod);
+        var target = index + direction;
+        return index >= 0 && target >= 0 && target < SelectedProfile.Mods.Count;
+    }
+
+    private bool CanLaunch()
+    {
+        return !IsBuilding && IsGameValid && SelectedProfile is { IsEnabled: true, IsRunning: false };
+    }
+
+    private bool CanAddMod()
+    {
+        if (SelectedProfile is null)
+        {
+            return false;
+        }
+
+        if (SelectedProfile.IsStandalone && SelectedProfile.Mods.Count >= 1)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task LaunchAsync()
+    {
+        if (SelectedProfile is null)
+        {
+            return;
+        }
+
+        try
+        {
+            RefreshValidation();
+            if (!CanLaunch())
+            {
+                Log("Launch blocked: profile is not ready.");
+                return;
+            }
+
+            IsBuilding = true;
+            BuildProgressText = "Building workspace...";
+            RaiseCommandStates();
+
+            var progress = new Progress<string>(msg =>
+            {
+                Log(msg);
+                BuildProgressText = msg;
+            });
+            var gamePath = SelectedProfile.GameInstallPath;
+            if (string.IsNullOrWhiteSpace(gamePath))
+            {
+                gamePath = _gameInstallPath;
+            }
+
+            var process = await _profileLauncher.LaunchAsync(gamePath, SelectedProfile, progress);
+            await SaveAsync();
+            Log($"Game process started. PID: {process.Id}");
+            _discordPresence.SetPlaying(SelectedProfile.Name);
+            SelectedProfile.IsRunning = true;
+            RaiseCommandStates();
+
+            _ = TrackPlaytimeAsync(process, SelectedProfile);
+        }
+        catch (Exception ex)
+        {
+            Log($"Launch failed: {ex.Message}");
+            _dialogService.ShowError("Launch failed", ex.Message);
+        }
+        finally
+        {
+            IsBuilding = false;
+            BuildProgressText = string.Empty;
+            RaiseCommandStates();
+        }
+    }
+
+    private async Task TrackPlaytimeAsync(Process process, ModProfile profile)
+    {
+        try
+        {
+            var startTime = DateTime.UtcNow;
+
+            await process.WaitForExitAsync();
+
+            _discordPresence.Clear();
+
+            await App.Current.Dispatcher.InvokeAsync(() =>
+            {
+                profile.IsRunning = false;
+                RaiseCommandStates();
+            });
+
+            var elapsed = (DateTime.UtcNow - startTime).TotalSeconds;
+            if (elapsed < 5)
+            {
+                return;
+            }
+
+            await App.Current.Dispatcher.InvokeAsync(() =>
+            {
+                profile.TotalPlaytimeSeconds += elapsed;
+                profile.LastPlayedAt = DateTime.Now;
+                Log($"Playtime recorded: {TimeSpan.FromSeconds(elapsed):g} (total: {profile.PlaytimeDisplay})");
+            });
+
+            await SaveAsync();
+        }
+        catch (Exception ex)
+        {
+            Log($"Playtime tracking failed: {ex.Message}");
+        }
+        finally
+        {
+            process.Dispose();
+        }
+    }
+
+    private void OpenProfileFolder()
+    {
+        if (SelectedProfile is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var path = SelectedProfile.IsStandalone
+                ? SelectedProfile.Mods.FirstOrDefault(m => m.IsEnabled && Directory.Exists(m.SourcePath))?.SourcePath
+                : null;
+
+            var gamePath = SelectedProfile.GameInstallPath;
+            if (string.IsNullOrWhiteSpace(gamePath))
+            {
+                gamePath = _gameInstallPath;
+            }
+
+            path ??= string.IsNullOrWhiteSpace(SelectedProfile.WorkspacePath)
+                ? Path.Combine(_paths.GetPreferredWorkspaceRoot(gamePath), $"{FileSystemSafety.SanitizeName(SelectedProfile.Name)}-{SelectedProfile.Id}")
+                : SelectedProfile.WorkspacePath;
+
+            Directory.CreateDirectory(path);
+            _dialogService.OpenFolder(path);
+        }
+        catch (Exception ex)
+        {
+            Log($"Could not open profile folder: {ex.Message}");
+        }
+    }
+
+    private void OpenSelectedModFolder()
+    {
+        if (SelectedMod is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _dialogService.OpenFolder(SelectedMod.SourcePath);
+        }
+        catch (Exception ex)
+        {
+            Log($"Could not open mod folder: {ex.Message}");
+        }
+    }
+
+    private void RefreshValidation()
+    {
+        if (SelectedProfile?.IsStandalone == true)
+        {
+            var enabledMods = SelectedProfile.Mods
+                .Where(mod => mod.IsEnabled)
+                .ToArray();
+            var standaloneMessages = new List<string>();
+
+            if (!SelectedProfile.IsEnabled)
+            {
+                standaloneMessages.Add("Выбранный профиль отключён.");
+            }
+
+            if (enabledMods.Length != 1)
+            {
+                standaloneMessages.Add("Автономный профиль должен содержать ровно один включённый мод.");
+            }
+            else if (!Directory.Exists(enabledMods[0].SourcePath))
+            {
+                standaloneMessages.Add($"Папка мода не найдена: {enabledMods[0].Name}");
+            }
+
+            var executableIsSafe = true;
+            try
+            {
+                FileSystemSafety.EnsureRelativePath(SelectedProfile.ExecutableRelativePath, "Launch executable");
+            }
+            catch (Exception ex)
+            {
+                executableIsSafe = false;
+                standaloneMessages.Add(ex.Message);
+            }
+
+            IsGameValid = SelectedProfile.IsEnabled &&
+                          enabledMods.Length == 1 &&
+                          Directory.Exists(enabledMods[0].SourcePath) &&
+                          executableIsSafe;
+            ValidationSummary = IsGameValid
+                ? "Автономный мод готов к запуску."
+                : string.Join(Environment.NewLine, standaloneMessages.Distinct());
+            RaiseCommandStates();
+            return;
+        }
+
+        var gamePath = SelectedProfile?.GameInstallPath ?? _gameInstallPath;
+        var gameValidation = _gameValidator.Validate(gamePath);
+        var messages = new List<string>(gameValidation.Messages);
+
+        if (SelectedProfile is null)
+        {
+            IsGameValid = gameValidation.IsValid;
+            ValidationSummary = gameValidation.Summary;
+            RaiseCommandStates();
+            return;
+        }
+
+        if (!SelectedProfile.IsEnabled)
+        {
+            messages.Add("Выбранный профиль отключён.");
+        }
+
+        foreach (var mod in SelectedProfile.Mods.Where(mod => mod.IsEnabled && !Directory.Exists(mod.SourcePath)))
+        {
+            messages.Add($"Папка мода не найдена: {mod.Name}");
+        }
+
+        var executablePathIsSafe = true;
+        try
+        {
+            FileSystemSafety.EnsureRelativePath(SelectedProfile.ExecutableRelativePath, "Launch executable");
+        }
+        catch (Exception ex)
+        {
+            executablePathIsSafe = false;
+            messages.Add(ex.Message);
+        }
+
+        var ready = (gameValidation.IsValid || SelectedProfile.IsStandalone) &&
+                    SelectedProfile.IsEnabled &&
+                    SelectedProfile.Mods.Where(mod => mod.IsEnabled).All(mod => Directory.Exists(mod.SourcePath)) &&
+                    executablePathIsSafe;
+
+        IsGameValid = ready;
+        ValidationSummary = ready ? "Готов к запуску." : string.Join(Environment.NewLine, messages.Distinct());
+        RaiseCommandStates();
+    }
+
+    private void ProfilesOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.NewItems is not null)
+        {
+            foreach (ModProfile profile in e.NewItems)
+            {
+                profile.PropertyChanged += ProfileOnPropertyChanged;
+                profile.Mods.CollectionChanged += ModsOnCollectionChanged;
+                foreach (var mod in profile.Mods)
+                {
+                    mod.PropertyChanged += ModOnPropertyChanged;
+                }
+            }
+        }
+
+        if (e.OldItems is not null)
+        {
+            foreach (ModProfile profile in e.OldItems)
+            {
+                profile.PropertyChanged -= ProfileOnPropertyChanged;
+                profile.Mods.CollectionChanged -= ModsOnCollectionChanged;
+                foreach (var mod in profile.Mods)
+                {
+                    mod.PropertyChanged -= ModOnPropertyChanged;
+                }
+            }
+        }
+    }
+
+    private void ModsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.NewItems is not null)
+        {
+            foreach (ModEntry mod in e.NewItems)
+            {
+                mod.PropertyChanged += ModOnPropertyChanged;
+            }
+        }
+
+        if (e.OldItems is not null)
+        {
+            foreach (ModEntry mod in e.OldItems)
+            {
+                mod.PropertyChanged -= ModOnPropertyChanged;
+            }
+        }
+
+        RenumberMods();
+        RecalculateLockedMods();
+        RefreshValidation();
+        _ = SaveAsync();
+    }
+
+    private void ProfileOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        RefreshValidation();
+        _ = SaveAsync();
+    }
+
+    private void ModOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        RefreshValidation();
+        _ = SaveAsync();
+        if (e.PropertyName == nameof(ModEntry.IsEnabled))
+        {
+            RecalculateLockedMods();
+        }
+    }
+
+    private void RenumberMods()
+    {
+        if (SelectedProfile is null)
+        {
+            return;
+        }
+
+        for (var index = 0; index < SelectedProfile.Mods.Count; index++)
+        {
+            SelectedProfile.Mods[index].Order = index + 1;
+        }
+    }
+
+    private void RecalculateLockedMods()
+    {
+        if (SelectedProfile is null)
+        {
+            return;
+        }
+
+        var mods = SelectedProfile.Mods;
+        var fileCache = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+
+        for (var i = 0; i < mods.Count; i++)
+        {
+            var mod = mods[i];
+            if (mod.IsEnabled && !string.IsNullOrWhiteSpace(mod.SourcePath))
+            {
+                fileCache[mod.Id] = GetModFileList(mod.SourcePath);
+            }
+        }
+
+        for (var i = 0; i < mods.Count; i++)
+        {
+            var upperFiles = fileCache.GetValueOrDefault(mods[i].Id);
+            var hasEnabledBelow = false;
+            for (var j = i + 1; j < mods.Count; j++)
+            {
+                var lowerFiles = fileCache.GetValueOrDefault(mods[j].Id);
+                if (lowerFiles is not null && lowerFiles.Count > 0 &&
+                    upperFiles is not null && lowerFiles.Overlaps(upperFiles))
+                {
+                    hasEnabledBelow = true;
+                    break;
+                }
+            }
+            mods[i].IsLocked = hasEnabledBelow;
+
+            var hasOverlapsAbove = false;
+            for (var j = 0; j < i; j++)
+            {
+                var aboveFiles = fileCache.GetValueOrDefault(mods[j].Id);
+                if (aboveFiles is not null && aboveFiles.Count > 0 &&
+                    upperFiles is not null && upperFiles.Overlaps(aboveFiles))
+                {
+                    hasOverlapsAbove = true;
+                    break;
+                }
+            }
+            mods[i].HasOverlapsAbove = hasOverlapsAbove;
+        }
+    }
+
+    private static HashSet<string> GetModFileList(string modPath)
+    {
+        var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            if (!Directory.Exists(modPath))
+            {
+                return files;
+            }
+
+            foreach (var file in Directory.EnumerateFiles(modPath, "*", SearchOption.AllDirectories))
+            {
+                var relative = Path.GetRelativePath(modPath, file);
+                files.Add(relative);
+            }
+        }
+        catch
+        {
+            // Ignore inaccessible folders
+        }
+
+        return files;
+    }
+
+    private void RaiseCommandStates()
+    {
+        DeleteProfileCommand.RaiseCanExecuteChanged();
+        BrowseExecutableCommand.RaiseCanExecuteChanged();
+        AddModCommand.RaiseCanExecuteChanged();
+        RemoveModCommand.RaiseCanExecuteChanged();
+        MoveModUpCommand.RaiseCanExecuteChanged();
+        MoveModDownCommand.RaiseCanExecuteChanged();
+        LaunchCommand.RaiseCanExecuteChanged();
+        OpenProfileFolderCommand.RaiseCanExecuteChanged();
+        OpenSelectedModFolderCommand.RaiseCanExecuteChanged();
+        ExportProfileCommand.RaiseCanExecuteChanged();
+        ImportProfileCommand.RaiseCanExecuteChanged();
+        ScanForModsCommand.RaiseCanExecuteChanged();
+    }
+
+    private string? TryGetWorkspaceRelativePath(string selectedPath)
+    {
+        if (SelectedProfile is null)
+        {
+            return null;
+        }
+
+        var roots = new List<string>();
+        var gamePath = SelectedProfile.GameInstallPath;
+        if (string.IsNullOrWhiteSpace(gamePath))
+        {
+            gamePath = _gameInstallPath;
+        }
+
+        if (Directory.Exists(gamePath))
+        {
+            roots.Add(GameInstallPath);
+        }
+
+        roots.AddRange(SelectedProfile.Mods.Where(mod => Directory.Exists(mod.SourcePath)).Select(mod => mod.SourcePath));
+
+        if (!string.IsNullOrWhiteSpace(SelectedProfile.WorkspacePath))
+        {
+            var currentWorkspace = Path.Combine(SelectedProfile.WorkspacePath, "current");
+            if (Directory.Exists(currentWorkspace))
+            {
+                roots.Add(currentWorkspace);
+            }
+        }
+
+        foreach (var root in roots.Distinct(StringComparer.OrdinalIgnoreCase).OrderByDescending(root => root.Length))
+        {
+            var relative = Path.GetRelativePath(root, selectedPath);
+            if (!relative.StartsWith("..", StringComparison.Ordinal) && !Path.IsPathRooted(relative))
+            {
+                return relative;
+            }
+        }
+
+        return null;
+    }
+
+    private static void EnsureProfileDefaults(ModProfile profile)
+    {
+        profile.IsRunning = false;
+
+        if (string.IsNullOrWhiteSpace(profile.Id))
+        {
+            profile.Id = Guid.NewGuid().ToString("N");
+        }
+
+        if (string.IsNullOrWhiteSpace(profile.ExecutableRelativePath))
+        {
+            profile.ExecutableRelativePath = @"bin\xr_3da.exe";
+        }
+    }
+
+    public ProfileSettingsViewModel? CreateProfileSettingsViewModel()
+    {
+        if (SelectedProfile is null)
+        {
+            return null;
+        }
+
+        return new ProfileSettingsViewModel(
+            SelectedProfile,
+            _dialogService,
+            () => SaveAsync(),
+            TryGetWorkspaceRelativePath,
+            name => Profiles.Any(p => p != SelectedProfile && p.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private void Log(string message)
+    {
+        var timestamp = DateTime.Now;
+        var entry = $"[{timestamp:HH:mm:ss}] {message}";
+
+        try
+        {
+            var logDir = _paths.ConfigDirectory;
+            Directory.CreateDirectory(logDir);
+            var logPath = Path.Combine(logDir, "launcher.log");
+            File.AppendAllText(logPath, $"[{timestamp:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}");
+        }
+        catch
+        {
+            // file logging is best-effort
+        }
+
+        App.Current.Dispatcher.Invoke(() =>
+        {
+            LogEntries.Insert(0, entry);
+            while (LogEntries.Count > 200)
+            {
+                LogEntries.RemoveAt(LogEntries.Count - 1);
+            }
+
+            LogText = string.Join(Environment.NewLine, LogEntries);
+        });
+    }
+
+    public void Cleanup()
+    {
+        _discordPresence.Dispose();
+    }
+}

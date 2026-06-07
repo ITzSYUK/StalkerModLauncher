@@ -1,0 +1,149 @@
+<Window x:Class="StalkerModLauncher.Views.ProfileSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Настройки профиля"
+        Width="720"
+        Height="560"
+        MinWidth="620"
+        MinHeight="460"
+        Background="{StaticResource WindowBackgroundBrush}"
+        Foreground="{StaticResource TextBrush}"
+        SourceInitialized="Window_OnSourceInitialized"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   FontSize="22"
+                   FontWeight="SemiBold"
+                   TextTrimming="CharacterEllipsis"
+                   Margin="0,0,0,12">
+            <Run Text="Настройки профиля "/>
+            <Run Text="{Binding ProfileName, Mode=OneWay}"/>
+        </TextBlock>
+
+        <Border Grid.Row="1"
+                Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource StrokeBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="16">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <Grid Margin="0,0,8,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="Название профиля"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   FontSize="12"/>
+                        <TextBox Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Margin="0,12,0,0">
+                        <TextBlock Text="Описание"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   FontSize="12"/>
+                        <TextBox Text="{Binding ProfileDescription, UpdateSourceTrigger=PropertyChanged}"
+                                 Height="60"
+                                 TextWrapping="Wrap"
+                                 AcceptsReturn="True"
+                                 Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <Rectangle Grid.Row="2"
+                               Height="1"
+                               Fill="{StaticResource StrokeBrush}"
+                               Margin="0,14,0,14"/>
+
+                    <CheckBox Grid.Row="3"
+                              IsChecked="{Binding IsStandalone}"
+                              Margin="0,0,0,8">
+                        <TextBlock TextWrapping="Wrap">
+                            <Run Text="Автономный мод"/>
+                            <Run Foreground="{StaticResource MutedTextBrush}" FontSize="11"
+                                 Text="—  мод имеет свой движок и все файлы игры, запускается из своей папки"/>
+                        </TextBlock>
+                    </CheckBox>
+
+                    <TextBlock Grid.Row="4"
+                               Text="Файл запуска (.exe)"
+                               Foreground="{StaticResource MutedTextBrush}"
+                               FontSize="12"/>
+
+                    <Border Grid.Row="5"
+                            Background="{StaticResource FieldBackgroundBrush}"
+                            BorderBrush="{StaticResource StrokeBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="8,4"
+                            Margin="0,4,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding ExecutableRelativePath, UpdateSourceTrigger=PropertyChanged}"
+                                     BorderThickness="0"
+                                     Background="Transparent"
+                                     Padding="0,2,0,0"
+                                     VerticalContentAlignment="Center"/>
+                            <Button Grid.Column="1"
+                                    Content="Обзор..."
+                                    Command="{Binding BrowseExecutableCommand}"
+                                    Margin="8,0,0,0"
+                                    MinWidth="100"
+                                    VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <TextBlock Grid.Row="6"
+                               Text="Путь до .exe относительно папки игры или мода"
+                               Foreground="{StaticResource DisabledTextBrush}"
+                               FontSize="11"
+                               Margin="0,2,0,0"/>
+
+                    <StackPanel Grid.Row="7" Margin="0,12,0,0">
+                        <TextBlock Text="Параметры запуска"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   FontSize="12"/>
+                        <TextBox Text="{Binding LaunchArguments, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,4,0,0"/>
+                        <TextBlock Text="Например: -nointro -nosound"
+                                   Foreground="{StaticResource DisabledTextBrush}"
+                                   FontSize="11"
+                                   Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                </Grid>
+            </ScrollViewer>
+        </Border>
+
+        <WrapPanel Grid.Row="2" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="Открыть папку профиля"
+                    Command="{Binding OpenProfileFolderCommand}"
+                    Margin="0,0,8,0"/>
+            <Button Content="Сохранить"
+                    Command="{Binding SaveCommand}"
+                    Margin="0,0,8,0"/>
+            <Button Content="Готово"
+                    Click="CloseButton_OnClick"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    MinWidth="96"/>
+        </WrapPanel>
+    </Grid>
+</Window>

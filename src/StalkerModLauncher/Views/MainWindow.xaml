@@ -1,0 +1,498 @@
+<Window x:Class="StalkerModLauncher.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="S.T.A.L.K.E.R. Mod Launcher"
+        MinWidth="1280"
+        MinHeight="560"
+        Width="1280"
+        Height="760"
+        Background="{StaticResource WindowBackgroundBrush}"
+        SourceInitialized="Window_OnSourceInitialized"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </Window.Resources>
+    <Window.InputBindings>
+        <KeyBinding Key="F5" Command="{Binding LaunchCommand}"/>
+        <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}"/>
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewProfileCommand}"/>
+    </Window.InputBindings>
+    <Grid x:Name="RootGrid" Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="{Binding LogRowHeight}"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="*" MinWidth="520"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Background="{StaticResource PanelBrush}"
+                        BorderBrush="{StaticResource StrokeBrush}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="14"
+                        Margin="0,0,0,10">
+                    <StackPanel Cursor="Hand"
+                                MouseDown="Title_MouseDown"
+                                HorizontalAlignment="Center">
+                        <TextBlock Text="S.T.A.L.K.E.R."
+                                   FontSize="25"
+                                   FontWeight="Black"
+                                   Foreground="{StaticResource AccentBrush}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="MOD LAUNCHER"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   FontSize="13"
+                                   Margin="0,1,0,0"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="1"
+                        Background="{StaticResource PanelBrush}"
+                        BorderBrush="{StaticResource StrokeBrush}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        ClipToBounds="True">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="12,12,12,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="Профили"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                            <Button Grid.Column="1"
+                                    Content="Импорт"
+                                    Command="{Binding ImportProfileCommand}"
+                                    FontSize="11"
+                                    Padding="8,2"/>
+                        </Grid>
+
+                        <ListBox Grid.Row="1"
+                                 ItemsSource="{Binding Profiles}"
+                                 SelectedItem="{Binding SelectedProfile}"
+                                 BorderThickness="0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}"/>
+                                        <TextBlock Text="Запущен"
+                                                   FontSize="10"
+                                                   Foreground="{StaticResource AccentBrush}"
+                                                   FontWeight="SemiBold"
+                                                   Margin="0,-1,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <UniformGrid Grid.Row="2" Columns="2" Margin="12,10,12,6">
+                            <Button Content="Создать"
+                                    Command="{Binding NewProfileCommand}"
+                                    Margin="0,0,5,0"/>
+                            <Button Content="Удалить"
+                                    Command="{Binding DeleteProfileCommand}"
+                                    Margin="5,0,0,0"/>
+                        </UniformGrid>
+
+                        <Button Grid.Row="3"
+                                Content="{Binding LogToggleText}"
+                                Command="{Binding ToggleLogCommand}"
+                                Margin="12,0,12,12"
+                                Padding="6,4"/>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <Border Grid.Column="2"
+                    Background="{StaticResource PanelBrush}"
+                    BorderBrush="{StaticResource StrokeBrush}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="14">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0"
+                            Background="{StaticResource FieldBackgroundBrush}"
+                            BorderBrush="{StaticResource StrokeBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="10,8"
+                            Margin="0,0,0,10">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedProfile.IsStandalone}" Value="True">
+                                        <Setter Property="Opacity" Value="0.35"/>
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Папка игры"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="11"/>
+                                <TextBox Grid.Row="1"
+                                         Text="{Binding SelectedProfile.GameInstallPath, UpdateSourceTrigger=PropertyChanged}"
+                                         BorderThickness="0"
+                                         Padding="0,2,0,0"
+                                         Background="Transparent"
+                                         VerticalContentAlignment="Center"/>
+                            </Grid>
+                            <Button Grid.Column="1"
+                                    Content="Выбрать игру"
+                                    Command="{Binding ChooseGameFolderCommand}"
+                                    Margin="12,0,0,0"
+                                    MinWidth="120"
+                                    VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Grid.Column="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Width="12"
+                                    Height="12"
+                                    CornerRadius="6"
+                                    VerticalAlignment="Top"
+                                    Margin="0,8,10,0">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{StaticResource DangerBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsGameValid}" Value="True">
+                                                <Setter Property="Background" Value="{StaticResource AccentGreenBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding SelectedProfile.Name, FallbackValue=Профиль}"
+                                           FontSize="22"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding ValidationSummary}"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           Margin="0,2,0,0"
+                                           TextWrapping="Wrap"
+                                           LineHeight="18"
+                                           MaxHeight="54"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <WrapPanel Grid.Column="1"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Top"
+                                   Margin="16,0,0,0">
+                            <Button Content="Настройки"
+                                    Click="EditProfileButton_OnClick"
+                                    Margin="0,0,8,8"/>
+                            <Button Content="Экспорт"
+                                    Command="{Binding ExportProfileCommand}"
+                                    Margin="0,0,8,8"/>
+                            <Button Content="Папка профиля"
+                                    Command="{Binding OpenProfileFolderCommand}"
+                                    Margin="0,0,8,8"/>
+                            <Button Content="Скриншоты"
+                                    Click="ScreenshotsButton_OnClick"
+                                    Margin="0,0,8,8"/>
+                            <Button Content="Заметки"
+                                    Click="NotesButton_OnClick"
+                                    Margin="0,0,8,8"/>
+                            <Button Content="Запустить"
+                                    Command="{Binding LaunchCommand}"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Margin="0,0,0,8"
+                                    MinWidth="112"/>
+                        </WrapPanel>
+                    </Grid>
+
+                    <Border Grid.Row="2"
+                            Background="{StaticResource FieldBackgroundBrush}"
+                            BorderBrush="{StaticResource StrokeBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="12"
+                            Margin="0,12,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Бинарник"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="11"/>
+                                <TextBlock Text="{Binding SelectedProfile.ExecutableRelativePath}"
+                                           FontSize="13"
+                                           TextTrimming="CharacterEllipsis"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Аргументы"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="11"/>
+                                <TextBlock Text="{Binding SelectedProfile.LaunchArguments}"
+                                           FontSize="13"
+                                           TextTrimming="CharacterEllipsis"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="4">
+                                <TextBlock Text="Модов в профиле"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="11"/>
+                                <TextBlock Text="{Binding SelectedProfile.Mods.Count}"
+                                           FontSize="13"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="6">
+                                <TextBlock Text="Наиграно"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="11"/>
+                                <TextBlock Text="{Binding SelectedProfile.PlaytimeDisplay}"
+                                           FontSize="13"
+                                           Margin="0,4,0,0"/>
+                                <TextBlock Text="{Binding SelectedProfile.LastPlayedDisplay}"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="11"
+                                           Margin="0,0,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="22,0,0,0">
+                            <TextBlock Text="Моды"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="Ниже мод — выше приоритет"
+                                       Foreground="{StaticResource MutedTextBrush}"
+                                       FontSize="11"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
+                            <ToggleButton Content="Автономный мод"
+                                          IsChecked="{Binding SelectedProfile.IsStandalone}"
+                                          Style="{StaticResource ProfileToggleButtonStyle}"
+                                          Margin="0,0,8,8"
+                                          ToolTipService.InitialShowDelay="600">
+                                <ToggleButton.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock TextWrapping="Wrap" MaxWidth="260">
+                                            Автономный мод имеет свой движок и все файлы игры, запускается из своей папки
+                                        </TextBlock>
+                                    </ToolTip>
+                                </ToggleButton.ToolTip>
+                            </ToggleButton>
+                            <Button Content="Сканировать"
+                                    Command="{Binding ScanForModsCommand}"
+                                    Margin="0,0,8,8"/>
+                            <Button Content="Добавить"
+                                    Command="{Binding AddModCommand}"
+                                    Margin="0,0,8,8"/>
+                            <Button Content="Убрать"
+                                    Click="RemoveModsButton_Click"
+                                    Margin="0,0,8,8"/>
+                            <Button Content="Выше"
+                                    Command="{Binding MoveModUpCommand}"
+                                    Margin="0,0,8,8"/>
+                            <Button Content="Ниже"
+                                    Command="{Binding MoveModDownCommand}"
+                                    Margin="0,0,8,8"/>
+                            <Button Content="Открыть"
+                                    Command="{Binding OpenSelectedModFolderCommand}"
+                                    Margin="0,0,0,8"/>
+                        </WrapPanel>
+                    </Grid>
+
+                    <Border Grid.Row="4"
+                            Background="{StaticResource FieldBackgroundBrush}"
+                            BorderBrush="{StaticResource StrokeBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="12"
+                            Margin="0,12,0,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                               <ListView x:Name="ModsList"
+                                        Margin="0"
+                                       SizeChanged="ModsList_SizeChanged"
+                                       ItemsSource="{Binding SelectedProfile.Mods}"
+                                       SelectedItem="{Binding SelectedMod}"
+                                       AllowDrop="True"
+                                       Drop="ModsList_OnDrop"
+                                       DragOver="ModsList_OnDragOver"
+                                       DragLeave="ModsList_OnDragLeave"
+                                       PreviewMouseLeftButtonDown="ModsList_OnPreviewMouseLeftButtonDown"
+                                       PreviewMouseRightButtonDown="ModsList_OnPreviewMouseRightButtonDown"
+                                       MouseMove="ModsList_OnMouseMove"
+                                        ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                        ScrollViewer.CanContentScroll="False"
+                                        VirtualizingPanel.ScrollUnit="Pixel"
+                                       ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                  <ListView.View>
+                                     <GridView AllowsColumnReorder="False">
+                                         <GridViewColumn Header="#" Width="36" DisplayMemberBinding="{Binding Order}"/>
+                                         <GridViewColumn Header="Вкл." Width="50">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                     <CheckBox IsChecked="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged}"
+                                                                HorizontalAlignment="Center"
+                                                                HorizontalContentAlignment="Center"
+                                                                ToolTipService.ShowOnDisabled="True"
+                                                                ToolTipService.InitialShowDelay="600">
+                                                         <CheckBox.Style>
+                                                             <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                                                                 <Setter Property="ToolTip" Value="Прозрачный значок — мод выключен&#x0a;Цветной значок — мод включён"/>
+                                                                 <Style.Triggers>
+                                                                     <MultiDataTrigger>
+                                                                         <MultiDataTrigger.Conditions>
+                                                                             <Condition Binding="{Binding IsLocked}" Value="True"/>
+                                                                             <Condition Binding="{Binding IsEnabled}" Value="True"/>
+                                                                         </MultiDataTrigger.Conditions>
+                                                                         <MultiDataTrigger.Setters>
+                                                                             <Setter Property="IsEnabled" Value="False"/>
+                                                                             <Setter Property="ToolTip" Value="Сначала отключите моды ниже в списке"/>
+                                                                         </MultiDataTrigger.Setters>
+                                                                     </MultiDataTrigger>
+                                                                 </Style.Triggers>
+                                                             </Style>
+                                                         </CheckBox.Style>
+                                                     </CheckBox>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                          <GridViewColumn Header="Мод" Width="150" DisplayMemberBinding="{Binding Name}"/>
+                                         <GridViewColumn Header="Папка" DisplayMemberBinding="{Binding SourcePath}"/>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <GridSplitter Grid.Row="1"
+                      Height="3"
+                      Margin="0,3,0,3"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Center"
+                      Background="{StaticResource StrokeBrush}"
+                      ResizeDirection="Rows"
+                      Visibility="{Binding IsLogVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+        <Border Grid.Row="2"
+                Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource StrokeBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10"
+                Margin="0,0,0,0"
+                Visibility="{Binding IsLogVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Журнал"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                </Grid>
+                <TextBox Grid.Row="1"
+                         Margin="0,6,0,0"
+                         Text="{Binding LogText, Mode=OneWay}"
+                         IsReadOnly="True"
+                         TextWrapping="NoWrap"
+                         AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Auto"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

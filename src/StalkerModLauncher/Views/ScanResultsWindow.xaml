@@ -1,0 +1,90 @@
+<Window x:Class="StalkerModLauncher.Views.ScanResultsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Найденные моды"
+        Width="560"
+        Height="480"
+        MinWidth="400"
+        MinHeight="300"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource WindowBackgroundBrush}"
+        Foreground="{StaticResource TextBrush}"
+        ShowInTaskbar="False"
+        ResizeMode="CanResizeWithGrip"
+        SourceInitialized="ScanResultsWindow_OnSourceInitialized">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid.Resources>
+            <Infrastructure:BoolToRadiationConverter x:Key="BoolToRadiationConverter"
+                xmlns:Infrastructure="clr-namespace:StalkerModLauncher.Infrastructure"/>
+        </Grid.Resources>
+        <TextBlock Grid.Row="0"
+                   Text="Выберите моды для добавления:"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,12"/>
+
+        <ListView Grid.Row="1"
+                  x:Name="ModsListView"
+                  BorderBrush="{StaticResource StrokeBrush}"
+                  BorderThickness="1"
+                  Background="{StaticResource FieldBackgroundBrush}"
+                  ScrollViewer.CanContentScroll="False"
+                  SelectionMode="Extended"
+                  SelectionChanged="ModsListView_SelectionChanged">
+            <ListView.Resources>
+                <Style TargetType="GridViewColumnHeader">
+                    <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                    <Setter Property="Padding" Value="6,4"/>
+                    <Setter Property="OverridesDefaultStyle" Value="True"/>
+                </Style>
+            </ListView.Resources>
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Width="28">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <Image Width="16"
+                                       Height="16"
+                                       Margin="0"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       Source="{Binding IsSelected, Converter={StaticResource BoolToRadiationConverter}}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Название" Width="200"
+                                    DisplayMemberBinding="{Binding Name}"/>
+                    <GridViewColumn Header="Обнаружен" Width="110"
+                                    DisplayMemberBinding="{Binding DetectedBy}"/>
+                    <GridViewColumn Header="Путь" Width="Auto"
+                                    DisplayMemberBinding="{Binding Path}"/>
+                </GridView>
+            </ListView.View>
+        </ListView>
+
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,12,0,0">
+            <Button Content="Добавить выбранные"
+                    Click="AddButton_Click"
+                    IsDefault="True"
+                    Margin="0,0,8,0"
+                    MinWidth="140"
+                    Padding="12,6"/>
+            <Button Content="Отмена"
+                    Click="CancelButton_Click"
+                    IsCancel="True"
+                    MinWidth="80"
+                    Padding="12,6"/>
+        </StackPanel>
+    </Grid>
+</Window>
