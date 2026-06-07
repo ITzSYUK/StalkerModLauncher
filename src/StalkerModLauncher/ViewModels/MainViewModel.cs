@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Text.Json;
 using Microsoft.Win32;
 using StalkerModLauncher.Infrastructure;
 using StalkerModLauncher.Models;
@@ -19,6 +18,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly ProfileLauncher _profileLauncher;
     private readonly DialogService _dialogService;
     private readonly ModConflictAnalyzer _modConflictAnalyzer;
+    private readonly ProfileTransferService _profileTransferService;
     private readonly DebouncedAsyncAction _autoSave;
     private DiscordPresenceService _discordPresence = new(string.Empty);
     private CancellationTokenSource? _conflictAnalysisCancellation;
@@ -41,6 +41,7 @@ public sealed class MainViewModel : ObservableObject
         _workspaceBuilder = new WorkspaceBuilder(_paths);
         _profileLauncher = new ProfileLauncher(_workspaceBuilder);
         _modConflictAnalyzer = new ModConflictAnalyzer();
+        _profileTransferService = new ProfileTransferService();
         _autoSave = new DebouncedAsyncAction(SaveAsync, TimeSpan.FromMilliseconds(500));
 
         Profiles.CollectionChanged += ProfilesOnCollectionChanged;
@@ -360,28 +361,7 @@ public sealed class MainViewModel : ObservableObject
 
         try
         {
-            var exported = new ExportedProfile
-            {
-                Name = SelectedProfile.Name,
-                IsEnabled = SelectedProfile.IsEnabled,
-                IsStandalone = SelectedProfile.IsStandalone,
-                ExecutableRelativePath = SelectedProfile.ExecutableRelativePath,
-                LaunchArguments = SelectedProfile.LaunchArguments,
-                WorkingDirectoryRelative = SelectedProfile.WorkingDirectoryRelative,
-                GameInstallPath = SelectedProfile.GameInstallPath,
-                ConfigNotes = SelectedProfile.ConfigNotes,
-                Mods = SelectedProfile.Mods.Select(m => new ExportedMod
-                {
-                    Name = m.Name,
-                    SourcePath = m.SourcePath,
-                    IsEnabled = m.IsEnabled,
-                    Order = m.Order,
-                    Notes = m.Notes
-                }).ToList()
-            };
-
-            var json = JsonSerializer.Serialize(exported, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(dialog.FileName, json);
+            _profileTransferService.Export(dialog.FileName, SelectedProfile);
             Log($"Profile exported: {dialog.FileName}");
         }
         catch (Exception ex)
@@ -407,42 +387,13 @@ public sealed class MainViewModel : ObservableObject
 
         try
         {
-            var json = File.ReadAllText(dialog.FileName);
-            var exported = JsonSerializer.Deserialize<ExportedProfile>(json);
-            if (exported is null)
-            {
-                return;
-            }
-
-            var profile = new ModProfile
-            {
-                Name = exported.Name,
-                IsEnabled = exported.IsEnabled,
-                IsStandalone = exported.IsStandalone,
-                ExecutableRelativePath = exported.ExecutableRelativePath,
-                LaunchArguments = exported.LaunchArguments,
-                WorkingDirectoryRelative = exported.WorkingDirectoryRelative,
-                GameInstallPath = exported.GameInstallPath,
-                ConfigNotes = exported.ConfigNotes
-            };
-
-            var order = 0;
-            foreach (var exportedMod in exported.Mods.OrderBy(m => m.Order))
-            {
-                profile.Mods.Add(new ModEntry
-                {
-                    Name = exportedMod.Name,
-                    SourcePath = exportedMod.SourcePath,
-                    IsEnabled = exportedMod.IsEnabled,
-                    Order = order++,
-                    Notes = exportedMod.Notes
-                });
-            }
+            var profile = _profileTransferService.Import(dialog.FileName);
+            profile.Name = GetUniqueProfileName(profile.Name);
 
             Profiles.Add(profile);
             SelectedProfile = profile;
             _ = SaveAsync();
-            Log($"Profile imported: {exported.Name}");
+            Log($"Profile imported: {profile.Name}");
         }
         catch (Exception ex)
         {
@@ -542,14 +493,7 @@ public sealed class MainViewModel : ObservableObject
 
     private void NewProfile()
     {
-        var baseName = $"Profile {Profiles.Count + 1}";
-        var name = baseName;
-        var counter = 1;
-        while (Profiles.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-        {
-            name = $"{baseName} ({++counter})";
-        }
-
+        var name = GetUniqueProfileName($"Profile {Profiles.Count + 1}");
         var profile = new ModProfile
         {
             Name = name,
@@ -562,6 +506,19 @@ public sealed class MainViewModel : ObservableObject
         SelectedProfile = profile;
         Log($"Profile created: {profile.Name}");
         _ = SaveAsync();
+    }
+
+    private string GetUniqueProfileName(string requestedName)
+    {
+        var baseName = string.IsNullOrWhiteSpace(requestedName) ? $"Profile {Profiles.Count + 1}" : requestedName.Trim();
+        var name = baseName;
+        var counter = 1;
+        while (Profiles.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        {
+            name = $"{baseName} ({++counter})";
+        }
+
+        return name;
     }
 
     private void DeleteProfile()
