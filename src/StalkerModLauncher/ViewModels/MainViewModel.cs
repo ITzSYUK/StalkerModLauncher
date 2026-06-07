@@ -18,7 +18,9 @@ public sealed class MainViewModel : ObservableObject
     private readonly WorkspaceBuilder _workspaceBuilder;
     private readonly ProfileLauncher _profileLauncher;
     private readonly DialogService _dialogService;
+    private readonly ModConflictAnalyzer _modConflictAnalyzer;
     private DiscordPresenceService _discordPresence = new(string.Empty);
+    private CancellationTokenSource? _conflictAnalysisCancellation;
     private string _gameInstallPath = string.Empty;
     private ModProfile? _selectedProfile;
     private ModEntry? _selectedMod;
@@ -37,6 +39,7 @@ public sealed class MainViewModel : ObservableObject
         _dialogService = new DialogService();
         _workspaceBuilder = new WorkspaceBuilder(_paths);
         _profileLauncher = new ProfileLauncher(_workspaceBuilder);
+        _modConflictAnalyzer = new ModConflictAnalyzer();
 
         Profiles.CollectionChanged += ProfilesOnCollectionChanged;
 
@@ -1088,76 +1091,49 @@ public sealed class MainViewModel : ObservableObject
 
     private void RecalculateLockedMods()
     {
-        if (SelectedProfile is null)
+        _conflictAnalysisCancellation?.Cancel();
+        _conflictAnalysisCancellation?.Dispose();
+        _conflictAnalysisCancellation = null;
+
+        var profile = SelectedProfile;
+        if (profile is null)
         {
             return;
         }
 
-        var mods = SelectedProfile.Mods;
-        var fileCache = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-
-        for (var i = 0; i < mods.Count; i++)
-        {
-            var mod = mods[i];
-            if (mod.IsEnabled && !string.IsNullOrWhiteSpace(mod.SourcePath))
-            {
-                fileCache[mod.Id] = GetModFileList(mod.SourcePath);
-            }
-        }
-
-        for (var i = 0; i < mods.Count; i++)
-        {
-            var upperFiles = fileCache.GetValueOrDefault(mods[i].Id);
-            var hasEnabledBelow = false;
-            for (var j = i + 1; j < mods.Count; j++)
-            {
-                var lowerFiles = fileCache.GetValueOrDefault(mods[j].Id);
-                if (lowerFiles is not null && lowerFiles.Count > 0 &&
-                    upperFiles is not null && lowerFiles.Overlaps(upperFiles))
-                {
-                    hasEnabledBelow = true;
-                    break;
-                }
-            }
-            mods[i].IsLocked = hasEnabledBelow;
-
-            var hasOverlapsAbove = false;
-            for (var j = 0; j < i; j++)
-            {
-                var aboveFiles = fileCache.GetValueOrDefault(mods[j].Id);
-                if (aboveFiles is not null && aboveFiles.Count > 0 &&
-                    upperFiles is not null && upperFiles.Overlaps(aboveFiles))
-                {
-                    hasOverlapsAbove = true;
-                    break;
-                }
-            }
-            mods[i].HasOverlapsAbove = hasOverlapsAbove;
-        }
+        var inputs = profile.Mods.Select(ModConflictInput.FromMod).ToArray();
+        var cancellation = new CancellationTokenSource();
+        _conflictAnalysisCancellation = cancellation;
+        _ = ApplyConflictAnalysisAsync(profile, inputs, cancellation.Token);
     }
 
-    private static HashSet<string> GetModFileList(string modPath)
+    private async Task ApplyConflictAnalysisAsync(
+        ModProfile profile,
+        IReadOnlyList<ModConflictInput> inputs,
+        CancellationToken cancellationToken)
     {
-        var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
         {
-            if (!Directory.Exists(modPath))
+            var result = await _modConflictAnalyzer.AnalyzeAsync(inputs, cancellationToken);
+            await App.Current.Dispatcher.InvokeAsync(() =>
             {
-                return files;
-            }
+                if (cancellationToken.IsCancellationRequested || SelectedProfile != profile)
+                {
+                    return;
+                }
 
-            foreach (var file in Directory.EnumerateFiles(modPath, "*", SearchOption.AllDirectories))
-            {
-                var relative = Path.GetRelativePath(modPath, file);
-                files.Add(relative);
-            }
+                foreach (var mod in profile.Mods)
+                {
+                    var state = result.GetValueOrDefault(mod.Id);
+                    mod.IsLocked = state?.IsLocked ?? false;
+                    mod.HasOverlapsAbove = state?.HasOverlapsAbove ?? false;
+                }
+            });
         }
-        catch
+        catch (OperationCanceledException)
         {
-            // Ignore inaccessible folders
+            // A newer profile or mod state superseded this analysis.
         }
-
-        return files;
     }
 
     private void RaiseCommandStates()
@@ -1279,6 +1255,8 @@ public sealed class MainViewModel : ObservableObject
 
     public void Cleanup()
     {
+        _conflictAnalysisCancellation?.Cancel();
+        _conflictAnalysisCancellation?.Dispose();
         _discordPresence.Dispose();
     }
 }
