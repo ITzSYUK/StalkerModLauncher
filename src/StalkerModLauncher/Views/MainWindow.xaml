@@ -11,6 +11,7 @@
         Height="760"
         Background="{StaticResource WindowBackgroundBrush}"
         SourceInitialized="Window_OnSourceInitialized"
+        Closing="Window_OnClosing"
         WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>

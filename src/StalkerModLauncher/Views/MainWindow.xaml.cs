@@ -28,6 +28,7 @@ public partial class MainWindow : Window
     private string? _notesProfileId;
     private nint _keyboardHook;
     private HookProc? _keyboardHookProc;
+    private bool _isClosingAfterCleanup;
 
     public MainWindow()
     {
@@ -513,10 +514,26 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void Window_OnClosing(object? sender, CancelEventArgs e)
+    {
+        if (_isClosingAfterCleanup)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        if (ViewModel is not null)
+        {
+            await ViewModel.CleanupAsync();
+        }
+
+        _isClosingAfterCleanup = true;
+        Close();
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         base.OnClosed(e);
-        ViewModel?.Cleanup();
         if (_keyboardHook != nint.Zero)
         {
             _ = UnhookWindowsHookEx(_keyboardHook);

@@ -19,6 +19,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly ProfileLauncher _profileLauncher;
     private readonly DialogService _dialogService;
     private readonly ModConflictAnalyzer _modConflictAnalyzer;
+    private readonly DebouncedAsyncAction _autoSave;
     private DiscordPresenceService _discordPresence = new(string.Empty);
     private CancellationTokenSource? _conflictAnalysisCancellation;
     private string _gameInstallPath = string.Empty;
@@ -40,6 +41,7 @@ public sealed class MainViewModel : ObservableObject
         _workspaceBuilder = new WorkspaceBuilder(_paths);
         _profileLauncher = new ProfileLauncher(_workspaceBuilder);
         _modConflictAnalyzer = new ModConflictAnalyzer();
+        _autoSave = new DebouncedAsyncAction(SaveAsync, TimeSpan.FromMilliseconds(500));
 
         Profiles.CollectionChanged += ProfilesOnCollectionChanged;
 
@@ -80,14 +82,14 @@ public sealed class MainViewModel : ObservableObject
                     SelectedProfile.GameInstallPath = value;
                     OnPropertyChanged(nameof(GameInstallPath));
                     RefreshValidation();
-                    _ = SaveAsync();
+                    _autoSave.Schedule();
                 }
             }
             else
             {
                 OnPropertyChanged(nameof(GameInstallPath));
                 RefreshValidation();
-                _ = SaveAsync();
+                _autoSave.Schedule();
             }
         }
     }
@@ -129,7 +131,7 @@ public sealed class MainViewModel : ObservableObject
             }
 
             RaiseCommandStates();
-            _ = SaveAsync();
+            _autoSave.Schedule();
         }
     }
 
@@ -184,7 +186,7 @@ public sealed class MainViewModel : ObservableObject
             {
                 OnPropertyChanged(nameof(LogToggleText));
                 OnPropertyChanged(nameof(LogRowHeight));
-                _ = SaveAsync();
+                _autoSave.Schedule();
             }
         }
     }
@@ -307,6 +309,8 @@ public sealed class MainViewModel : ObservableObject
 
     private async Task SaveAsync()
     {
+        _autoSave.Cancel();
+
         try
         {
             RenumberMods();
@@ -1057,19 +1061,29 @@ public sealed class MainViewModel : ObservableObject
         RenumberMods();
         RecalculateLockedMods();
         RefreshValidation();
-        _ = SaveAsync();
+        _autoSave.Schedule();
     }
 
     private void ProfileOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(ModProfile.IsRunning))
+        {
+            return;
+        }
+
         RefreshValidation();
-        _ = SaveAsync();
+        _autoSave.Schedule();
     }
 
     private void ModOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is nameof(ModEntry.IsLocked) or nameof(ModEntry.HasOverlapsAbove))
+        {
+            return;
+        }
+
         RefreshValidation();
-        _ = SaveAsync();
+        _autoSave.Schedule();
         if (e.PropertyName == nameof(ModEntry.IsEnabled))
         {
             RecalculateLockedMods();
@@ -1253,8 +1267,10 @@ public sealed class MainViewModel : ObservableObject
         });
     }
 
-    public void Cleanup()
+    public async Task CleanupAsync()
     {
+        await SaveAsync();
+        _autoSave.Dispose();
         _conflictAnalysisCancellation?.Cancel();
         _conflictAnalysisCancellation?.Dispose();
         _discordPresence.Dispose();
