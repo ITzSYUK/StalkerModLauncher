@@ -19,6 +19,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly DialogService _dialogService;
     private readonly ModConflictAnalyzer _modConflictAnalyzer;
     private readonly ProfileTransferService _profileTransferService;
+    private readonly ModScannerService _modScannerService;
     private readonly DebouncedAsyncAction _autoSave;
     private DiscordPresenceService _discordPresence = new(string.Empty);
     private CancellationTokenSource? _conflictAnalysisCancellation;
@@ -42,6 +43,7 @@ public sealed class MainViewModel : ObservableObject
         _profileLauncher = new ProfileLauncher(_workspaceBuilder);
         _modConflictAnalyzer = new ModConflictAnalyzer();
         _profileTransferService = new ProfileTransferService();
+        _modScannerService = new ModScannerService();
         _autoSave = new DebouncedAsyncAction(SaveAsync, TimeSpan.FromMilliseconds(500));
 
         Profiles.CollectionChanged += ProfilesOnCollectionChanged;
@@ -60,7 +62,7 @@ public sealed class MainViewModel : ObservableObject
         OpenSelectedModFolderCommand = new RelayCommand(OpenSelectedModFolder, () => SelectedMod is not null);
         ExportProfileCommand = new RelayCommand(ExportProfile, () => SelectedProfile is not null);
         ImportProfileCommand = new RelayCommand(ImportProfile);
-        ScanForModsCommand = new RelayCommand(ScanForMods, () => SelectedProfile is not null && !SelectedProfile.IsStandalone);
+        ScanForModsCommand = new AsyncRelayCommand(ScanForModsAsync, () => SelectedProfile is not null && !SelectedProfile.IsStandalone);
         ToggleLogCommand = new RelayCommand(() => IsLogVisible = !IsLogVisible);
 
         _ = LoadAsync();
@@ -212,7 +214,7 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand OpenSelectedModFolderCommand { get; }
     public RelayCommand ExportProfileCommand { get; }
     public RelayCommand ImportProfileCommand { get; }
-    public RelayCommand ScanForModsCommand { get; }
+    public AsyncRelayCommand ScanForModsCommand { get; }
 
     public void AddDroppedMods(IEnumerable<string> paths)
     {
@@ -402,7 +404,7 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    private void ScanForMods()
+    private async Task ScanForModsAsync()
     {
         if (SelectedProfile is null)
         {
@@ -417,8 +419,10 @@ public sealed class MainViewModel : ObservableObject
 
         try
         {
-            var scanner = new ModScannerService();
-            var discovered = scanner.ScanFolder(folder);
+            IsBuilding = true;
+            BuildProgressText = "Сканирование модов...";
+            RaiseCommandStates();
+            var discovered = await _modScannerService.ScanFolderAsync(folder);
 
             if (discovered.Count == 0)
             {
@@ -475,6 +479,12 @@ public sealed class MainViewModel : ObservableObject
         {
             Log($"Scan failed: {ex.Message}");
             _dialogService.ShowError("Ошибка сканирования", ex.Message);
+        }
+        finally
+        {
+            IsBuilding = false;
+            BuildProgressText = string.Empty;
+            RaiseCommandStates();
         }
     }
 

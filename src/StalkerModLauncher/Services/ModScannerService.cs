@@ -9,71 +9,118 @@ public sealed class DiscoveredMod
 
 public sealed class ModScannerService
 {
-    public List<DiscoveredMod> ScanFolder(string rootPath)
+    public Task<IReadOnlyList<DiscoveredMod>> ScanFolderAsync(
+        string rootPath,
+        CancellationToken cancellationToken = default)
     {
-        var result = new List<DiscoveredMod>();
-
-        if (!Directory.Exists(rootPath))
-        {
-            return result;
-        }
-
-        foreach (var subDir in Directory.EnumerateDirectories(rootPath))
-        {
-            var mod = ExamineDirectory(subDir);
-            if (mod is not null)
-            {
-                result.Add(mod);
-            }
-        }
-
-        return result;
+        return Task.Run(() => ScanFolder(rootPath, cancellationToken), cancellationToken);
     }
 
-    private static DiscoveredMod? ExamineDirectory(string dirPath)
+    private static IReadOnlyList<DiscoveredMod> ScanFolder(string rootPath, CancellationToken cancellationToken)
     {
-        var dirName = Path.GetFileName(dirPath);
+        if (!Directory.Exists(rootPath))
+        {
+            return Array.Empty<DiscoveredMod>();
+        }
 
+        var result = new List<DiscoveredMod>();
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        ScanDirectory(rootPath, result, visited, cancellationToken);
+
+        return result
+            .OrderBy(mod => mod.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(mod => mod.Path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static void ScanDirectory(
+        string directoryPath,
+        ICollection<DiscoveredMod> result,
+        ISet<string> visited,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        string fullPath;
+        try
+        {
+            fullPath = Path.GetFullPath(directoryPath);
+        }
+        catch
+        {
+            return;
+        }
+
+        if (!visited.Add(fullPath))
+        {
+            return;
+        }
+
+        try
+        {
+            var detectedBy = GetDetectionReasons(fullPath);
+            if (detectedBy.Count > 0)
+            {
+                result.Add(new DiscoveredMod
+                {
+                    Name = Path.GetFileName(fullPath),
+                    Path = fullPath,
+                    DetectedBy = string.Join(", ", detectedBy)
+                });
+                return;
+            }
+
+            foreach (var subDirectory in Directory.EnumerateDirectories(fullPath, "*", SafeEnumerationOptions))
+            {
+                ScanDirectory(subDirectory, result, visited, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            // Inaccessible folders do not prevent scanning the rest of the selected tree.
+        }
+    }
+
+    private static List<string> GetDetectionReasons(string directoryPath)
+    {
         var detectedBy = new List<string>();
 
-        if (File.Exists(Path.Combine(dirPath, "fsgame.ltx")))
+        if (File.Exists(Path.Combine(directoryPath, "fsgame.ltx")))
         {
             detectedBy.Add("fsgame.ltx");
         }
 
-        if (Directory.Exists(Path.Combine(dirPath, "gamedata")))
+        if (Directory.Exists(Path.Combine(directoryPath, "gamedata")))
         {
             detectedBy.Add("gamedata");
         }
 
-        if (Directory.Exists(Path.Combine(dirPath, "bin")))
+        foreach (var binName in new[] { "bin", "bin_x64" })
         {
-            var exes = Directory.EnumerateFiles(Path.Combine(dirPath, "bin"), "*.exe", SearchOption.TopDirectoryOnly).Take(2).ToList();
-            if (exes.Count > 0)
+            var binPath = Path.Combine(directoryPath, binName);
+            if (!Directory.Exists(binPath))
             {
-                detectedBy.Add($"bin{Path.DirectorySeparatorChar}{Path.GetFileName(exes[0])}");
+                continue;
+            }
+
+            var executable = Directory.EnumerateFiles(binPath, "*.exe", SafeEnumerationOptions).FirstOrDefault();
+            if (executable is not null)
+            {
+                detectedBy.Add($"{binName}{Path.DirectorySeparatorChar}{Path.GetFileName(executable)}");
             }
         }
 
-        if (detectedBy.Count == 0)
-        {
-            foreach (var subDir in Directory.EnumerateDirectories(dirPath))
-            {
-                var inner = ExamineDirectory(subDir);
-                if (inner is not null)
-                {
-                    return inner;
-                }
-            }
-
-            return null;
-        }
-
-        return new DiscoveredMod
-        {
-            Name = dirName,
-            Path = dirPath,
-            DetectedBy = string.Join(", ", detectedBy)
-        };
+        return detectedBy;
     }
+
+    private static EnumerationOptions SafeEnumerationOptions { get; } = new()
+    {
+        RecurseSubdirectories = false,
+        IgnoreInaccessible = true,
+        AttributesToSkip = FileAttributes.ReparsePoint
+    };
 }
