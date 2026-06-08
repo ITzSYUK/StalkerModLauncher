@@ -53,7 +53,9 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var workspaceRoot = EnsureProfileWorkspace(profile, gamePath);
         var currentWorkspace = Path.Combine(workspaceRoot, "current");
         FileSystemSafety.EnsureDirectoryInside(currentWorkspace, workspaceRoot);
-        var buildSignature = CreateBuildSignature(gamePath, profile);
+        progress.Report("Checking game and mod files...");
+        var sourceSnapshot = CaptureSources(gamePath, profile, cancellationToken);
+        var buildSignature = CreateBuildSignature(profile, sourceSnapshot);
         var cachedExecutable = TryUseCachedWorkspace(workspaceRoot, currentWorkspace, profile, buildSignature, progress);
         if (cachedExecutable is not null)
         {
@@ -67,12 +69,12 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var stats = new WorkspaceBuildStats();
 
         progress.Report("Linking base game into isolated workspace...");
-        MirrorBaseGame(gamePath, currentWorkspace, progress, stats, cancellationToken);
+        MirrorBaseGame(sourceSnapshot.Game, currentWorkspace, progress, stats, cancellationToken);
 
         foreach (var mod in profile.Mods.Where(mod => mod.IsEnabled).OrderBy(mod => mod.Order))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            ApplyMod(currentWorkspace, mod, progress, stats, cancellationToken);
+            ApplyMod(currentWorkspace, mod, sourceSnapshot.Mods[mod.Id], progress, stats, cancellationToken);
         }
 
         ResolveWorkingDirectory(gamePath, currentWorkspace, workspaceRoot, profile, progress);
@@ -180,28 +182,26 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
     }
 
     private static void MirrorBaseGame(
-        string sourceRoot,
+        DirectorySnapshot source,
         string targetRoot,
         IProgress<string> progress,
         WorkspaceBuildStats stats,
         CancellationToken cancellationToken)
     {
-        foreach (var directory in Directory.EnumerateDirectories(sourceRoot, "*", SafeEnumerationOptions))
+        foreach (var relativePath in source.Directories)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var relativePath = Path.GetRelativePath(sourceRoot, directory);
             Directory.CreateDirectory(Path.Combine(targetRoot, relativePath));
         }
 
         var fileCount = 0;
-        foreach (var sourceFile in Directory.EnumerateFiles(sourceRoot, "*", SafeEnumerationOptions))
+        foreach (var file in source.Files)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var relativePath = Path.GetRelativePath(sourceRoot, sourceFile);
-            var targetFile = Path.Combine(targetRoot, relativePath);
+            var targetFile = Path.Combine(targetRoot, file.RelativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
 
-            LinkOrCopyFile(sourceFile, targetFile, relativePath, stats);
+            LinkOrCopyFile(file.FullPath, targetFile, file.RelativePath, stats);
 
             fileCount++;
             if (fileCount % 500 == 0)
@@ -258,10 +258,44 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         File.WriteAllText(manifestPath, JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
     }
 
-    private static string CreateBuildSignature(string gamePath, ModProfile profile)
+    private static WorkspaceSourceSnapshot CaptureSources(
+        string gamePath,
+        ModProfile profile,
+        CancellationToken cancellationToken)
+    {
+        var game = CaptureDirectory(gamePath, cancellationToken);
+        var mods = profile.Mods
+            .Where(mod => mod.IsEnabled && Directory.Exists(mod.SourcePath))
+            .ToDictionary(mod => mod.Id, mod => CaptureDirectory(mod.SourcePath, cancellationToken));
+        return new WorkspaceSourceSnapshot(game, mods);
+    }
+
+    private static DirectorySnapshot CaptureDirectory(string directoryPath, CancellationToken cancellationToken)
+    {
+        var fullRoot = Path.GetFullPath(directoryPath);
+        var directories = Directory.EnumerateDirectories(fullRoot, "*", SafeEnumerationOptions)
+            .Select(path => Path.GetRelativePath(fullRoot, path))
+            .ToArray();
+        var files = Directory.EnumerateFiles(fullRoot, "*", SafeEnumerationOptions)
+            .Select(path =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var info = new FileInfo(path);
+                return new SourceFileSnapshot(
+                    path,
+                    Path.GetRelativePath(fullRoot, path),
+                    info.Length,
+                    info.LastWriteTimeUtc.Ticks);
+            })
+            .OrderBy(file => file.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return new DirectorySnapshot(fullRoot, directories, files);
+    }
+
+    private static string CreateBuildSignature(ModProfile profile, WorkspaceSourceSnapshot sourceSnapshot)
     {
         var builder = new StringBuilder();
-        AppendDirectoryFingerprint(builder, gamePath);
+        AppendDirectoryFingerprint(builder, sourceSnapshot.Game);
         builder.AppendLine(profile.ExecutableRelativePath);
         builder.AppendLine(profile.IsStandalone ? "standalone" : "overlay");
 
@@ -271,33 +305,31 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
                 .Append(mod.IsEnabled).Append('|')
                 .Append(Path.GetFullPath(mod.SourcePath)).AppendLine();
 
-            if (mod.IsEnabled && Directory.Exists(mod.SourcePath))
+            if (sourceSnapshot.Mods.TryGetValue(mod.Id, out var modSnapshot))
             {
-                AppendDirectoryFingerprint(builder, mod.SourcePath);
+                AppendDirectoryFingerprint(builder, modSnapshot);
             }
         }
 
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString())));
     }
 
-    private static void AppendDirectoryFingerprint(StringBuilder builder, string directoryPath)
+    private static void AppendDirectoryFingerprint(StringBuilder builder, DirectorySnapshot snapshot)
     {
-        var fullRoot = Path.GetFullPath(directoryPath);
-        builder.AppendLine(fullRoot);
+        builder.AppendLine(snapshot.RootPath);
 
-        foreach (var filePath in Directory.EnumerateFiles(fullRoot, "*", SafeEnumerationOptions)
-                     .Order(StringComparer.OrdinalIgnoreCase))
+        foreach (var file in snapshot.Files)
         {
-            var info = new FileInfo(filePath);
-            builder.Append(Path.GetRelativePath(fullRoot, filePath)).Append('|')
-                .Append(info.Length).Append('|')
-                .Append(info.LastWriteTimeUtc.Ticks).AppendLine();
+            builder.Append(file.RelativePath).Append('|')
+                .Append(file.Length).Append('|')
+                .Append(file.LastWriteTimeUtcTicks).AppendLine();
         }
     }
 
     private static void ApplyMod(
         string workspaceRoot,
         ModEntry mod,
+        DirectorySnapshot source,
         IProgress<string> progress,
         WorkspaceBuildStats stats,
         CancellationToken cancellationToken)
@@ -312,20 +344,18 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var directoryCount = 0;
         var fileCount = 0;
 
-        foreach (var directory in Directory.EnumerateDirectories(mod.SourcePath, "*", SafeEnumerationOptions))
+        foreach (var relativePath in source.Directories)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var relativePath = Path.GetRelativePath(mod.SourcePath, directory);
             Directory.CreateDirectory(Path.Combine(workspaceRoot, relativePath));
             directoryCount++;
         }
 
-        foreach (var sourceFile in Directory.EnumerateFiles(mod.SourcePath, "*", SafeEnumerationOptions))
+        foreach (var file in source.Files)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var relativePath = Path.GetRelativePath(mod.SourcePath, sourceFile);
-            FileSystemSafety.EnsureRelativePath(relativePath, "Mod file");
-            var targetFile = Path.Combine(workspaceRoot, relativePath);
+            FileSystemSafety.EnsureRelativePath(file.RelativePath, "Mod file");
+            var targetFile = Path.Combine(workspaceRoot, file.RelativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
 
             // The base mirror may use links. Deleting the workspace entry before overlaying a mod file
@@ -335,7 +365,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
                 File.Delete(targetFile);
             }
 
-            LinkOrCopyFile(sourceFile, targetFile, relativePath, stats);
+            LinkOrCopyFile(file.FullPath, targetFile, file.RelativePath, stats);
             fileCount++;
         }
 
@@ -683,3 +713,18 @@ internal sealed class WorkspaceBuildManifest
     public string Signature { get; set; } = string.Empty;
     public DateTime BuiltAtUtc { get; set; }
 }
+
+internal sealed record WorkspaceSourceSnapshot(
+    DirectorySnapshot Game,
+    IReadOnlyDictionary<string, DirectorySnapshot> Mods);
+
+internal sealed record DirectorySnapshot(
+    string RootPath,
+    IReadOnlyList<string> Directories,
+    IReadOnlyList<SourceFileSnapshot> Files);
+
+internal sealed record SourceFileSnapshot(
+    string FullPath,
+    string RelativePath,
+    long Length,
+    long LastWriteTimeUtcTicks);
