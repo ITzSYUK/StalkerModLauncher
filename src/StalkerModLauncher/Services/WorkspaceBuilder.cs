@@ -101,7 +101,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             profile.ExecutableRelativePath = Path.GetRelativePath(currentWorkspace, detectedExecutable);
         }
 
-        progress.Report($"Workspace is ready. Linked: {stats.LinkedFiles:N0}, symlinked: {stats.SymbolicLinkedFiles:N0}, copied: {stats.CopiedFiles:N0}.");
+        progress.Report($"Workspace is ready. Linked: {stats.LinkedFiles:N0}, symlinked: {stats.SymbolicLinkedFiles:N0}, protected copies: {stats.ProtectedCopies:N0}, copied fallback: {stats.CopiedFiles:N0}.");
         WriteBuildManifest(workspaceRoot, buildSignature);
         return new WorkspaceBuildResult(currentWorkspace, executablePath);
     }
@@ -201,7 +201,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             var targetFile = Path.Combine(targetRoot, relativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
 
-            LinkOrCopyFile(sourceFile, targetFile, stats);
+            LinkOrCopyFile(sourceFile, targetFile, relativePath, stats);
 
             fileCount++;
             if (fileCount % 500 == 0)
@@ -335,7 +335,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
                 File.Delete(targetFile);
             }
 
-            LinkOrCopyFile(sourceFile, targetFile, stats);
+            LinkOrCopyFile(sourceFile, targetFile, relativePath, stats);
             fileCount++;
         }
 
@@ -559,8 +559,15 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         return null;
     }
 
-    private static void LinkOrCopyFile(string sourceFile, string targetFile, WorkspaceBuildStats stats)
+    private static void LinkOrCopyFile(string sourceFile, string targetFile, string relativePath, WorkspaceBuildStats stats)
     {
+        if (WorkspaceFileStrategy.MustCopy(relativePath))
+        {
+            File.Copy(sourceFile, targetFile, overwrite: false);
+            stats.ProtectedCopies++;
+            return;
+        }
+
         if (TryCreateHardLink(targetFile, sourceFile))
         {
             stats.LinkedFiles++;
@@ -667,6 +674,7 @@ internal sealed class WorkspaceBuildStats
 {
     public int LinkedFiles { get; set; }
     public int SymbolicLinkedFiles { get; set; }
+    public int ProtectedCopies { get; set; }
     public int CopiedFiles { get; set; }
 }
 
