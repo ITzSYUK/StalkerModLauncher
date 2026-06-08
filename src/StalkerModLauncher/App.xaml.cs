@@ -95,7 +95,8 @@ public partial class App : Application
             _services.DialogService,
             _services.SettingsStore,
             _services.ProfileHealthService,
-            _services.ScreenshotScannerService);
+            _services.ScreenshotScannerService,
+            _services.ScreenshotClipboardService);
     }
 
     private async Task ShowAboutIfNeededAsync()

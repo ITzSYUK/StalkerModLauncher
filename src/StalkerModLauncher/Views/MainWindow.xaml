@@ -458,7 +458,7 @@
                                                 </DataTemplate>
                                             </GridViewColumn.CellTemplate>
                                         </GridViewColumn>
-                                          <GridViewColumn Header="Мод" Width="150" DisplayMemberBinding="{Binding Name}"/>
+                                          <GridViewColumn Header="Мод" Width="220" DisplayMemberBinding="{Binding Name}"/>
                                          <GridViewColumn Header="Папка" DisplayMemberBinding="{Binding SourcePath}"/>
                                     </GridView>
                                 </ListView.View>

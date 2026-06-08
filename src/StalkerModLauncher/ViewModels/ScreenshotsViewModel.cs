@@ -10,16 +10,20 @@ namespace StalkerModLauncher.ViewModels;
 public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
 {
     private readonly CancellationTokenSource _loadCancellation = new();
+    private readonly IScreenshotClipboardService _clipboardService;
     private BitmapImage? _selectedScreenshot;
     private bool _isFullScreen;
     private bool _isLoading = true;
     private int _selectedIndex = -1;
+    private string _statusText = string.Empty;
 
     public ScreenshotsViewModel(
         ModProfile profile,
         string defaultGamePath,
-        ScreenshotScannerService screenshotScannerService)
+        ScreenshotScannerService screenshotScannerService,
+        IScreenshotClipboardService clipboardService)
     {
+        _clipboardService = clipboardService;
         OpenScreenshotCommand = new RelayCommand(param =>
         {
             if (param is ScreenshotItem item)
@@ -35,6 +39,13 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
         CloseFullScreenCommand = new RelayCommand(CloseFullScreen);
         GoPreviousCommand = new RelayCommand(_ => GoPrevious(), _ => CanGoPrevious);
         GoNextCommand = new RelayCommand(_ => GoNext(), _ => CanGoNext);
+        CopyScreenshotCommand = new RelayCommand(parameter =>
+        {
+            if (parameter is ScreenshotItem item)
+            {
+                CopyScreenshot(item);
+            }
+        });
 
         _ = LoadScreenshotsAsync(profile, defaultGamePath, screenshotScannerService);
     }
@@ -78,11 +89,17 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
     }
     public bool CanGoPrevious => _isFullScreen && _selectedIndex > 0;
     public bool CanGoNext => _isFullScreen && _selectedIndex < Screenshots.Count - 1;
+    public string StatusText
+    {
+        get => _statusText;
+        private set => SetProperty(ref _statusText, value);
+    }
 
     public ICommand OpenScreenshotCommand { get; }
     public ICommand CloseFullScreenCommand { get; }
     public ICommand GoPreviousCommand { get; }
     public ICommand GoNextCommand { get; }
+    public ICommand CopyScreenshotCommand { get; }
 
     public void OpenScreenshot(int index)
     {
@@ -124,6 +141,14 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
         }
     }
 
+    public void CopySelectedScreenshot()
+    {
+        if (_selectedIndex >= 0 && _selectedIndex < Screenshots.Count)
+        {
+            CopyScreenshot(Screenshots[_selectedIndex]);
+        }
+    }
+
     public void HandleKeyDown(System.Windows.Input.Key key)
     {
         if (!_isFullScreen)
@@ -151,6 +176,19 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CanGoNext));
         ((RelayCommand)GoPreviousCommand).RaiseCanExecuteChanged();
         ((RelayCommand)GoNextCommand).RaiseCanExecuteChanged();
+    }
+
+    public void CopyScreenshot(ScreenshotItem item)
+    {
+        try
+        {
+            _clipboardService.Copy(item.Source);
+            StatusText = $"Скопировано: {Path.GetFileName(item.FilePath)}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Не удалось скопировать скриншот: {ex.Message}";
+        }
     }
 
     public void Dispose()

@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using StalkerModLauncher.ViewModels;
@@ -47,6 +48,30 @@ public partial class ScreenshotsWindow : Window
             }
 
             e.Handled = true;
+        }
+    }
+
+    private void FullScreenImage_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount == 2 && DataContext is ScreenshotsViewModel vm)
+        {
+            vm.CopySelectedScreenshot();
+            e.Handled = true;
+        }
+    }
+
+    private void CopyScreenshotMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem menuItem || DataContext is not ScreenshotsViewModel vm)
+        {
+            return;
+        }
+
+        var item = menuItem.CommandParameter as ScreenshotItem
+                   ?? ((menuItem.Parent as ContextMenu)?.PlacementTarget as FrameworkElement)?.DataContext as ScreenshotItem;
+        if (item is not null)
+        {
+            vm.CopyScreenshot(item);
         }
     }
 

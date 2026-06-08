@@ -42,6 +42,13 @@
                                 BorderThickness="1"
                                 CornerRadius="4"
                                 Cursor="Hand">
+                            <Border.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Скопировать в буфер обмена"
+                                              Click="CopyScreenshotMenuItem_OnClick"
+                                              CommandParameter="{Binding}"/>
+                                </ContextMenu>
+                            </Border.ContextMenu>
                             <Border.InputBindings>
                                 <MouseBinding MouseAction="LeftClick"
                                               Command="{Binding DataContext.OpenScreenshotCommand, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -91,7 +98,9 @@
             <Image Grid.Column="1"
                    Source="{Binding SelectedScreenshot}"
                    Stretch="Uniform"
-                   Margin="0,0,0,0"/>
+                   Margin="0,0,0,0"
+                   ToolTip="Двойной щелчок копирует скриншот в буфер обмена"
+                   MouseLeftButtonDown="FullScreenImage_OnMouseLeftButtonDown"/>
 
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
@@ -142,5 +151,27 @@
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"
                    Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}"/>
+
+        <Border HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="0,0,0,8"
+                Padding="10,5"
+                Background="{StaticResource PanelAltBrush}"
+                BorderBrush="{StaticResource StrokeBrush}"
+                BorderThickness="1"
+                CornerRadius="4">
+            <TextBlock Text="{Binding StatusText}"
+                       Foreground="{StaticResource MutedTextBrush}"/>
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding StatusText}" Value="">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+        </Border>
     </Grid>
 </Window>

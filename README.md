@@ -1,153 +1,168 @@
 # S.T.A.L.K.E.R. Mod Launcher
 
-Windows-лаунчер профилей модов для GOG/DRM-free версии **S.T.A.L.K.E.R.: Shadow of Chernobyl**. Приложение создает изолированную рабочую среду профиля, накладывает моды поверх базы и запускает игру из этой среды, не изменяя оригинальную папку игры.
+Windows-лаунчер профилей для локальной GOG/DRM-free версии **S.T.A.L.K.E.R.: Shadow of Chernobyl**.
+
+Лаунчер не поддерживает Steam и не изменяет папку установленной игры. Папки модов также не изменяются.
+
+## Возможности
+
+- отдельные профили с собственными настройками запуска;
+- обычные моды, которые накладываются поверх базовой игры;
+- автономные моды с собственным движком и файлами игры;
+- включение, отключение и изменение порядка модов;
+- сортировка модов и профилей перетаскиванием;
+- автоматическое определение подходящего EXE;
+- отдельные сохранения, настройки и логи для обычных профилей;
+- проверка состояния профиля, поиск логов и crash dump;
+- просмотр и копирование скриншотов;
+- импорт и экспорт профилей;
+- заметки профиля и учет игрового времени.
+
+## Требования
+
+- Windows 10 или Windows 11 x64;
+- локальная GOG/DRM-free установка Shadow of Chernobyl для обычных профилей;
+- права на создание файлов в папке workspace;
+- для сборки исходного кода: .NET 8 SDK.
+
+Готовая self-contained сборка не требует отдельно установленного .NET.
+
+## Первый запуск обычного мода
+
+1. Нажмите **Создать**.
+2. При желании переименуйте профиль в окне **Настройки**.
+3. В поле **Папка игры** выберите корневую папку Shadow of Chernobyl.
+4. Нажмите **Добавить** и выберите корневую папку мода.
+5. Проверьте выбранный исполняемый файл в окне **Настройки**.
+6. Нажмите **Запустить**.
+
+Для оригинальной игры обычно используется `bin\XR_3DA.exe` или `bin\xr_3da.exe`. Моды на OGSR Engine часто используют `bin_x64\xrEngine.exe`.
+
+## Автономный мод
+
+Автономный мод уже содержит собственный движок и необходимые игровые файлы.
+
+1. Создайте профиль.
+2. Включите переключатель **Автономный мод**.
+3. Добавьте папку автономного мода.
+4. Выберите его EXE, если он не был найден автоматически.
+5. Нажмите **Запустить**.
+
+Автономный профиль запускается непосредственно из папки мода. Workspace для него не создается. Место хранения сохранений и логов определяет сам автономный мод.
+
+## Порядок модов
+
+Моды применяются сверху вниз. **Нижний включенный мод имеет больший приоритет** и заменяет совпадающие файлы модов выше.
+
+Порядок можно изменить:
+
+- перетаскиванием строки мышью;
+- кнопками **Выше** и **Ниже**.
+
+После изменения порядка подпись workspace меняется. При следующем запуске launcher пересобирает workspace в новом порядке.
+
+## Как работает workspace
+
+Для обычного профиля launcher создает управляемую папку workspace вне установленной игры:
+
+```text
+<диск игры>\StalkerModLauncher\Workspaces\<имя профиля>-<короткий ID>\
+  current\
+  userdata\
+  build-manifest.json
+```
+
+- `current` содержит объединенное представление игры и модов;
+- `userdata` содержит сохранения, пользовательские настройки и логи профиля;
+- `build-manifest.json` хранит подпись последней успешной сборки.
+
+Крупные неизменяемые файлы подключаются через hard link. Если hard link недоступен, launcher пробует symbolic link, затем обычное копирование. Потенциально изменяемые конфигурации, скрипты, тексты и пользовательские данные всегда копируются отдельно.
+
+Проводник может показывать большой размер workspace, потому что учитывает полный размер hard-linked файлов. Это не означает, что каждый такой файл занял место на диске повторно.
+
+## Защита файлов
+
+- launcher не пишет в папку установленной игры;
+- launcher не удаляет папки модов;
+- удаление обычного профиля разрешено только для workspace внутри управляемой папки launcher и при наличии защитного marker-файла;
+- удаление автономного профиля не удаляет папку автономного мода;
+- настройки записываются атомарно в JSON и имеют резервную копию;
+- отмененная или неудачная сборка не получает manifest успешного workspace.
+
+## Где хранятся данные
+
+Настройки launcher:
+
+```text
+%AppData%\StalkerModLauncher\settings.json
+%AppData%\StalkerModLauncher\settings.backup.json
+```
+
+Резервный корень workspace:
+
+```text
+%LocalAppData%\StalkerModLauncher\Workspaces
+```
+
+Если папка игры находится на другом диске, новые workspace создаются на диске игры, чтобы hard links могли экономить место.
+
+## Диагностика
+
+Кнопка **Состояние** проверяет:
+
+- путь к базовой игре;
+- существование папок модов;
+- выбранный EXE;
+- workspace и его marker;
+- сохранения;
+- последний игровой лог;
+- последний crash dump.
+
+Если профиль не запускается, сначала откройте **Состояние**, затем проверьте сообщения в **Журнале**.
+
+## Скриншоты
+
+Окно **Скриншоты** ищет изображения в стандартных каталогах профиля и автономного мода.
+
+- ПКМ по миниатюре: **Скопировать в буфер обмена**;
+- двойной щелчок ЛКМ по полноэкранному изображению: копировать текущий скриншот;
+- колесо мыши или клавиши стрелок: предыдущий или следующий скриншот;
+- `Esc`: выйти из полноэкранного просмотра.
+
+Поддерживаются `.png`, `.jpg`, `.jpeg` и `.bmp`.
+
+## Сборка из исходного кода
+
+```powershell
+dotnet build .\StalkerModLauncher.sln
+dotnet test .\StalkerModLauncher.sln -c Release
+dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
+```
+
+Публикация одного self-contained EXE для Windows x64:
+
+```powershell
+dotnet publish .\src\StalkerModLauncher\StalkerModLauncher.csproj `
+  -c Release `
+  -r win-x64 `
+  --self-contained true `
+  -p:PublishSingleFile=true `
+  -p:IncludeNativeLibrariesForSelfExtract=true `
+  -p:DebugType=none
+```
 
 ## Структура проекта
 
 ```text
-StalkerModLauncher.sln
-src/
-  StalkerModLauncher/
-    App.xaml
-    Views/
-      MainWindow.xaml
-      ProfileSettingsWindow.xaml
-      AboutWindow.xaml
-      NotesWindow.xaml
-      ScreenshotsWindow.xaml
-      ProfileHealthWindow.xaml
-      ScanResultsWindow.xaml
-    ViewModels/
-      MainViewModel.cs
-      ProfileSettingsViewModel.cs
-      ProfileHealthViewModel.cs
-      NotesViewModel.cs
-      ScreenshotsViewModel.cs
-    Models/
-      AppSettings.cs
-      ModProfile.cs
-      ModEntry.cs
-      ValidationResult.cs
-    Services/
-      AppPaths.cs
-      SettingsStore.cs
-      GameInstallationValidator.cs
-      AppServices.cs
-      ProfileManager.cs
-      WorkspaceBuilder.cs
-      ProfileLauncher.cs
-      LaunchCoordinator.cs
-      GameSessionTracker.cs
-      GameExitDiagnosticsService.cs
-      ProfileHealthService.cs
-      ProfileDataPathResolver.cs
-      ScreenshotScannerService.cs
-      ProfileReadinessService.cs
-      ApplicationLogService.cs
-      ModScannerService.cs
-      DiscordPresenceService.cs
-      DialogService.cs
-      FileSystemSafety.cs
-    Infrastructure/
-      ObservableObject.cs
-      RelayCommand.cs
-      AsyncRelayCommand.cs
-docs/
-  example-settings.json
-tests/
-  StalkerModLauncher.Tests/
+src/StalkerModLauncher/
+  Models/          JSON-модели и состояние профилей
+  ViewModels/      состояние и команды интерфейса
+  Views/           WPF-окна
+  Services/        workspace, запуск, хранение, диагностика и файловая логика
+  Infrastructure/  базовые MVVM-компоненты
+
+tests/StalkerModLauncher.Tests/
+  модульные и интеграционные тесты
 ```
 
-## Архитектура
-
-- **UI:** WPF на .NET 8, экран сразу является рабочим лаунчером: профили слева, детали и моды справа, журнал действий снизу.
-- **MVVM:** `MainViewModel` управляет состоянием, командами и привязками; файловая логика вынесена в сервисы.
-- **Композиция зависимостей:** `AppServices` централизованно создает сервисы и передает их окнам и view model через конструкторы.
-- **Профили:** `ProfileManager` отвечает за создание, дублирование, импортные значения по умолчанию и безопасное удаление профилей.
-- **Хранилище:** JSON в `%AppData%\StalkerModLauncher\settings.json`; запись атомарная и сохраняет резервную копию последнего корректного файла.
-- **Workspaces:** управляемая папка лаунчера. Если игра находится на диске вроде `D:\`, новые профили по умолчанию используют `D:\StalkerModLauncher\Workspaces`, чтобы Windows могла делать hard links вместо полной копии базы. Резервный путь: `%LocalAppData%\StalkerModLauncher\Workspaces`.
-- **Валидация игры:** проверяется корневая папка SoC GOG, `fsgame.ltx` и известные исполняемые файлы.
-- **Запуск:** `WorkspaceBuilder` готовит изолированный workspace, `ProfileLauncher` запускает процесс игры, а `LaunchCoordinator` связывает запуск с отслеживанием игровой сессии.
-- **Тесты безопасности:** интеграционные тесты проверяют порядок наложения модов, неизменность исходных файлов, изоляцию `userdata`, кэш workspace и защиту от удаления неуправляемых директорий.
-- **Отказоустойчивость:** отмененная сборка не получает manifest готового workspace, отсутствующие папки модов диагностируются до наложения, а поврежденный основной JSON читается из резервной копии.
-- **Автономные профили:** крупные моды со своим движком запускаются непосредственно из папки мода без создания overlay-workspace.
-- **Дополнительные возможности:** импорт/экспорт профилей, поиск модов, заметки, просмотр скриншотов, учет игрового времени и Discord Rich Presence.
-- **Дублирование профиля:** кнопка `Копия` или `Ctrl+D` создает профиль с новыми ID и отдельным читаемо названным workspace, сохраняя настройки и список модов без переноса сохранений и игрового времени.
-- **Новые профили:** создаются без унаследованной папки игры и без заранее назначенного workspace. Путь workspace получает актуальное имя профиля при первом overlay-запуске; существующие workspace после переименования сохраняют прежний путь.
-- **Порядок загрузки:** моды и профили можно переставлять перетаскиванием. Индикатор показывает вставку до или после строки, длинные списки прокручиваются у края, а порядок сохраняется в JSON.
-- **Диагностика завершения:** при быстром завершении игры лаунчер показывает код выхода и пути к свежим игровым логам или crash dump в журнале.
-- **Состояние профиля:** отдельное read-only окно проверяет игру, моды, бинарник, workspace, сохранения, логи и crash dump; для автономных модов учитываются `fsgame.ltx`, `appdata`, `userdata` и варианты `_appdata_`.
-- **Фоновые операции:** поиск скриншотов и проверка состояния выполняются вне UI-потока и отменяются при закрытии соответствующего окна.
-
-## Почему оригинальная игра не меняется
-
-Лаунчер не пишет в выбранную папку установки игры. Крупные неизменяемые ресурсы подключаются через hard link или symbolic link. Потенциально изменяемые конфигурации, скрипты, текстовые файлы и каталоги пользовательских данных всегда копируются в workspace, поэтому запись движка в них не затрагивает оригинальную игру или мод. При наложении мода существующая запись workspace сначала удаляется, и только потом создается защищенная копия или ссылка модового файла.
-
-Workspace содержит маркер `.stalker-launcher-workspace`; лаунчер пересоздает только управляемую подпапку `current`.
-
-При проверке кэша лаунчер один раз создает снимок метаданных файлов игры и включенных модов. Тот же снимок используется для пересборки workspace, поэтому большие каталоги не сканируются повторно в рамках одного запуска.
-
-Проводник Windows может показывать большой `Size` для workspace, потому что считает длину файлов, на которые указывают hard links. Это не всегда равно реально занятому месту. В журнале лаунчера после подготовки профиля выводится количество linked/symlinked/copied файлов; чем меньше `copied`, тем меньше реальная прибавка к расходу диска.
-
-`fsgame.ltx` внутри workspace генерируется отдельно для профиля: `$app_data_root$` указывает на `userdata` в папке профиля, чтобы сейвы, логи и пользовательские конфиги не смешивались между профилями.
-
-## Сборка и запуск
-
-Нужен .NET 8 SDK на Windows 10/11:
-
-```powershell
-dotnet build .\StalkerModLauncher.sln
-dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
-dotnet test .\StalkerModLauncher.sln -c Release
-```
-
-Публикация:
-
-```powershell
-dotnet publish .\src\StalkerModLauncher\StalkerModLauncher.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none
-```
-
-## Использование
-
-1. Выберите папку GOG-игры, например `D:\Games\S.T.A.L.K.E.R. Shadow of Chernobyl`.
-2. Создайте профиль.
-3. Добавьте одну или несколько папок модов. Папки можно перетаскивать в список модов.
-4. Меняйте порядок модов drag-and-drop или кнопками Up/Down.
-5. Укажите исполняемый файл относительно workspace.
-   - Vanilla SoC GOG обычно использует `bin\xr_3da.exe`; на Windows регистр не важен, поэтому подойдет и фактический `bin\XR_3DA.exe`.
-   - OGSR-моды с собственным движком могут использовать `bin_x64\xrEngine.exe`.
-6. Нажмите Launch.
-
-Для тестового мода `D:\Games\Mods\Zona_pokayaniya` найден исполняемый файл `D:\Games\Mods\Zona_pokayaniya\bin_x64\xrEngine.exe`, поэтому в профиле нужно указать `bin_x64\xrEngine.exe`.
-
-## Пример JSON
-
-```json
-{
-  "gameInstallPath": "D:\\Games\\S.T.A.L.K.E.R. Shadow of Chernobyl",
-  "profiles": [
-    {
-      "id": "zona-pokayaniya",
-      "name": "Zona pokayaniya",
-      "description": "OGSR test profile",
-      "isEnabled": true,
-      "launchArguments": "-nointro",
-      "executableRelativePath": "bin_x64\\xrEngine.exe",
-      "workspacePath": "D:\\StalkerModLauncher\\Workspaces\\Zona-pokayaniya",
-      "configNotes": "Mod files stay outside the game installation.",
-      "mods": [
-        {
-          "id": "zona-pokayaniya-main",
-          "name": "Zona pokayaniya",
-          "sourcePath": "D:\\Games\\Mods\\Zona_pokayaniya",
-          "isEnabled": true,
-          "order": 1,
-          "notes": "Main mod folder"
-        }
-      ]
-    }
-  ]
-}
-```
-
-Лаунчер сам записывает абсолютный `workspacePath` при создании профиля. Если workspace находится на том же диске, что и игра, подготовка профиля обычно быстрее и экономнее по месту.
+Основной стек: .NET 8, WPF, MVVM, JSON. Облачные сервисы и база данных не используются.
