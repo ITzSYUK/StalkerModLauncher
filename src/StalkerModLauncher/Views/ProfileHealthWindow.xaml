@@ -95,7 +95,7 @@
             <Button Content="Обновить"
                     Command="{Binding RefreshCommand}"
                     Margin="0,0,8,0"/>
-            <Button Content="Workspace"
+            <Button Content="Профиль"
                     Command="{Binding OpenWorkspaceCommand}"
                     Margin="0,0,8,0"/>
             <Button Content="Сохранения"
