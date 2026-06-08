@@ -497,7 +497,7 @@ public sealed class MainViewModel : ObservableObject
 
     private void NewProfile()
     {
-        var profile = _profileManager.Create(Profiles, GameInstallPath);
+        var profile = _profileManager.Create(Profiles);
         Profiles.Add(profile);
         SelectedProfile = profile;
         Log($"Profile created: {profile.Name}");

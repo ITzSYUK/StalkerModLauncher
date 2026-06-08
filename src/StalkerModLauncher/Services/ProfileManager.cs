@@ -13,16 +13,13 @@ public sealed class ProfileManager
         _workspaceManager = workspaceManager;
     }
 
-    public ModProfile Create(IReadOnlyCollection<ModProfile> profiles, string gameInstallPath)
+    public ModProfile Create(IReadOnlyCollection<ModProfile> profiles)
     {
-        var profile = new ModProfile
+        return new ModProfile
         {
             Name = GetUniqueName(profiles, $"Profile {profiles.Count + 1}"),
-            Description = "S.T.A.L.K.E.R. mod profile",
-            GameInstallPath = gameInstallPath
+            Description = "S.T.A.L.K.E.R. mod profile"
         };
-        profile.WorkspacePath = CreateWorkspacePath(profile, gameInstallPath);
-        return profile;
     }
 
     public ModProfile Duplicate(IReadOnlyCollection<ModProfile> profiles, ModProfile source)
@@ -130,6 +127,11 @@ public sealed class ProfileManager
 
     private string CreateWorkspacePath(ModProfile profile, string gameInstallPath)
     {
+        return Path.Combine(_paths.GetPreferredWorkspaceRoot(gameInstallPath), CreateWorkspaceDirectoryName(profile));
+    }
+
+    internal static string CreateWorkspaceDirectoryName(ModProfile profile)
+    {
         var readableName = FileSystemSafety.SanitizeName(profile.Name);
         if (readableName.Length > 80)
         {
@@ -137,6 +139,6 @@ public sealed class ProfileManager
         }
 
         var shortId = profile.Id.Length > 8 ? profile.Id[..8] : profile.Id;
-        return Path.Combine(_paths.GetPreferredWorkspaceRoot(gameInstallPath), $"{readableName}-{shortId}");
+        return $"{readableName}-{shortId}";
     }
 }

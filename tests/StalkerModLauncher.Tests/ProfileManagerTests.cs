@@ -16,15 +16,15 @@ public sealed class ProfileManagerTests
     }
 
     [Fact]
-    public void Create_UsesUniqueNameAndSeparateWorkspace()
+    public void Create_UsesUniqueNameAndStartsWithoutInheritedPaths()
     {
         var existing = new List<ModProfile> { new() { Name = "Profile 2" } };
 
-        var created = _manager.Create(existing, @"D:\Games\STALKER");
+        var created = _manager.Create(existing);
 
         Assert.Equal("Profile 2 (2)", created.Name);
-        Assert.Equal(@"D:\Games\STALKER", created.GameInstallPath);
-        Assert.EndsWith($"Profile 2 (2)-{created.Id[..8]}", created.WorkspacePath);
+        Assert.Empty(created.GameInstallPath);
+        Assert.Empty(created.WorkspacePath);
     }
 
     [Fact]

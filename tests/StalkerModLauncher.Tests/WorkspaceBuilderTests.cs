@@ -64,17 +64,17 @@ public sealed class WorkspaceBuilderTests : IDisposable
         var profile = CreateProfile(modPath);
 
         var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
-        var savePath = Path.Combine(profile.WorkspacePath, "userdata", "savedgames", "test.sav");
+        var savePath = Path.Combine(first.ProfileWorkspacePath, "userdata", "savedgames", "test.sav");
         CreateFileAtPath(savePath, "save");
-        CreateFileAtPath(Path.Combine(profile.WorkspacePath, "userdata", "user.ltx"), "profile settings");
+        CreateFileAtPath(Path.Combine(first.ProfileWorkspacePath, "userdata", "user.ltx"), "profile settings");
         CreateFile(modPath, "gamedata/config/new-file.ltx", "changed");
 
         await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
 
         Assert.Equal("save", File.ReadAllText(savePath));
-        Assert.Equal("profile settings", File.ReadAllText(Path.Combine(profile.WorkspacePath, "userdata", "user.ltx")));
+        Assert.Equal("profile settings", File.ReadAllText(Path.Combine(first.ProfileWorkspacePath, "userdata", "user.ltx")));
         Assert.Equal("$app_data_root$ = true | false | appdata", File.ReadAllText(Path.Combine(_gamePath, "fsgame.ltx")));
-        Assert.Contains(Path.Combine(profile.WorkspacePath, "userdata"), File.ReadAllText(Path.Combine(first.WorkspaceRoot, "fsgame.ltx")));
+        Assert.Contains(Path.Combine(first.ProfileWorkspacePath, "userdata"), File.ReadAllText(Path.Combine(first.WorkspaceRoot, "fsgame.ltx")));
     }
 
     [Fact]
@@ -167,7 +167,35 @@ public sealed class WorkspaceBuilderTests : IDisposable
 
         Assert.Equal("base", File.ReadAllText(Path.Combine(_gamePath, "gamedata", "config", "shared.ltx")));
         Assert.Equal("mod source", File.ReadAllText(Path.Combine(modPath, "gamedata", "config", "shared.ltx")));
-        Assert.False(File.Exists(Path.Combine(profile.WorkspacePath, "build-manifest.json")));
+        var generatedWorkspace = Path.Combine(_workspaceRoot, $"Test profile-{profile.Id[..8]}");
+        Assert.False(File.Exists(Path.Combine(generatedWorkspace, "build-manifest.json")));
+    }
+
+    [Fact]
+    public async Task BuildAsync_DoesNotMutateBoundProfilePropertiesOnWorkerThread()
+    {
+        var profile = CreateProfile(CreateMod("mod", "mod"));
+        var originalExecutable = profile.ExecutableRelativePath;
+
+        var result = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+        Assert.Empty(profile.WorkspacePath);
+        Assert.Equal(originalExecutable, profile.ExecutableRelativePath);
+        Assert.Empty(profile.WorkingDirectoryRelative);
+        Assert.EndsWith($"Test profile-{profile.Id[..8]}", result.ProfileWorkspacePath);
+    }
+
+    [Fact]
+    public async Task BuildAsync_RefreshesUnusedGeneratedWorkspaceAfterProfileRename()
+    {
+        var profile = CreateProfile(CreateMod("mod", "mod"));
+        profile.WorkspacePath = Path.Combine(_workspaceRoot, $"Profile 6-{profile.Id[..8]}");
+        profile.Name = "Тень Чернобыля";
+
+        var result = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+        Assert.EndsWith($"Тень Чернобыля-{profile.Id[..8]}", result.ProfileWorkspacePath);
+        Assert.False(Directory.Exists(profile.WorkspacePath));
     }
 
     private ModProfile CreateProfile(params string[] modPaths)

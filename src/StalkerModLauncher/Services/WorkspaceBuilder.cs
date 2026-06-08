@@ -60,7 +60,12 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var cachedExecutable = TryUseCachedWorkspace(workspaceRoot, currentWorkspace, profile, buildSignature, progress);
         if (cachedExecutable is not null)
         {
-            return new WorkspaceBuildResult(currentWorkspace, cachedExecutable);
+            return new WorkspaceBuildResult(
+                currentWorkspace,
+                cachedExecutable,
+                workspaceRoot,
+                profile.ExecutableRelativePath,
+                profile.WorkingDirectoryRelative);
         }
 
         progress.Report("Preparing clean profile workspace...");
@@ -78,9 +83,10 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             ApplyMod(currentWorkspace, mod, sourceSnapshot.Mods[mod.Id], progress, stats, cancellationToken);
         }
 
-        ResolveWorkingDirectory(gamePath, currentWorkspace, workspaceRoot, profile, progress);
+        var workingDirectoryRelative = ResolveWorkingDirectory(gamePath, currentWorkspace, workspaceRoot, progress);
 
         var executablePath = Path.Combine(currentWorkspace, profile.ExecutableRelativePath);
+        var executableRelativePath = profile.ExecutableRelativePath;
         if (!File.Exists(executablePath))
         {
             var detectedExecutable = TryDetectExecutable(currentWorkspace, profile.ExecutableRelativePath, progress);
@@ -101,12 +107,17 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             }
 
             executablePath = detectedExecutable;
-            profile.ExecutableRelativePath = Path.GetRelativePath(currentWorkspace, detectedExecutable);
+            executableRelativePath = Path.GetRelativePath(currentWorkspace, detectedExecutable);
         }
 
         progress.Report($"Workspace is ready. Linked: {stats.LinkedFiles:N0}, symlinked: {stats.SymbolicLinkedFiles:N0}, protected copies: {stats.ProtectedCopies:N0}, copied fallback: {stats.CopiedFiles:N0}.");
         WriteBuildManifest(workspaceRoot, buildSignature);
-        return new WorkspaceBuildResult(currentWorkspace, executablePath);
+        return new WorkspaceBuildResult(
+            currentWorkspace,
+            executablePath,
+            workspaceRoot,
+            executableRelativePath,
+            workingDirectoryRelative);
     }
 
     public string GetSavedGamesPath(ModProfile profile)
@@ -152,8 +163,10 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var preferredRoot = _paths.GetPreferredWorkspaceRoot(gamePath);
         var managedRoots = _paths.GetManagedWorkspaceRoots(gamePath);
 
-        var workspacePath = string.IsNullOrWhiteSpace(profile.WorkspacePath)
-            ? Path.Combine(preferredRoot, $"{FileSystemSafety.SanitizeName(profile.Name)}-{profile.Id}")
+        var generatedWorkspacePath = Path.Combine(preferredRoot, ProfileManager.CreateWorkspaceDirectoryName(profile));
+        var workspacePath = string.IsNullOrWhiteSpace(profile.WorkspacePath) ||
+                            ShouldRefreshUnusedGeneratedPath(profile, managedRoots)
+            ? generatedWorkspacePath
             : profile.WorkspacePath;
 
         if (!string.IsNullOrWhiteSpace(profile.WorkspacePath) &&
@@ -178,8 +191,26 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             File.WriteAllText(markerPath, "Managed by Stalker Mod Launcher. It is safe for the launcher to recreate the 'current' subfolder.");
         }
 
-        profile.WorkspacePath = workspacePath;
         return workspacePath;
+    }
+
+    private static bool ShouldRefreshUnusedGeneratedPath(ModProfile profile, IReadOnlyList<string> managedRoots)
+    {
+        if (string.IsNullOrWhiteSpace(profile.WorkspacePath) || Directory.Exists(profile.WorkspacePath))
+        {
+            return false;
+        }
+
+        var workspacePath = Path.GetFullPath(profile.WorkspacePath);
+        if (!managedRoots.Any(root => FileSystemSafety.IsDirectoryInside(workspacePath, root)))
+        {
+            return false;
+        }
+
+        var directoryName = Path.GetFileName(workspacePath);
+        var shortId = profile.Id.Length > 8 ? profile.Id[..8] : profile.Id;
+        return directoryName.EndsWith($"-{shortId}", StringComparison.OrdinalIgnoreCase) ||
+               directoryName.EndsWith($"-{profile.Id}", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void MirrorBaseGame(
@@ -457,25 +488,26 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         return 100;
     }
 
-    private static void ResolveWorkingDirectory(string gamePath, string currentWorkspace, string profileWorkspace, ModProfile profile, IProgress<string> progress)
+    private static string ResolveWorkingDirectory(
+        string gamePath,
+        string currentWorkspace,
+        string profileWorkspace,
+        IProgress<string> progress)
     {
         var fsgameName = "fsgame.ltx";
         var fsgameDir = FindFileDirectory(currentWorkspace, fsgameName);
         if (fsgameDir is null)
         {
             progress.Report($"Warning: {fsgameName} not found in workspace. The game may not start correctly.");
-            return;
+            return string.Empty;
         }
 
         var relativeDir = Path.GetRelativePath(currentWorkspace, fsgameDir);
+        var workingDirectoryRelative = string.Empty;
         if (relativeDir != ".")
         {
-            profile.WorkingDirectoryRelative = relativeDir;
+            workingDirectoryRelative = relativeDir;
             progress.Report($"Detected {fsgameName} in '{relativeDir}' — using as working directory.");
-        }
-        else
-        {
-            profile.WorkingDirectoryRelative = string.Empty;
         }
 
         var fsgamePath = Path.Combine(fsgameDir, fsgameName);
@@ -497,6 +529,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         File.Delete(fsgamePath);
         File.WriteAllLines(fsgamePath, lines, Encoding.Default);
         progress.Report("fsgame.ltx rewritten for profile-local saves and logs.");
+        return workingDirectoryRelative;
     }
 
     private static void CopyUserLtxFromGame(string gamePath, string profileDataPath, IProgress<string> progress)
@@ -678,6 +711,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
 
         modRoot = Path.GetFullPath(modRoot);
         var exePath = FileSystemSafety.ResolvePathInside(modRoot, profile.ExecutableRelativePath, "Launch executable");
+        var executableRelativePath = profile.ExecutableRelativePath;
 
         if (!File.Exists(exePath))
         {
@@ -698,26 +732,37 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
                     $"No executable found in standalone mod folder: {modRoot}", exePath);
             }
 
-            profile.ExecutableRelativePath = found;
+            executableRelativePath = found;
             exePath = Path.Combine(modRoot, found);
         }
 
+        var workingDirectoryRelative = profile.WorkingDirectoryRelative;
         var fsgameDir = FindFileDirectory(modRoot, "fsgame.ltx");
         if (fsgameDir is not null)
         {
             var relativeDir = Path.GetRelativePath(modRoot, fsgameDir);
             if (relativeDir != ".")
             {
-                profile.WorkingDirectoryRelative = relativeDir;
+                workingDirectoryRelative = relativeDir;
             }
         }
 
         progress.Report($"Standalone mod ready: {profile.Name}");
-        return new WorkspaceBuildResult(modRoot, exePath);
+        return new WorkspaceBuildResult(
+            modRoot,
+            exePath,
+            profile.WorkspacePath,
+            executableRelativePath,
+            workingDirectoryRelative);
     }
 }
 
-public sealed record WorkspaceBuildResult(string WorkspaceRoot, string ExecutablePath);
+public sealed record WorkspaceBuildResult(
+    string WorkspaceRoot,
+    string ExecutablePath,
+    string ProfileWorkspacePath,
+    string ExecutableRelativePath,
+    string WorkingDirectoryRelative);
 
 internal sealed class WorkspaceBuildStats
 {

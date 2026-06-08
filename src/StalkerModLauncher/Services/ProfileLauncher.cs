@@ -33,6 +33,9 @@ public sealed class ProfileLauncher : IProfileLauncher
         CancellationToken cancellationToken = default)
     {
         var workspace = await _workspaceBuilder.BuildAsync(gamePath, profile, progress, cancellationToken);
+        profile.WorkspacePath = workspace.ProfileWorkspacePath;
+        profile.ExecutableRelativePath = workspace.ExecutableRelativePath;
+        profile.WorkingDirectoryRelative = workspace.WorkingDirectoryRelative;
         RemoveLegacyScriptAutoloadPatch(workspace, profile, progress);
         progress.Report($"Starting: {workspace.ExecutablePath}");
 
