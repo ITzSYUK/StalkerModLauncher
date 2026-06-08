@@ -314,10 +314,32 @@ public partial class MainWindow : Window
 
                 var contextMenu = new ContextMenu();
                 var removeItem = new MenuItem { Header = "Убрать" };
-                removeItem.Click += (_, _) =>
+                var removeArmed = false;
+                removeItem.PreviewMouseDown += (_, args) =>
                 {
-                    var selected = ModsList.SelectedItems.Cast<ModEntry>().ToList();
-                    ViewModel?.RemoveMods(selected);
+                    removeArmed = args.ChangedButton == MouseButton.Left;
+                    if (removeArmed)
+                    {
+                        removeItem.CaptureMouse();
+                    }
+
+                    args.Handled = true;
+                };
+                removeItem.PreviewMouseUp += (_, args) =>
+                {
+                    var shouldRemove = args.ChangedButton == MouseButton.Left &&
+                                       removeArmed &&
+                                       removeItem.IsMouseOver;
+                    removeArmed = false;
+                    removeItem.ReleaseMouseCapture();
+                    args.Handled = true;
+
+                    if (shouldRemove)
+                    {
+                        var selected = ModsList.SelectedItems.Cast<ModEntry>().ToList();
+                        ViewModel?.RemoveMods(selected);
+                        contextMenu.IsOpen = false;
+                    }
                 };
                 contextMenu.Items.Add(removeItem);
                 contextMenu.PlacementTarget = item;
