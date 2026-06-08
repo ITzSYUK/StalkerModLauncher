@@ -41,6 +41,7 @@ src/
       GameExitDiagnosticsService.cs
       ProfileHealthService.cs
       ProfileDataPathResolver.cs
+      ScreenshotScannerService.cs
       ProfileReadinessService.cs
       ApplicationLogService.cs
       ModScannerService.cs
@@ -73,6 +74,7 @@ tests/
 - **Дублирование профиля:** кнопка `Копия` или `Ctrl+D` создает профиль с новыми ID и отдельным читаемо названным workspace, сохраняя настройки и список модов без переноса сохранений и игрового времени.
 - **Диагностика завершения:** при быстром завершении игры лаунчер показывает код выхода и пути к свежим игровым логам или crash dump в журнале.
 - **Состояние профиля:** отдельное read-only окно проверяет игру, моды, бинарник, workspace, сохранения, логи и crash dump; для автономных модов учитываются `fsgame.ltx`, `appdata`, `userdata` и варианты `_appdata_`.
+- **Фоновые операции:** поиск скриншотов и проверка состояния выполняются вне UI-потока и отменяются при закрытии соответствующего окна.
 
 ## Почему оригинальная игра не меняется
 

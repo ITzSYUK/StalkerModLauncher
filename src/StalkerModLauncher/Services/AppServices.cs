@@ -21,6 +21,7 @@ public sealed class AppServices
         ModScannerService = new ModScannerService();
         ModListEditor = new ModListEditor();
         ProfileDataPathResolver = new ProfileDataPathResolver();
+        ScreenshotScannerService = new ScreenshotScannerService(ProfileDataPathResolver);
         GameExitDiagnosticsService = new GameExitDiagnosticsService(ProfileDataPathResolver);
         ProfileHealthService = new ProfileHealthService(GameValidator, ProfileManager, ProfileDataPathResolver);
     }
@@ -40,6 +41,7 @@ public sealed class AppServices
     public GameExitDiagnosticsService GameExitDiagnosticsService { get; }
     public ProfileHealthService ProfileHealthService { get; }
     public ProfileDataPathResolver ProfileDataPathResolver { get; }
+    public ScreenshotScannerService ScreenshotScannerService { get; }
 
     public MainViewModel CreateMainViewModel()
     {

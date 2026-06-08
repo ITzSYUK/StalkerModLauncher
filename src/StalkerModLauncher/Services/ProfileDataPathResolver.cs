@@ -21,6 +21,14 @@ public sealed class ProfileDataPathResolver
             .ToArray();
     }
 
+    public IReadOnlyList<string> GetScreenshotDirectories(ModProfile profile)
+    {
+        return GetDataRoots(profile)
+            .Select(root => Path.Combine(root, "screenshots"))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     private static IReadOnlyList<string> GetDataRoots(ModProfile profile)
     {
         if (!profile.IsStandalone)

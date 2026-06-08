@@ -33,19 +33,22 @@ public partial class MainWindow : Window
     private readonly DialogService _dialogService;
     private readonly SettingsStore _settingsStore;
     private readonly ProfileHealthService _profileHealthService;
+    private readonly ScreenshotScannerService _screenshotScannerService;
 
     public MainWindow(
         MainViewModel viewModel,
         AppPaths paths,
         DialogService dialogService,
         SettingsStore settingsStore,
-        ProfileHealthService profileHealthService)
+        ProfileHealthService profileHealthService,
+        ScreenshotScannerService screenshotScannerService)
     {
         InitializeComponent();
         _paths = paths;
         _dialogService = dialogService;
         _settingsStore = settingsStore;
         _profileHealthService = profileHealthService;
+        _screenshotScannerService = screenshotScannerService;
         viewModel.PropertyChanged += ViewModel_PropertyChanged;
         DataContext = viewModel;
     }
@@ -222,7 +225,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var vm = new ScreenshotsViewModel(profile, ViewModel!.GameInstallPath);
+        var vm = new ScreenshotsViewModel(profile, ViewModel!.GameInstallPath, _screenshotScannerService);
         var window = new ScreenshotsWindow(vm)
         {
             Owner = this

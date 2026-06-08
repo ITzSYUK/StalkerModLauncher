@@ -48,6 +48,18 @@ public sealed class ProfileDataPathResolverTests : IDisposable
         Assert.Contains(Path.Combine(_root, "custom_data", "logs"), result);
     }
 
+    [Fact]
+    public void GetScreenshotDirectories_UsesResolvedDataRoots()
+    {
+        Directory.CreateDirectory(_root);
+        var profile = CreateStandaloneProfile();
+
+        var result = _resolver.GetScreenshotDirectories(profile);
+
+        Assert.Contains(Path.Combine(_root, "appdata", "screenshots"), result);
+        Assert.Contains(Path.Combine(_root, "bin_x64", "_appdata_", "screenshots"), result);
+    }
+
     private ModProfile CreateStandaloneProfile()
     {
         var profile = new ModProfile { IsStandalone = true };

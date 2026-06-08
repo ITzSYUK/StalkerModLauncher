@@ -135,5 +135,12 @@
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"
                    Visibility="{Binding HasNoScreenshots, Converter={StaticResource BoolToVis}}"/>
+
+        <TextBlock Text="Поиск скриншотов..."
+                   Foreground="{StaticResource MutedTextBrush}"
+                   FontSize="16"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}"/>
     </Grid>
 </Window>

@@ -1,19 +1,24 @@
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using StalkerModLauncher.Infrastructure;
 using StalkerModLauncher.Models;
+using StalkerModLauncher.Services;
 
 namespace StalkerModLauncher.ViewModels;
 
-public sealed class ScreenshotsViewModel : ObservableObject
+public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
 {
+    private readonly CancellationTokenSource _loadCancellation = new();
     private BitmapImage? _selectedScreenshot;
     private bool _isFullScreen;
+    private bool _isLoading = true;
     private int _selectedIndex = -1;
 
-    public ScreenshotsViewModel(ModProfile profile, string defaultGamePath)
+    public ScreenshotsViewModel(
+        ModProfile profile,
+        string defaultGamePath,
+        ScreenshotScannerService screenshotScannerService)
     {
         OpenScreenshotCommand = new RelayCommand(param =>
         {
@@ -31,7 +36,7 @@ public sealed class ScreenshotsViewModel : ObservableObject
         GoPreviousCommand = new RelayCommand(_ => GoPrevious(), _ => CanGoPrevious);
         GoNextCommand = new RelayCommand(_ => GoNext(), _ => CanGoNext);
 
-        LoadScreenshots(profile, defaultGamePath);
+        _ = LoadScreenshotsAsync(profile, defaultGamePath, screenshotScannerService);
     }
 
     public ObservableCollection<ScreenshotItem> Screenshots { get; } = new();
@@ -59,7 +64,18 @@ public sealed class ScreenshotsViewModel : ObservableObject
 
     public bool ShowThumbnailGrid => !_isFullScreen && Screenshots.Count > 0;
     public bool ShowFullScreenView => _isFullScreen;
-    public bool HasNoScreenshots => Screenshots.Count == 0 && !_isFullScreen;
+    public bool HasNoScreenshots => !IsLoading && Screenshots.Count == 0 && !_isFullScreen;
+    public bool IsLoading
+    {
+        get => _isLoading;
+        private set
+        {
+            if (SetProperty(ref _isLoading, value))
+            {
+                OnPropertyChanged(nameof(HasNoScreenshots));
+            }
+        }
+    }
     public bool CanGoPrevious => _isFullScreen && _selectedIndex > 0;
     public bool CanGoNext => _isFullScreen && _selectedIndex < Screenshots.Count - 1;
 
@@ -137,67 +153,41 @@ public sealed class ScreenshotsViewModel : ObservableObject
         ((RelayCommand)GoNextCommand).RaiseCanExecuteChanged();
     }
 
-    private void LoadScreenshots(ModProfile profile, string defaultGamePath)
+    public void Dispose()
     {
-        var searchPaths = new List<string>();
+        _loadCancellation.Cancel();
+        _loadCancellation.Dispose();
+    }
 
-        var gamePath = !string.IsNullOrWhiteSpace(profile.GameInstallPath)
-            ? profile.GameInstallPath
-            : defaultGamePath;
-
-        if (!string.IsNullOrWhiteSpace(gamePath))
+    private async Task LoadScreenshotsAsync(
+        ModProfile profile,
+        string defaultGamePath,
+        ScreenshotScannerService screenshotScannerService)
+    {
+        var cancellationToken = _loadCancellation.Token;
+        try
         {
-            searchPaths.Add(Path.Combine(gamePath, "userdata", "screenshots"));
-            searchPaths.Add(Path.Combine(gamePath, "appdata", "screenshots"));
-        }
-
-        var modRoot = profile.Mods.FirstOrDefault(m => m.IsEnabled && Directory.Exists(m.SourcePath))?.SourcePath;
-        if (modRoot is not null)
-        {
-            var appdata = Path.Combine(modRoot, "_appdata_", "screenshots");
-            if (Directory.Exists(appdata))
+            var files = await screenshotScannerService.ScanAsync(profile, defaultGamePath, cancellationToken);
+            foreach (var file in files)
             {
-                searchPaths.Add(appdata);
-            }
-
-            var binAppdata = Path.Combine(modRoot, "bin", "_appdata_", "screenshots");
-            if (Directory.Exists(binAppdata))
-            {
-                searchPaths.Add(binAppdata);
-            }
-
-            var modAppdata = Path.Combine(modRoot, "appdata", "screenshots");
-            if (Directory.Exists(modAppdata))
-            {
-                searchPaths.Add(modAppdata);
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    Screenshots.Add(new ScreenshotItem(file));
+                }
+                catch
+                {
+                    // Ignore unreadable or partially written image files.
+                }
             }
         }
-
-        if (!string.IsNullOrWhiteSpace(profile.WorkspacePath))
+        catch (OperationCanceledException)
         {
-            searchPaths.Add(Path.Combine(profile.WorkspacePath, "userdata", "screenshots"));
         }
-
-        Screenshots.Clear();
-        foreach (var dir in searchPaths.Distinct())
+        finally
         {
-            if (!Directory.Exists(dir))
-            {
-                continue;
-            }
-
-            foreach (var file in Directory.EnumerateFiles(dir, "*.*")
-                         .Where(f => f.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
-                                  || f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
-                                  || f.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
-                                  || f.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase))
-                         .OrderBy(f => f))
-            {
-                Screenshots.Add(new ScreenshotItem(file));
-            }
+            IsLoading = false;
+            OnPropertyChanged(nameof(ShowThumbnailGrid));
         }
-
-        OnPropertyChanged(nameof(HasNoScreenshots));
-        OnPropertyChanged(nameof(ShowThumbnailGrid));
     }
 }

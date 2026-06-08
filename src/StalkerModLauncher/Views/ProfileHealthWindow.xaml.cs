@@ -13,6 +13,12 @@ public partial class ProfileHealthWindow : Window
         DataContext = viewModel;
     }
 
+    protected override void OnClosed(EventArgs e)
+    {
+        (DataContext as IDisposable)?.Dispose();
+        base.OnClosed(e);
+    }
+
     private void Window_OnSourceInitialized(object? sender, EventArgs e)
     {
         var handle = new WindowInteropHelper(this).Handle;

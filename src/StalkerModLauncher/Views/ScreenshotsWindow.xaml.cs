@@ -14,6 +14,12 @@ public partial class ScreenshotsWindow : Window
         DataContext = viewModel;
     }
 
+    protected override void OnClosed(EventArgs e)
+    {
+        (DataContext as IDisposable)?.Dispose();
+        base.OnClosed(e);
+    }
+
     private void ScreenshotsWindow_OnSourceInitialized(object? sender, EventArgs e)
     {
         ApplyDarkWindowFrame();

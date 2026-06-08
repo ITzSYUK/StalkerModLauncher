@@ -86,15 +86,16 @@ public sealed class ProfileHealthService
             AddWorkspaceChecks(checks, profile.WorkspacePath);
         }
 
-        var saveCount = CountFiles(savedGamesPath, "*.sav");
+        cancellationToken.ThrowIfCancellationRequested();
+        var saveCount = CountFiles(savedGamesPath, "*.sav", cancellationToken);
         checks.Add(new ProfileHealthCheck(
             Directory.Exists(savedGamesPath) ? ProfileHealthStatus.Healthy : ProfileHealthStatus.Warning,
             "Сохранения",
             Directory.Exists(savedGamesPath) ? $"{saveCount} файл(ов): {savedGamesPath}" : "Папка сохранений еще не создана."));
 
         var logPaths = _dataPathResolver.GetLogDirectories(profile);
-        var latestLog = FindLatest(logPaths, ".log", ".txt");
-        var latestDump = FindLatest(logPaths, ".mdmp", ".dmp");
+        var latestLog = FindLatest(logPaths, cancellationToken, ".log", ".txt");
+        var latestDump = FindLatest(logPaths, cancellationToken, ".mdmp", ".dmp");
         checks.Add(new ProfileHealthCheck(
             latestDump is null ? ProfileHealthStatus.Healthy : ProfileHealthStatus.Warning,
             "Диагностика игры",
@@ -155,11 +156,22 @@ public sealed class ProfileHealthService
             .FirstOrDefault(File.Exists);
     }
 
-    private static int CountFiles(string path, string pattern)
+    private static int CountFiles(string path, string pattern, CancellationToken cancellationToken)
     {
         try
         {
-            return Directory.Exists(path) ? Directory.EnumerateFiles(path, pattern, SearchOption.TopDirectoryOnly).Count() : 0;
+            return Directory.Exists(path)
+                ? Directory.EnumerateFiles(path, pattern, SearchOption.TopDirectoryOnly)
+                    .Count(_ =>
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        return true;
+                    })
+                : 0;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {
@@ -167,15 +179,26 @@ public sealed class ProfileHealthService
         }
     }
 
-    private static string? FindLatest(IEnumerable<string> paths, params string[] extensions)
+    private static string? FindLatest(
+        IEnumerable<string> paths,
+        CancellationToken cancellationToken,
+        params string[] extensions)
     {
         try
         {
             return paths.Where(Directory.Exists)
                 .SelectMany(path => Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
-                    .Where(file => extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
-                    .OrderByDescending(File.GetLastWriteTimeUtc)
-                    .FirstOrDefault();
+                .Where(file =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase);
+                })
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .FirstOrDefault();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {

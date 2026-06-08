@@ -6,7 +6,7 @@ using StalkerModLauncher.Services;
 
 namespace StalkerModLauncher.ViewModels;
 
-public sealed class ProfileHealthViewModel : ObservableObject
+public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
 {
     private readonly ModProfile _profile;
     private readonly string _defaultGamePath;
@@ -15,6 +15,7 @@ public sealed class ProfileHealthViewModel : ObservableObject
     private ProfileHealthReport? _report;
     private string _summary = "Проверка состояния профиля...";
     private bool _isChecking;
+    private CancellationTokenSource? _refreshCancellation;
 
     public ProfileHealthViewModel(
         ModProfile profile,
@@ -67,11 +68,15 @@ public sealed class ProfileHealthViewModel : ObservableObject
 
     private async Task RefreshAsync()
     {
+        _refreshCancellation?.Cancel();
+        _refreshCancellation?.Dispose();
+        _refreshCancellation = new CancellationTokenSource();
+
         try
         {
             IsChecking = true;
             Summary = "Проверка состояния профиля...";
-            var report = await _healthService.AnalyzeAsync(_profile, _defaultGamePath);
+            var report = await _healthService.AnalyzeAsync(_profile, _defaultGamePath, _refreshCancellation.Token);
             _report = report;
             Checks.Clear();
             foreach (var check in report.Checks)
@@ -82,6 +87,9 @@ public sealed class ProfileHealthViewModel : ObservableObject
             Summary = report.Summary;
             RaiseCommandStates();
         }
+        catch (OperationCanceledException)
+        {
+        }
         catch (Exception ex)
         {
             Summary = $"Проверка не выполнена: {ex.Message}";
@@ -90,6 +98,13 @@ public sealed class ProfileHealthViewModel : ObservableObject
         {
             IsChecking = false;
         }
+    }
+
+    public void Dispose()
+    {
+        _refreshCancellation?.Cancel();
+        _refreshCancellation?.Dispose();
+        _refreshCancellation = null;
     }
 
     private void OpenProfile()
