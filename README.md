@@ -41,6 +41,8 @@ src/
       GameExitDiagnosticsService.cs
       ProfileHealthService.cs
       ProfileDataPathResolver.cs
+      ProfileReadinessService.cs
+      ApplicationLogService.cs
       ModScannerService.cs
       DiscordPresenceService.cs
       DialogService.cs

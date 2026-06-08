@@ -12,7 +12,6 @@ public sealed class MainViewModel : ObservableObject
 {
     private readonly AppPaths _paths;
     private readonly SettingsStore _settingsStore;
-    private readonly GameInstallationValidator _gameValidator;
     private readonly LaunchCoordinator _launchCoordinator;
     private readonly DialogService _dialogService;
     private readonly ModConflictAnalyzer _modConflictAnalyzer;
@@ -21,6 +20,8 @@ public sealed class MainViewModel : ObservableObject
     private readonly ModListEditor _modListEditor;
     private readonly ProfileManager _profileManager;
     private readonly GameExitDiagnosticsService _gameExitDiagnosticsService;
+    private readonly ProfileReadinessService _profileReadinessService;
+    private readonly ApplicationLogService _applicationLogService;
     private readonly DebouncedAsyncAction _autoSave;
     private CancellationTokenSource? _conflictAnalysisCancellation;
     private string _gameInstallPath = string.Empty;
@@ -36,7 +37,6 @@ public sealed class MainViewModel : ObservableObject
     public MainViewModel(
         AppPaths paths,
         SettingsStore settingsStore,
-        GameInstallationValidator gameValidator,
         LaunchCoordinator launchCoordinator,
         DialogService dialogService,
         ModConflictAnalyzer modConflictAnalyzer,
@@ -44,11 +44,12 @@ public sealed class MainViewModel : ObservableObject
         ModScannerService modScannerService,
         ModListEditor modListEditor,
         ProfileManager profileManager,
-        GameExitDiagnosticsService gameExitDiagnosticsService)
+        GameExitDiagnosticsService gameExitDiagnosticsService,
+        ProfileReadinessService profileReadinessService,
+        ApplicationLogService applicationLogService)
     {
         _paths = paths;
         _settingsStore = settingsStore;
-        _gameValidator = gameValidator;
         _launchCoordinator = launchCoordinator;
         _dialogService = dialogService;
         _modConflictAnalyzer = modConflictAnalyzer;
@@ -57,6 +58,8 @@ public sealed class MainViewModel : ObservableObject
         _modListEditor = modListEditor;
         _profileManager = profileManager;
         _gameExitDiagnosticsService = gameExitDiagnosticsService;
+        _profileReadinessService = profileReadinessService;
+        _applicationLogService = applicationLogService;
         _autoSave = new DebouncedAsyncAction(SaveAsync, TimeSpan.FromMilliseconds(500));
 
         Profiles.CollectionChanged += ProfilesOnCollectionChanged;
@@ -856,89 +859,9 @@ public sealed class MainViewModel : ObservableObject
 
     private void RefreshValidation()
     {
-        if (SelectedProfile?.IsStandalone == true)
-        {
-            var enabledMods = SelectedProfile.Mods
-                .Where(mod => mod.IsEnabled)
-                .ToArray();
-            var standaloneMessages = new List<string>();
-
-            if (!SelectedProfile.IsEnabled)
-            {
-                standaloneMessages.Add("Выбранный профиль отключён.");
-            }
-
-            if (enabledMods.Length != 1)
-            {
-                standaloneMessages.Add("Автономный профиль должен содержать ровно один включённый мод.");
-            }
-            else if (!Directory.Exists(enabledMods[0].SourcePath))
-            {
-                standaloneMessages.Add($"Папка мода не найдена: {enabledMods[0].Name}");
-            }
-
-            var executableIsSafe = true;
-            try
-            {
-                FileSystemSafety.EnsureRelativePath(SelectedProfile.ExecutableRelativePath, "Launch executable");
-            }
-            catch (Exception ex)
-            {
-                executableIsSafe = false;
-                standaloneMessages.Add(ex.Message);
-            }
-
-            IsGameValid = SelectedProfile.IsEnabled &&
-                          enabledMods.Length == 1 &&
-                          Directory.Exists(enabledMods[0].SourcePath) &&
-                          executableIsSafe;
-            ValidationSummary = IsGameValid
-                ? "Автономный мод готов к запуску."
-                : string.Join(Environment.NewLine, standaloneMessages.Distinct());
-            RaiseCommandStates();
-            return;
-        }
-
-        var gamePath = SelectedProfile?.GameInstallPath ?? _gameInstallPath;
-        var gameValidation = _gameValidator.Validate(gamePath);
-        var messages = new List<string>(gameValidation.Messages);
-
-        if (SelectedProfile is null)
-        {
-            IsGameValid = gameValidation.IsValid;
-            ValidationSummary = gameValidation.Summary;
-            RaiseCommandStates();
-            return;
-        }
-
-        if (!SelectedProfile.IsEnabled)
-        {
-            messages.Add("Выбранный профиль отключён.");
-        }
-
-        foreach (var mod in SelectedProfile.Mods.Where(mod => mod.IsEnabled && !Directory.Exists(mod.SourcePath)))
-        {
-            messages.Add($"Папка мода не найдена: {mod.Name}");
-        }
-
-        var executablePathIsSafe = true;
-        try
-        {
-            FileSystemSafety.EnsureRelativePath(SelectedProfile.ExecutableRelativePath, "Launch executable");
-        }
-        catch (Exception ex)
-        {
-            executablePathIsSafe = false;
-            messages.Add(ex.Message);
-        }
-
-        var ready = (gameValidation.IsValid || SelectedProfile.IsStandalone) &&
-                    SelectedProfile.IsEnabled &&
-                    SelectedProfile.Mods.Where(mod => mod.IsEnabled).All(mod => Directory.Exists(mod.SourcePath)) &&
-                    executablePathIsSafe;
-
-        IsGameValid = ready;
-        ValidationSummary = ready ? "Готов к запуску." : string.Join(Environment.NewLine, messages.Distinct());
+        var result = _profileReadinessService.Validate(SelectedProfile, _gameInstallPath);
+        IsGameValid = result.IsValid;
+        ValidationSummary = result.Summary;
         RaiseCommandStates();
     }
 
@@ -1147,20 +1070,7 @@ public sealed class MainViewModel : ObservableObject
 
     private void Log(string message)
     {
-        var timestamp = DateTime.Now;
-        var entry = $"[{timestamp:HH:mm:ss}] {message}";
-
-        try
-        {
-            var logDir = _paths.ConfigDirectory;
-            Directory.CreateDirectory(logDir);
-            var logPath = Path.Combine(logDir, "launcher.log");
-            File.AppendAllText(logPath, $"[{timestamp:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}");
-        }
-        catch
-        {
-            // file logging is best-effort
-        }
+        var entry = _applicationLogService.Write(message);
 
         App.Current.Dispatcher.Invoke(() =>
         {

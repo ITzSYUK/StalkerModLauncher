@@ -14,6 +14,8 @@ public sealed class AppServices
         ProfileManager = new ProfileManager(Paths, workspaceBuilder);
         LaunchCoordinator = new LaunchCoordinator(new ProfileLauncher(workspaceBuilder), new GameSessionTracker());
         GameValidator = new GameInstallationValidator();
+        ProfileReadinessService = new ProfileReadinessService(GameValidator);
+        ApplicationLogService = new ApplicationLogService(Paths);
         ModConflictAnalyzer = new ModConflictAnalyzer();
         ProfileTransferService = new ProfileTransferService();
         ModScannerService = new ModScannerService();
@@ -29,6 +31,8 @@ public sealed class AppServices
     public ProfileManager ProfileManager { get; }
     public LaunchCoordinator LaunchCoordinator { get; }
     public GameInstallationValidator GameValidator { get; }
+    public ProfileReadinessService ProfileReadinessService { get; }
+    public ApplicationLogService ApplicationLogService { get; }
     public ModConflictAnalyzer ModConflictAnalyzer { get; }
     public ProfileTransferService ProfileTransferService { get; }
     public ModScannerService ModScannerService { get; }
@@ -42,7 +46,6 @@ public sealed class AppServices
         return new MainViewModel(
             Paths,
             SettingsStore,
-            GameValidator,
             LaunchCoordinator,
             DialogService,
             ModConflictAnalyzer,
@@ -50,6 +53,8 @@ public sealed class AppServices
             ModScannerService,
             ModListEditor,
             ProfileManager,
-            GameExitDiagnosticsService);
+            GameExitDiagnosticsService,
+            ProfileReadinessService,
+            ApplicationLogService);
     }
 }
