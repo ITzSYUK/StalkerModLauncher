@@ -6,11 +6,16 @@ public sealed class ProfileHealthService
 {
     private readonly GameInstallationValidator _gameValidator;
     private readonly ProfileManager _profileManager;
+    private readonly ProfileDataPathResolver _dataPathResolver;
 
-    public ProfileHealthService(GameInstallationValidator gameValidator, ProfileManager profileManager)
+    public ProfileHealthService(
+        GameInstallationValidator gameValidator,
+        ProfileManager profileManager,
+        ProfileDataPathResolver dataPathResolver)
     {
         _gameValidator = gameValidator;
         _profileManager = profileManager;
+        _dataPathResolver = dataPathResolver;
     }
 
     public Task<ProfileHealthReport> AnalyzeAsync(
@@ -71,9 +76,10 @@ public sealed class ProfileHealthService
                 : executableSource));
 
         var profileFolderPath = _profileManager.GetProfileFolderPath(profile, defaultGamePath) ?? string.Empty;
-        var savedGamesPath = string.IsNullOrWhiteSpace(profile.WorkspacePath)
-            ? string.Empty
-            : Path.Combine(profile.WorkspacePath, "userdata", "savedgames");
+        var savedGamePaths = _dataPathResolver.GetSavedGameDirectories(profile);
+        var savedGamesPath = savedGamePaths.FirstOrDefault(Directory.Exists)
+            ?? savedGamePaths.FirstOrDefault()
+            ?? string.Empty;
 
         if (!profile.IsStandalone)
         {
@@ -86,11 +92,9 @@ public sealed class ProfileHealthService
             "Сохранения",
             Directory.Exists(savedGamesPath) ? $"{saveCount} файл(ов): {savedGamesPath}" : "Папка сохранений еще не создана."));
 
-        var logsPath = string.IsNullOrWhiteSpace(profile.WorkspacePath)
-            ? string.Empty
-            : Path.Combine(profile.WorkspacePath, "userdata", "logs");
-        var latestLog = FindLatest(logsPath, ".log", ".txt");
-        var latestDump = FindLatest(logsPath, ".mdmp", ".dmp");
+        var logPaths = _dataPathResolver.GetLogDirectories(profile);
+        var latestLog = FindLatest(logPaths, ".log", ".txt");
+        var latestDump = FindLatest(logPaths, ".mdmp", ".dmp");
         checks.Add(new ProfileHealthCheck(
             latestDump is null ? ProfileHealthStatus.Healthy : ProfileHealthStatus.Warning,
             "Диагностика игры",
@@ -163,16 +167,15 @@ public sealed class ProfileHealthService
         }
     }
 
-    private static string? FindLatest(string path, params string[] extensions)
+    private static string? FindLatest(IEnumerable<string> paths, params string[] extensions)
     {
         try
         {
-            return Directory.Exists(path)
-                ? Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories)
+            return paths.Where(Directory.Exists)
+                .SelectMany(path => Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
                     .Where(file => extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
                     .OrderByDescending(File.GetLastWriteTimeUtc)
-                    .FirstOrDefault()
-                : null;
+                    .FirstOrDefault();
         }
         catch
         {

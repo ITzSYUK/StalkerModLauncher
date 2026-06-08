@@ -10,7 +10,7 @@ public sealed class GameExitDiagnosticsServiceTests : IDisposable
         Path.GetTempPath(),
         "StalkerModLauncherTests",
         Guid.NewGuid().ToString("N"));
-    private readonly GameExitDiagnosticsService _service = new();
+    private readonly GameExitDiagnosticsService _service = new(new ProfileDataPathResolver());
 
     [Fact]
     public void Analyze_ReportsQuickExitAndFreshDiagnosticFiles()
@@ -55,6 +55,22 @@ public sealed class GameExitDiagnosticsServiceTests : IDisposable
 
         Assert.True(result.IsQuickExit);
         Assert.Null(result.LatestLogPath);
+    }
+
+    [Fact]
+    public void Analyze_FindsFreshStandaloneAppdataLog()
+    {
+        var started = DateTime.UtcNow.AddSeconds(-5);
+        var modRoot = Path.Combine(_root, "standalone");
+        var log = CreateFile(Path.Combine(modRoot, "appdata", "logs"), "xray.log", started.AddSeconds(2));
+        var profile = new ModProfile { IsStandalone = true };
+        profile.Mods.Add(new ModEntry { SourcePath = modRoot, IsEnabled = true });
+
+        var result = _service.Analyze(
+            profile,
+            new GameSessionResult(TimeSpan.FromSeconds(5), true, -1, started, DateTime.UtcNow));
+
+        Assert.Equal(log, result.LatestLogPath);
     }
 
     private static string CreateFile(string directory, string name, DateTime lastWriteUtc)

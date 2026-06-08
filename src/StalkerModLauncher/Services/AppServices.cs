@@ -18,8 +18,9 @@ public sealed class AppServices
         ProfileTransferService = new ProfileTransferService();
         ModScannerService = new ModScannerService();
         ModListEditor = new ModListEditor();
-        GameExitDiagnosticsService = new GameExitDiagnosticsService();
-        ProfileHealthService = new ProfileHealthService(GameValidator, ProfileManager);
+        ProfileDataPathResolver = new ProfileDataPathResolver();
+        GameExitDiagnosticsService = new GameExitDiagnosticsService(ProfileDataPathResolver);
+        ProfileHealthService = new ProfileHealthService(GameValidator, ProfileManager, ProfileDataPathResolver);
     }
 
     public AppPaths Paths { get; }
@@ -34,6 +35,7 @@ public sealed class AppServices
     public ModListEditor ModListEditor { get; }
     public GameExitDiagnosticsService GameExitDiagnosticsService { get; }
     public ProfileHealthService ProfileHealthService { get; }
+    public ProfileDataPathResolver ProfileDataPathResolver { get; }
 
     public MainViewModel CreateMainViewModel()
     {

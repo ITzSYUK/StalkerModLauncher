@@ -16,7 +16,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var manager = new ProfileManager(paths, new FakeWorkspaceManager());
-        _service = new ProfileHealthService(new GameInstallationValidator(), manager);
+        _service = new ProfileHealthService(new GameInstallationValidator(), manager, new ProfileDataPathResolver());
     }
 
     [Fact]
@@ -97,6 +97,27 @@ public sealed class ProfileHealthServiceTests : IDisposable
         Assert.Equal(modRoot, report.ProfileFolderPath);
         Assert.Equal(2, report.WarningCount);
         Assert.Contains("crash dump", report.ToText("Standalone"));
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_FindsStandaloneAppdataLogAndSaves()
+    {
+        var modRoot = Path.Combine(_root, "cpogsr");
+        CreateFileAtPath(Path.Combine(modRoot, "bin_x64", "xrEngine.exe"));
+        var log = CreateFileAtPath(Path.Combine(modRoot, "appdata", "logs", "xray.log"));
+        var save = CreateFileAtPath(Path.Combine(modRoot, "appdata", "savedgames", "test.sav"));
+        var profile = new ModProfile
+        {
+            IsStandalone = true,
+            ExecutableRelativePath = @"bin_x64\xrEngine.exe"
+        };
+        profile.Mods.Add(new ModEntry { Name = "ОП ОГСР", SourcePath = modRoot, Order = 1 });
+
+        var report = await _service.AnalyzeAsync(profile, string.Empty);
+
+        Assert.Equal(log, report.LatestLogPath);
+        Assert.Equal(Path.GetDirectoryName(save), report.SavedGamesPath);
+        Assert.Contains(report.Checks, check => check.Title == "Сохранения" && check.Details.StartsWith("1 файл"));
     }
 
     [Fact]
