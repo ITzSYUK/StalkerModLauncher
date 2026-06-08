@@ -101,15 +101,25 @@ public sealed class SettingsStore
     {
         Directory.CreateDirectory(_paths.ConfigDirectory);
         var tempPath = _paths.SettingsFile + ".tmp";
-        await File.WriteAllBytesAsync(tempPath, snapshot);
+        try
+        {
+            await File.WriteAllBytesAsync(tempPath, snapshot);
 
-        if (File.Exists(_paths.SettingsFile))
-        {
-            File.Replace(tempPath, _paths.SettingsFile, _paths.SettingsBackupFile);
+            if (File.Exists(_paths.SettingsFile))
+            {
+                File.Replace(tempPath, _paths.SettingsFile, _paths.SettingsBackupFile);
+            }
+            else
+            {
+                File.Move(tempPath, _paths.SettingsFile);
+            }
         }
-        else
+        finally
         {
-            File.Move(tempPath, _paths.SettingsFile);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 }

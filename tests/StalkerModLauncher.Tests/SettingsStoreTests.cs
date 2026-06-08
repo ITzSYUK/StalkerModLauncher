@@ -65,6 +65,19 @@ public sealed class SettingsStoreTests : IDisposable
         Assert.Equal("snapshot", loaded.GameInstallPath);
     }
 
+    [Fact]
+    public async Task LoadAsync_ReturnsDefaultsWhenPrimaryAndBackupAreCorrupted()
+    {
+        Directory.CreateDirectory(_paths.ConfigDirectory);
+        await File.WriteAllTextAsync(_paths.SettingsFile, "{ broken primary");
+        await File.WriteAllTextAsync(_paths.SettingsBackupFile, "{ broken backup");
+
+        var loaded = await _store.LoadAsync();
+
+        Assert.Equal(string.Empty, loaded.GameInstallPath);
+        Assert.Empty(loaded.Profiles);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

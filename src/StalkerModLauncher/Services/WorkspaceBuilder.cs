@@ -42,7 +42,8 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
 
         if (profile.IsStandalone)
         {
-            return BuildStandalone(profile, gamePath, progress);
+            cancellationToken.ThrowIfCancellationRequested();
+            return BuildStandalone(profile, gamePath, progress, cancellationToken);
         }
 
         if (!Directory.Exists(gamePath))
@@ -264,9 +265,18 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         CancellationToken cancellationToken)
     {
         var game = CaptureDirectory(gamePath, cancellationToken);
-        var mods = profile.Mods
-            .Where(mod => mod.IsEnabled && Directory.Exists(mod.SourcePath))
-            .ToDictionary(mod => mod.Id, mod => CaptureDirectory(mod.SourcePath, cancellationToken));
+        var mods = new Dictionary<string, DirectorySnapshot>();
+        foreach (var mod in profile.Mods.Where(mod => mod.IsEnabled))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!Directory.Exists(mod.SourcePath))
+            {
+                throw new DirectoryNotFoundException($"Mod folder was not found: {mod.SourcePath}");
+            }
+
+            mods.Add(mod.Id, CaptureDirectory(mod.SourcePath, cancellationToken));
+        }
+
         return new WorkspaceSourceSnapshot(game, mods);
     }
 
@@ -653,7 +663,11 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         AttributesToSkip = FileAttributes.ReparsePoint
     };
 
-    private WorkspaceBuildResult BuildStandalone(ModProfile profile, string gamePath, IProgress<string> progress)
+    private WorkspaceBuildResult BuildStandalone(
+        ModProfile profile,
+        string gamePath,
+        IProgress<string> progress,
+        CancellationToken cancellationToken)
     {
         var modRoot = profile.Mods.FirstOrDefault(m => m.IsEnabled && Directory.Exists(m.SourcePath))?.SourcePath;
         if (modRoot is null)
@@ -667,8 +681,13 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
 
         if (!File.Exists(exePath))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var found = Directory.EnumerateFiles(modRoot, "*.exe", SearchOption.AllDirectories)
-                .Select(p => Path.GetRelativePath(modRoot, p))
+                .Select(p =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return Path.GetRelativePath(modRoot, p);
+                })
                 .OrderBy(p => p.Equals(profile.ExecutableRelativePath, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
                 .ThenBy(p => p, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault();

@@ -135,6 +135,41 @@ public sealed class WorkspaceBuilderTests : IDisposable
         Assert.Contains("profile-specific folder", exception.Message);
     }
 
+    [Fact]
+    public async Task BuildAsync_ReportsMissingEnabledModFolderClearly()
+    {
+        var missingMod = Path.Combine(_root, "mods", "missing");
+        var profile = CreateProfile(missingMod);
+
+        var exception = await Assert.ThrowsAsync<DirectoryNotFoundException>(
+            () => _builder.BuildAsync(_gamePath, profile, new ProgressLog()));
+
+        Assert.Contains(missingMod, exception.Message);
+        Assert.Equal("base", File.ReadAllText(Path.Combine(_gamePath, "gamedata", "config", "shared.ltx")));
+    }
+
+    [Fact]
+    public async Task BuildAsync_CancellationDoesNotChangeSourcesOrWriteManifest()
+    {
+        var modPath = CreateMod("mod", "mod source");
+        var profile = CreateProfile(modPath);
+        using var cancellation = new CancellationTokenSource();
+        var progress = new ProgressLog(message =>
+        {
+            if (message.Contains("Preparing clean profile workspace"))
+            {
+                cancellation.Cancel();
+            }
+        });
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => _builder.BuildAsync(_gamePath, profile, progress, cancellation.Token));
+
+        Assert.Equal("base", File.ReadAllText(Path.Combine(_gamePath, "gamedata", "config", "shared.ltx")));
+        Assert.Equal("mod source", File.ReadAllText(Path.Combine(modPath, "gamedata", "config", "shared.ltx")));
+        Assert.False(File.Exists(Path.Combine(profile.WorkspacePath, "build-manifest.json")));
+    }
+
     private ModProfile CreateProfile(params string[] modPaths)
     {
         var profile = new ModProfile
@@ -183,13 +218,14 @@ public sealed class WorkspaceBuilderTests : IDisposable
         }
     }
 
-    private sealed class ProgressLog : IProgress<string>
+    private sealed class ProgressLog(Action<string>? onReport = null) : IProgress<string>
     {
         public List<string> Messages { get; } = [];
 
         public void Report(string value)
         {
             Messages.Add(value);
+            onReport?.Invoke(value);
         }
     }
 }
