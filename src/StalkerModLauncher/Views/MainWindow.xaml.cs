@@ -313,7 +313,11 @@ public partial class MainWindow : Window
                 }
 
                 var contextMenu = new ContextMenu();
-                var removeItem = new MenuItem { Header = "Убрать" };
+                var removeItem = new MenuItem
+                {
+                    Header = "Убрать",
+                    IsEnabled = ViewModel?.CanEditSelectedProfile == true
+                };
                 var removeArmed = false;
                 removeItem.PreviewMouseDown += (_, args) =>
                 {
@@ -360,7 +364,8 @@ public partial class MainWindow : Window
     private void ModsList_OnMouseMove(object sender, WpfMouseEventArgs e)
     {
         var currentPosition = e.GetPosition(ModsList);
-        if (e.LeftButton != MouseButtonState.Pressed ||
+        if (ViewModel?.CanEditSelectedProfile != true ||
+            e.LeftButton != MouseButtonState.Pressed ||
             _draggedMod is null ||
             Math.Abs(currentPosition.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance ||
             Math.Abs(currentPosition.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
@@ -383,6 +388,14 @@ public partial class MainWindow : Window
 
     private void ModsList_OnDragOver(object sender, WpfDragEventArgs e)
     {
+        if (ViewModel?.CanEditSelectedProfile != true)
+        {
+            ClearModDropHighlight();
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
         {
             ClearModDropHighlight();
@@ -423,8 +436,9 @@ public partial class MainWindow : Window
 
     private void ModsList_OnDrop(object sender, WpfDragEventArgs e)
     {
-        if (ViewModel is null)
+        if (ViewModel?.CanEditSelectedProfile != true)
         {
+            ClearModDropHighlight();
             return;
         }
 

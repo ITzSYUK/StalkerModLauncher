@@ -70,7 +70,7 @@ public sealed class MainViewModel : ObservableObject
         DeleteProfileCommand = new RelayCommand(DeleteProfile, () => SelectedProfile is not null);
         BrowseExecutableCommand = new RelayCommand(BrowseExecutable, () => SelectedProfile is not null);
         AddModCommand = new RelayCommand(AddMod, CanAddMod);
-        RemoveModCommand = new RelayCommand(RemoveMod, () => SelectedProfile is not null && SelectedMod is not null);
+        RemoveModCommand = new RelayCommand(RemoveMod, () => CanEditSelectedProfile && SelectedMod is not null);
         MoveModUpCommand = new RelayCommand(() => MoveSelectedMod(-1), () => CanMoveSelectedMod(-1));
         MoveModDownCommand = new RelayCommand(() => MoveSelectedMod(1), () => CanMoveSelectedMod(1));
         LaunchCommand = new AsyncRelayCommand(LaunchAsync, CanLaunch);
@@ -79,7 +79,9 @@ public sealed class MainViewModel : ObservableObject
         OpenSelectedModFolderCommand = new RelayCommand(OpenSelectedModFolder, () => SelectedMod is not null);
         ExportProfileCommand = new RelayCommand(ExportProfile, () => SelectedProfile is not null);
         ImportProfileCommand = new RelayCommand(ImportProfile);
-        ScanForModsCommand = new AsyncRelayCommand(ScanForModsAsync, () => SelectedProfile is not null && !SelectedProfile.IsStandalone);
+        ScanForModsCommand = new AsyncRelayCommand(
+            ScanForModsAsync,
+            () => CanEditSelectedProfile && SelectedProfile is { IsStandalone: false });
         ToggleLogCommand = new RelayCommand(() => IsLogVisible = !IsLogVisible);
 
         _ = LoadAsync();
@@ -132,6 +134,7 @@ public sealed class MainViewModel : ObservableObject
                 RefreshValidation();
                 RaiseCommandStates();
                 OnPropertyChanged(nameof(GameInstallPath));
+                OnPropertyChanged(nameof(CanEditSelectedProfile));
 
                 if (_selectedProfile is not null)
                 {
@@ -191,6 +194,8 @@ public sealed class MainViewModel : ObservableObject
         private set => SetProperty(ref _isBuilding, value);
     }
 
+    public bool CanEditSelectedProfile => SelectedProfile is { IsRunning: false };
+
     public string BuildProgressText
     {
         get => _buildProgressText;
@@ -236,7 +241,7 @@ public sealed class MainViewModel : ObservableObject
 
     public void AddDroppedMods(IEnumerable<string> paths)
     {
-        if (SelectedProfile is null)
+        if (!CanEditSelectedProfile || SelectedProfile is null)
         {
             return;
         }
@@ -274,7 +279,9 @@ public sealed class MainViewModel : ObservableObject
 
     public void MoveMod(ModEntry source, ModEntry target)
     {
-        if (SelectedProfile is null || !_modListEditor.Move(SelectedProfile, source, target))
+        if (!CanEditSelectedProfile ||
+            SelectedProfile is null ||
+            !_modListEditor.Move(SelectedProfile, source, target))
         {
             return;
         }
@@ -285,7 +292,9 @@ public sealed class MainViewModel : ObservableObject
 
     public void MoveModToEnd(ModEntry source)
     {
-        if (SelectedProfile is null || !_modListEditor.MoveToEnd(SelectedProfile, source))
+        if (!CanEditSelectedProfile ||
+            SelectedProfile is null ||
+            !_modListEditor.MoveToEnd(SelectedProfile, source))
         {
             return;
         }
@@ -296,7 +305,8 @@ public sealed class MainViewModel : ObservableObject
 
     public void MoveModToInsertionIndex(ModEntry source, int insertionIndex)
     {
-        if (SelectedProfile is null ||
+        if (!CanEditSelectedProfile ||
+            SelectedProfile is null ||
             !_modListEditor.MoveToInsertionIndex(SelectedProfile, source, insertionIndex))
         {
             return;
@@ -450,7 +460,7 @@ public sealed class MainViewModel : ObservableObject
 
     private async Task ScanForModsAsync()
     {
-        if (SelectedProfile is null)
+        if (!CanEditSelectedProfile || SelectedProfile is null)
         {
             return;
         }
@@ -676,7 +686,7 @@ public sealed class MainViewModel : ObservableObject
 
     public void RemoveMods(IReadOnlyList<ModEntry> mods)
     {
-        if (SelectedProfile is null || mods.Count == 0)
+        if (!CanEditSelectedProfile || SelectedProfile is null || mods.Count == 0)
         {
             return;
         }
@@ -689,7 +699,7 @@ public sealed class MainViewModel : ObservableObject
 
     private void RemoveMod()
     {
-        if (SelectedProfile is null || SelectedMod is null)
+        if (!CanEditSelectedProfile || SelectedProfile is null || SelectedMod is null)
         {
             return;
         }
@@ -703,7 +713,7 @@ public sealed class MainViewModel : ObservableObject
 
     private void MoveSelectedMod(int direction)
     {
-        if (SelectedProfile is null || SelectedMod is null)
+        if (!CanEditSelectedProfile || SelectedProfile is null || SelectedMod is null)
         {
             return;
         }
@@ -718,7 +728,7 @@ public sealed class MainViewModel : ObservableObject
 
     private bool CanMoveSelectedMod(int direction)
     {
-        if (SelectedProfile is null || SelectedMod is null)
+        if (!CanEditSelectedProfile || SelectedProfile is null || SelectedMod is null)
         {
             return false;
         }
@@ -733,7 +743,7 @@ public sealed class MainViewModel : ObservableObject
 
     private bool CanAddMod()
     {
-        if (SelectedProfile is null)
+        if (!CanEditSelectedProfile || SelectedProfile is null)
         {
             return false;
         }
@@ -966,6 +976,8 @@ public sealed class MainViewModel : ObservableObject
     {
         if (e.PropertyName == nameof(ModProfile.IsRunning))
         {
+            OnPropertyChanged(nameof(CanEditSelectedProfile));
+            RaiseCommandStates();
             return;
         }
 

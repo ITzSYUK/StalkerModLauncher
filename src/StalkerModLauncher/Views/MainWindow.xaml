@@ -366,6 +366,7 @@
                         <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
                             <ToggleButton Content="Автономный мод"
                                           IsChecked="{Binding SelectedProfile.IsStandalone}"
+                                          IsEnabled="{Binding CanEditSelectedProfile}"
                                           Style="{StaticResource ProfileToggleButtonStyle}"
                                           Margin="0,0,8,8"
                                           ToolTipService.InitialShowDelay="600">
@@ -385,6 +386,7 @@
                                     Margin="0,0,8,8"/>
                             <Button Content="Убрать"
                                     Click="RemoveModsButton_Click"
+                                    IsEnabled="{Binding CanEditSelectedProfile}"
                                     Margin="0,0,8,8"/>
                             <Button Content="Выше"
                                     Command="{Binding MoveModUpCommand}"
@@ -441,6 +443,11 @@
                                                              <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                                                  <Setter Property="ToolTip" Value="Прозрачный значок — мод выключен&#x0a;Цветной значок — мод включён"/>
                                                                  <Style.Triggers>
+                                                                     <DataTrigger Binding="{Binding DataContext.CanEditSelectedProfile, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                                  Value="False">
+                                                                         <Setter Property="IsEnabled" Value="False"/>
+                                                                         <Setter Property="ToolTip" Value="Нельзя изменять моды, пока профиль запущен"/>
+                                                                     </DataTrigger>
                                                                      <MultiDataTrigger>
                                                                          <MultiDataTrigger.Conditions>
                                                                              <Condition Binding="{Binding IsLocked}" Value="True"/>
