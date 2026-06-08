@@ -19,7 +19,7 @@ public sealed class AppServices
         ModScannerService = new ModScannerService();
         ModListEditor = new ModListEditor();
         GameExitDiagnosticsService = new GameExitDiagnosticsService();
-        ProfileHealthService = new ProfileHealthService(GameValidator);
+        ProfileHealthService = new ProfileHealthService(GameValidator, ProfileManager);
     }
 
     public AppPaths Paths { get; }

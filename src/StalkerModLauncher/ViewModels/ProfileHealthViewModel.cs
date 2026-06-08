@@ -28,7 +28,7 @@ public sealed class ProfileHealthViewModel : ObservableObject
         _dialogService = dialogService;
 
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => !IsChecking);
-        OpenWorkspaceCommand = new RelayCommand(OpenWorkspace, () => Directory.Exists(_report?.WorkspacePath));
+        OpenProfileCommand = new RelayCommand(OpenProfile, () => Directory.Exists(_report?.ProfileFolderPath));
         OpenSavesCommand = new RelayCommand(OpenSaves, () => Directory.Exists(_report?.SavedGamesPath));
         OpenLatestLogCommand = new RelayCommand(OpenLatestLog, () => File.Exists(_report?.LatestLogPath));
         OpenCrashDumpCommand = new RelayCommand(OpenCrashDump, () => File.Exists(_report?.LatestCrashDumpPath));
@@ -59,7 +59,7 @@ public sealed class ProfileHealthViewModel : ObservableObject
     }
 
     public ICommand RefreshCommand { get; }
-    public ICommand OpenWorkspaceCommand { get; }
+    public ICommand OpenProfileCommand { get; }
     public ICommand OpenSavesCommand { get; }
     public ICommand OpenLatestLogCommand { get; }
     public ICommand OpenCrashDumpCommand { get; }
@@ -92,9 +92,9 @@ public sealed class ProfileHealthViewModel : ObservableObject
         }
     }
 
-    private void OpenWorkspace()
+    private void OpenProfile()
     {
-        RunAction(() => _dialogService.OpenFolder(_report!.WorkspacePath));
+        RunAction(() => _dialogService.OpenFolder(_report!.ProfileFolderPath));
     }
 
     private void OpenSaves()
@@ -131,7 +131,7 @@ public sealed class ProfileHealthViewModel : ObservableObject
 
     private void RaiseCommandStates()
     {
-        ((RelayCommand)OpenWorkspaceCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)OpenProfileCommand).RaiseCanExecuteChanged();
         ((RelayCommand)OpenSavesCommand).RaiseCanExecuteChanged();
         ((RelayCommand)OpenLatestLogCommand).RaiseCanExecuteChanged();
         ((RelayCommand)OpenCrashDumpCommand).RaiseCanExecuteChanged();

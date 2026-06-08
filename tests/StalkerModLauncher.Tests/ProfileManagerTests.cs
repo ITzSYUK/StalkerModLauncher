@@ -122,6 +122,26 @@ public sealed class ProfileManagerTests
         Assert.False(imported.IsRunning);
     }
 
+    [Fact]
+    public void GetProfileFolderPath_ReturnsStandaloneModOrOverlayWorkspace()
+    {
+        var standaloneRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(standaloneRoot);
+        try
+        {
+            var standalone = new ModProfile { IsStandalone = true };
+            standalone.Mods.Add(new ModEntry { SourcePath = standaloneRoot, IsEnabled = true });
+            var overlay = new ModProfile { WorkspacePath = @"D:\Workspace" };
+
+            Assert.Equal(standaloneRoot, _manager.GetProfileFolderPath(standalone, string.Empty));
+            Assert.Equal(@"D:\Workspace", _manager.GetProfileFolderPath(overlay, string.Empty));
+        }
+        finally
+        {
+            Directory.Delete(standaloneRoot);
+        }
+    }
+
     private sealed class FakeWorkspaceManager : IProfileWorkspaceManager
     {
         public List<ModProfile> DeletedProfiles { get; } = [];

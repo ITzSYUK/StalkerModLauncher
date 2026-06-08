@@ -96,7 +96,7 @@
                     Command="{Binding RefreshCommand}"
                     Margin="0,0,8,0"/>
             <Button Content="Профиль"
-                    Command="{Binding OpenWorkspaceCommand}"
+                    Command="{Binding OpenProfileCommand}"
                     Margin="0,0,8,0"/>
             <Button Content="Сохранения"
                     Command="{Binding OpenSavesCommand}"

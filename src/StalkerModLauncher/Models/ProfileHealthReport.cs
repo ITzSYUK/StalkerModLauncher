@@ -14,7 +14,7 @@ public sealed record ProfileHealthCheck(
 
 public sealed record ProfileHealthReport(
     IReadOnlyList<ProfileHealthCheck> Checks,
-    string WorkspacePath,
+    string ProfileFolderPath,
     string SavedGamesPath,
     string? LatestLogPath,
     string? LatestCrashDumpPath)

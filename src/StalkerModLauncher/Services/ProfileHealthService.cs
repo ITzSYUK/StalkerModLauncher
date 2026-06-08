@@ -5,10 +5,12 @@ namespace StalkerModLauncher.Services;
 public sealed class ProfileHealthService
 {
     private readonly GameInstallationValidator _gameValidator;
+    private readonly ProfileManager _profileManager;
 
-    public ProfileHealthService(GameInstallationValidator gameValidator)
+    public ProfileHealthService(GameInstallationValidator gameValidator, ProfileManager profileManager)
     {
         _gameValidator = gameValidator;
+        _profileManager = profileManager;
     }
 
     public Task<ProfileHealthReport> AnalyzeAsync(
@@ -68,7 +70,7 @@ public sealed class ProfileHealthService
                 ? $"Не найден: {profile.ExecutableRelativePath}"
                 : executableSource));
 
-        var workspacePath = profile.IsStandalone ? string.Empty : profile.WorkspacePath;
+        var profileFolderPath = _profileManager.GetProfileFolderPath(profile, defaultGamePath) ?? string.Empty;
         var savedGamesPath = string.IsNullOrWhiteSpace(profile.WorkspacePath)
             ? string.Empty
             : Path.Combine(profile.WorkspacePath, "userdata", "savedgames");
@@ -96,7 +98,7 @@ public sealed class ProfileHealthService
                 ? $"Найден crash dump: {latestDump}"
                 : latestLog is not null ? $"Последний лог: {latestLog}" : "Логи и crash dump пока не найдены."));
 
-        return new ProfileHealthReport(checks, workspacePath, savedGamesPath, latestLog, latestDump);
+        return new ProfileHealthReport(checks, profileFolderPath, savedGamesPath, latestLog, latestDump);
     }
 
     private static void AddWorkspaceChecks(List<ProfileHealthCheck> checks, string workspacePath)

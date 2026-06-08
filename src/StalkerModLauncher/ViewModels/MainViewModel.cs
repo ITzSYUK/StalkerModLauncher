@@ -825,19 +825,8 @@ public sealed class MainViewModel : ObservableObject
 
         try
         {
-            var path = SelectedProfile.IsStandalone
-                ? SelectedProfile.Mods.FirstOrDefault(m => m.IsEnabled && Directory.Exists(m.SourcePath))?.SourcePath
-                : null;
-
-            var gamePath = SelectedProfile.GameInstallPath;
-            if (string.IsNullOrWhiteSpace(gamePath))
-            {
-                gamePath = _gameInstallPath;
-            }
-
-            path ??= string.IsNullOrWhiteSpace(SelectedProfile.WorkspacePath)
-                ? Path.Combine(_paths.GetPreferredWorkspaceRoot(gamePath), $"{FileSystemSafety.SanitizeName(SelectedProfile.Name)}-{SelectedProfile.Id}")
-                : SelectedProfile.WorkspacePath;
+            var path = _profileManager.GetProfileFolderPath(SelectedProfile, _gameInstallPath)
+                ?? throw new DirectoryNotFoundException("Папка включенного автономного мода не найдена.");
 
             Directory.CreateDirectory(path);
             _dialogService.OpenFolder(path);

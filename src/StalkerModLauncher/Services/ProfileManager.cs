@@ -92,6 +92,26 @@ public sealed class ProfileManager
         return profiles.FirstOrDefault();
     }
 
+    public string? GetProfileFolderPath(ModProfile profile, string defaultGamePath)
+    {
+        if (profile.IsStandalone)
+        {
+            return profile.Mods
+                .FirstOrDefault(mod => mod.IsEnabled && Directory.Exists(mod.SourcePath))
+                ?.SourcePath;
+        }
+
+        if (!string.IsNullOrWhiteSpace(profile.WorkspacePath))
+        {
+            return profile.WorkspacePath;
+        }
+
+        var gamePath = string.IsNullOrWhiteSpace(profile.GameInstallPath)
+            ? defaultGamePath
+            : profile.GameInstallPath;
+        return CreateWorkspacePath(profile, gamePath);
+    }
+
     public static string GetUniqueName(IEnumerable<ModProfile> profiles, string requestedName)
     {
         var profileList = profiles.ToList();

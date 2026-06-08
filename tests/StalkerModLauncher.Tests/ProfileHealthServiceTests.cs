@@ -10,7 +10,14 @@ public sealed class ProfileHealthServiceTests : IDisposable
         Path.GetTempPath(),
         "StalkerModLauncherTests",
         Guid.NewGuid().ToString("N"));
-    private readonly ProfileHealthService _service = new(new GameInstallationValidator());
+    private readonly ProfileHealthService _service;
+
+    public ProfileHealthServiceTests()
+    {
+        var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
+        var manager = new ProfileManager(paths, new FakeWorkspaceManager());
+        _service = new ProfileHealthService(new GameInstallationValidator(), manager);
+    }
 
     [Fact]
     public async Task AnalyzeAsync_ReportsReadyOverlayProfile()
@@ -87,8 +94,21 @@ public sealed class ProfileHealthServiceTests : IDisposable
 
         Assert.Equal(log, report.LatestLogPath);
         Assert.Equal(dump, report.LatestCrashDumpPath);
+        Assert.Equal(modRoot, report.ProfileFolderPath);
         Assert.Equal(2, report.WarningCount);
         Assert.Contains("crash dump", report.ToText("Standalone"));
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_UsesWorkspaceAsOverlayProfileFolder()
+    {
+        var workspace = Path.Combine(_root, "workspace");
+        Directory.CreateDirectory(workspace);
+        var profile = new ModProfile { GameInstallPath = CreateGame(), WorkspacePath = workspace };
+
+        var report = await _service.AnalyzeAsync(profile, string.Empty);
+
+        Assert.Equal(workspace, report.ProfileFolderPath);
     }
 
     private string CreateGame()
@@ -116,6 +136,13 @@ public sealed class ProfileHealthServiceTests : IDisposable
         if (Directory.Exists(_root))
         {
             Directory.Delete(_root, recursive: true);
+        }
+    }
+
+    private sealed class FakeWorkspaceManager : IProfileWorkspaceManager
+    {
+        public void DeleteProfileWorkspace(ModProfile profile, string gamePath)
+        {
         }
     }
 }
