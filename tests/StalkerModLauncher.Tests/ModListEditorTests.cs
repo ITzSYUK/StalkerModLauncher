@@ -68,6 +68,18 @@ public sealed class ModListEditorTests
         Assert.Equal(["First", "Second"], profile.Mods.Select(mod => mod.Name));
     }
 
+    [Fact]
+    public void MoveToInsertionIndex_ReordersAndRenumbersMods()
+    {
+        var profile = CreateProfile("First", "Second", "Third");
+
+        var moved = _editor.MoveToInsertionIndex(profile, profile.Mods[0], 3);
+
+        Assert.True(moved);
+        Assert.Equal(["Second", "Third", "First"], profile.Mods.Select(mod => mod.Name));
+        Assert.Equal([1, 2, 3], profile.Mods.Select(mod => mod.Order));
+    }
+
     private static ModProfile CreateProfile(params string[] names)
     {
         var profile = new ModProfile();

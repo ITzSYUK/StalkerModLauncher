@@ -1,4 +1,5 @@
 using StalkerModLauncher.Models;
+using System.Collections.ObjectModel;
 
 namespace StalkerModLauncher.Services;
 
@@ -61,6 +62,14 @@ public sealed class ProfileManager
     {
         EnsureDefaults(profile);
         profile.Name = GetUniqueName(profiles, profile.Name);
+    }
+
+    public bool MoveToInsertionIndex(
+        ObservableCollection<ModProfile> profiles,
+        ModProfile profile,
+        int insertionIndex)
+    {
+        return CollectionReorderer.MoveToInsertionIndex(profiles, profile, insertionIndex);
     }
 
     public void EnsureDefaults(ModProfile profile)

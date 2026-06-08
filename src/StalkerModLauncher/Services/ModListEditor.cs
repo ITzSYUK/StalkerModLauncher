@@ -51,6 +51,17 @@ public sealed class ModListEditor
         return MoveToIndex(profile, profile.Mods.IndexOf(source), profile.Mods.Count - 1);
     }
 
+    public bool MoveToInsertionIndex(ModProfile profile, ModEntry source, int insertionIndex)
+    {
+        if (!CollectionReorderer.MoveToInsertionIndex(profile.Mods, source, insertionIndex))
+        {
+            return false;
+        }
+
+        Renumber(profile);
+        return true;
+    }
+
     public bool CanMoveByOffset(ModProfile profile, ModEntry source, int offset)
     {
         var oldIndex = profile.Mods.IndexOf(source);

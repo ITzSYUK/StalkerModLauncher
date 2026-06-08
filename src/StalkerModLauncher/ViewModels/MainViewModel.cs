@@ -241,13 +241,35 @@ public sealed class MainViewModel : ObservableObject
             return;
         }
 
-        foreach (var path in paths.Where(Directory.Exists))
+        foreach (var path in paths.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
         {
+            if (SelectedProfile.IsStandalone && SelectedProfile.Mods.Count >= 1)
+            {
+                break;
+            }
+
+            if (SelectedProfile.Mods.Any(mod => AreSamePaths(mod.SourcePath, path)))
+            {
+                continue;
+            }
+
             SelectedMod = _modListEditor.Add(SelectedProfile, path);
         }
 
         RefreshValidation();
         _ = SaveAsync();
+    }
+
+    private static bool AreSamePaths(string left, string right)
+    {
+        try
+        {
+            return FileSystemSafety.IsSameDirectory(left, right);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public void MoveMod(ModEntry source, ModEntry target)
@@ -258,8 +280,7 @@ public sealed class MainViewModel : ObservableObject
         }
 
         SelectedMod = source;
-        RecalculateLockedMods();
-        _ = SaveAsync();
+        RaiseCommandStates();
     }
 
     public void MoveModToEnd(ModEntry source)
@@ -270,8 +291,30 @@ public sealed class MainViewModel : ObservableObject
         }
 
         SelectedMod = source;
-        RecalculateLockedMods();
-        _ = SaveAsync();
+        RaiseCommandStates();
+    }
+
+    public void MoveModToInsertionIndex(ModEntry source, int insertionIndex)
+    {
+        if (SelectedProfile is null ||
+            !_modListEditor.MoveToInsertionIndex(SelectedProfile, source, insertionIndex))
+        {
+            return;
+        }
+
+        SelectedMod = source;
+        RaiseCommandStates();
+    }
+
+    public void MoveProfileToInsertionIndex(ModProfile profile, int insertionIndex)
+    {
+        if (!_profileManager.MoveToInsertionIndex(Profiles, profile, insertionIndex))
+        {
+            return;
+        }
+
+        SelectedProfile = profile;
+        _autoSave.Schedule();
     }
 
     private async Task LoadAsync()
@@ -670,8 +713,6 @@ public sealed class MainViewModel : ObservableObject
             return;
         }
 
-        RecalculateLockedMods();
-        _ = SaveAsync();
         RaiseCommandStates();
     }
 

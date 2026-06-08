@@ -24,6 +24,12 @@ public partial class MainWindow : Window
     private const int VkShift = 0x10;
 
     private WpfPoint _dragStartPoint;
+    private ModEntry? _draggedMod;
+    private ModProfile? _draggedProfile;
+    private ListViewItem? _modDropTargetItem;
+    private ListBoxItem? _profileDropTargetItem;
+    private bool _modDropAfter;
+    private bool _profileDropAfter;
     private NotesWindow? _notesWindow;
     private string? _notesProfileId;
     private nint _keyboardHook;
@@ -275,11 +281,16 @@ public partial class MainWindow : Window
         _ = DwmSetWindowAttribute(handle, DwmTextColor, ref textColor, sizeof(int));
     }
 
-    private ListViewItem? _dropTargetItem;
-
     private void ModsList_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        _dragStartPoint = e.GetPosition(null);
+        _draggedMod = null;
+        if (e.OriginalSource is not DependencyObject source || IsInteractiveDragSource(source))
+        {
+            return;
+        }
+
+        _draggedMod = FindAncestor<ListViewItem>(source)?.DataContext as ModEntry;
+        _dragStartPoint = e.GetPosition(ModsList);
     }
 
     private void ModsList_OnPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
@@ -319,22 +330,39 @@ public partial class MainWindow : Window
 
     private void ModsList_OnMouseMove(object sender, WpfMouseEventArgs e)
     {
-        var currentPosition = e.GetPosition(null);
+        var currentPosition = e.GetPosition(ModsList);
         if (e.LeftButton != MouseButtonState.Pressed ||
+            _draggedMod is null ||
             Math.Abs(currentPosition.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance ||
             Math.Abs(currentPosition.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
         {
             return;
         }
 
-        if (ModsList.SelectedItem is ModEntry mod)
+        var draggedMod = _draggedMod;
+        try
         {
-            DragDrop.DoDragDrop(ModsList, mod, DragDropEffects.Move);
+            ModsList.SelectedItem = draggedMod;
+            DragDrop.DoDragDrop(ModsList, draggedMod, DragDropEffects.Move);
+        }
+        finally
+        {
+            _draggedMod = null;
+            ClearModDropHighlight();
         }
     }
 
     private void ModsList_OnDragOver(object sender, WpfDragEventArgs e)
     {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            ClearModDropHighlight();
+            e.Effects = DragDropEffects.Copy;
+            e.Handled = true;
+            AutoScroll(ModsList, e.GetPosition(ModsList));
+            return;
+        }
+
         if (!e.Data.GetDataPresent(typeof(ModEntry)))
         {
             e.Effects = DragDropEffects.None;
@@ -343,37 +371,29 @@ public partial class MainWindow : Window
 
         e.Effects = DragDropEffects.Move;
         e.Handled = true;
+        AutoScroll(ModsList, e.GetPosition(ModsList));
 
         if (e.OriginalSource is DependencyObject source)
         {
             var target = FindAncestor<ListViewItem>(source);
-            if (target != _dropTargetItem)
+            var dropAfter = target is not null && e.GetPosition(target).Y > target.ActualHeight / 2;
+            if (target != _modDropTargetItem || dropAfter != _modDropAfter)
             {
-                ClearDropHighlight();
-
-                _dropTargetItem = target;
-                if (_dropTargetItem?.DataContext is ModEntry mod && _dropTargetItem.IsEnabled)
-                {
-                    var chrome = FindVisualChild<Border>(_dropTargetItem, "RowChrome");
-                    if (chrome is not null)
-                    {
-                        chrome.BorderBrush = new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0x00));
-                        chrome.BorderThickness = new Thickness(2);
-                    }
-                }
+                ClearModDropHighlight();
+                _modDropTargetItem = target;
+                _modDropAfter = dropAfter;
+                SetDropHighlight(_modDropTargetItem, "RowChrome", dropAfter);
             }
         }
     }
 
     private void ModsList_OnDragLeave(object sender, WpfDragEventArgs e)
     {
-        ClearDropHighlight();
+        ClearModDropHighlight();
     }
 
     private void ModsList_OnDrop(object sender, WpfDragEventArgs e)
     {
-        ClearDropHighlight();
-
         if (ViewModel is null)
         {
             return;
@@ -393,13 +413,18 @@ public partial class MainWindow : Window
 
             if (target is not null)
             {
-                ViewModel.MoveMod(source, target);
+                var targetIndex = ViewModel.SelectedProfile?.Mods.IndexOf(target) ?? -1;
+                if (targetIndex >= 0)
+                {
+                    ViewModel.MoveModToInsertionIndex(source, targetIndex + (_modDropAfter ? 1 : 0));
+                }
             }
-            else if (source != ViewModel.SelectedProfile?.Mods.LastOrDefault())
+            else
             {
-                ViewModel.MoveModToEnd(source);
+                ViewModel.MoveModToInsertionIndex(source, ViewModel.SelectedProfile?.Mods.Count ?? 0);
             }
 
+            ClearModDropHighlight();
             return;
         }
 
@@ -408,20 +433,160 @@ public partial class MainWindow : Window
             var paths = (string[])e.Data.GetData(DataFormats.FileDrop)!;
             ViewModel.AddDroppedMods(paths);
         }
+
+        ClearModDropHighlight();
     }
 
-    private void ClearDropHighlight()
+    private void ClearModDropHighlight()
     {
-        if (_dropTargetItem is not null)
-        {
-            var chrome = FindVisualChild<Border>(_dropTargetItem, "RowChrome");
-            if (chrome is not null)
-            {
-                chrome.BorderBrush = new SolidColorBrush(Colors.Transparent);
-                chrome.BorderThickness = new Thickness(1);
-            }
+        ClearDropHighlight(_modDropTargetItem, "RowChrome");
+        _modDropTargetItem = null;
+        _modDropAfter = false;
+    }
 
-            _dropTargetItem = null;
+    private void ProfilesList_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _draggedProfile = null;
+        if (e.OriginalSource is not DependencyObject source || IsInteractiveDragSource(source))
+        {
+            return;
+        }
+
+        _draggedProfile = FindAncestor<ListBoxItem>(source)?.DataContext as ModProfile;
+        _dragStartPoint = e.GetPosition(ProfilesList);
+    }
+
+    private void ProfilesList_OnMouseMove(object sender, WpfMouseEventArgs e)
+    {
+        var currentPosition = e.GetPosition(ProfilesList);
+        if (e.LeftButton != MouseButtonState.Pressed ||
+            _draggedProfile is null ||
+            Math.Abs(currentPosition.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance ||
+            Math.Abs(currentPosition.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+
+        var draggedProfile = _draggedProfile;
+        try
+        {
+            ProfilesList.SelectedItem = draggedProfile;
+            DragDrop.DoDragDrop(ProfilesList, draggedProfile, DragDropEffects.Move);
+        }
+        finally
+        {
+            _draggedProfile = null;
+            ClearProfileDropHighlight();
+        }
+    }
+
+    private void ProfilesList_OnDragOver(object sender, WpfDragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(typeof(ModProfile)))
+        {
+            e.Effects = DragDropEffects.None;
+            return;
+        }
+
+        e.Effects = DragDropEffects.Move;
+        e.Handled = true;
+        AutoScroll(ProfilesList, e.GetPosition(ProfilesList));
+
+        if (e.OriginalSource is DependencyObject source)
+        {
+            var target = FindAncestor<ListBoxItem>(source);
+            var dropAfter = target is not null && e.GetPosition(target).Y > target.ActualHeight / 2;
+            if (target != _profileDropTargetItem || dropAfter != _profileDropAfter)
+            {
+                ClearProfileDropHighlight();
+                _profileDropTargetItem = target;
+                _profileDropAfter = dropAfter;
+                SetDropHighlight(_profileDropTargetItem, "ItemChrome", dropAfter);
+            }
+        }
+    }
+
+    private void ProfilesList_OnDragLeave(object sender, WpfDragEventArgs e)
+    {
+        ClearProfileDropHighlight();
+    }
+
+    private void ProfilesList_OnDrop(object sender, WpfDragEventArgs e)
+    {
+        if (ViewModel is null || !e.Data.GetDataPresent(typeof(ModProfile)))
+        {
+            ClearProfileDropHighlight();
+            return;
+        }
+
+        var profile = (ModProfile)e.Data.GetData(typeof(ModProfile))!;
+        var target = e.OriginalSource is DependencyObject source
+            ? FindAncestor<ListBoxItem>(source)?.DataContext as ModProfile
+            : null;
+        var targetIndex = target is null ? ViewModel.Profiles.Count : ViewModel.Profiles.IndexOf(target);
+        ViewModel.MoveProfileToInsertionIndex(profile, targetIndex + (target is not null && _profileDropAfter ? 1 : 0));
+        ClearProfileDropHighlight();
+    }
+
+    private void ClearProfileDropHighlight()
+    {
+        ClearDropHighlight(_profileDropTargetItem, "ItemChrome");
+        _profileDropTargetItem = null;
+        _profileDropAfter = false;
+    }
+
+    private static void SetDropHighlight(FrameworkElement? item, string chromeName, bool after)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        var chrome = FindVisualChild<Border>(item, chromeName);
+        if (chrome is not null)
+        {
+            chrome.BorderBrush = new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0x00));
+            chrome.BorderThickness = after ? new Thickness(0, 0, 0, 2) : new Thickness(0, 2, 0, 0);
+        }
+    }
+
+    private static void ClearDropHighlight(FrameworkElement? item, string chromeName)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        var chrome = FindVisualChild<Border>(item, chromeName);
+        if (chrome is not null)
+        {
+            chrome.BorderBrush = new SolidColorBrush(Colors.Transparent);
+            chrome.BorderThickness = item is ListViewItem ? new Thickness(1) : new Thickness(0);
+        }
+    }
+
+    private static bool IsInteractiveDragSource(DependencyObject source)
+    {
+        return FindAncestor<System.Windows.Controls.Primitives.ButtonBase>(source) is not null ||
+               FindAncestor<TextBox>(source) is not null;
+    }
+
+    private static void AutoScroll(ItemsControl list, WpfPoint position)
+    {
+        var scrollViewer = FindVisualChild<ScrollViewer>(list);
+        if (scrollViewer is null)
+        {
+            return;
+        }
+
+        const double edge = 32;
+        if (position.Y < edge)
+        {
+            scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - 18);
+        }
+        else if (position.Y > list.ActualHeight - edge)
+        {
+            scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset + 18);
         }
     }
 
@@ -438,6 +603,28 @@ public partial class MainWindow : Window
             }
 
             var found = FindVisualChild<T>(child, childName);
+            if (found is not null)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject parent)
+        where T : DependencyObject
+    {
+        var count = VisualTreeHelper.GetChildrenCount(parent);
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T typed)
+            {
+                return typed;
+            }
+
+            var found = FindVisualChild<T>(child);
             if (found is not null)
             {
                 return found;

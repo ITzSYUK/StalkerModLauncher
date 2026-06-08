@@ -96,10 +96,18 @@
                                     Padding="8,2"/>
                         </Grid>
 
-                        <ListBox Grid.Row="1"
+                        <ListBox x:Name="ProfilesList"
+                                 Grid.Row="1"
                                  ItemsSource="{Binding Profiles}"
                                  SelectedItem="{Binding SelectedProfile}"
                                  BorderThickness="0"
+                                 AllowDrop="True"
+                                 PreviewMouseLeftButtonDown="ProfilesList_OnPreviewMouseLeftButtonDown"
+                                 MouseMove="ProfilesList_OnMouseMove"
+                                 DragOver="ProfilesList_OnDragOver"
+                                 DragLeave="ProfilesList_OnDragLeave"
+                                 Drop="ProfilesList_OnDrop"
+                                 ToolTip="Профили можно перетаскивать для изменения порядка"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
@@ -413,6 +421,7 @@
                                        PreviewMouseLeftButtonDown="ModsList_OnPreviewMouseLeftButtonDown"
                                        PreviewMouseRightButtonDown="ModsList_OnPreviewMouseRightButtonDown"
                                        MouseMove="ModsList_OnMouseMove"
+                                        ToolTip="Моды можно перетаскивать между строками; нижние имеют больший приоритет"
                                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                         ScrollViewer.CanContentScroll="False"
                                         VirtualizingPanel.ScrollUnit="Pixel"

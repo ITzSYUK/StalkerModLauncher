@@ -142,6 +142,21 @@ public sealed class ProfileManagerTests
         }
     }
 
+    [Fact]
+    public void MoveToInsertionIndex_ReordersProfiles()
+    {
+        var first = new ModProfile { Name = "First" };
+        var second = new ModProfile { Name = "Second" };
+        var third = new ModProfile { Name = "Third" };
+        var profiles = new System.Collections.ObjectModel.ObservableCollection<ModProfile>(
+            [first, second, third]);
+
+        var moved = _manager.MoveToInsertionIndex(profiles, first, 3);
+
+        Assert.True(moved);
+        Assert.Equal(["Second", "Third", "First"], profiles.Select(profile => profile.Name));
+    }
+
     private sealed class FakeWorkspaceManager : IProfileWorkspaceManager
     {
         public List<ModProfile> DeletedProfiles { get; } = [];

@@ -78,6 +78,23 @@ public sealed class SettingsStoreTests : IDisposable
         Assert.Empty(loaded.Profiles);
     }
 
+    [Fact]
+    public async Task SaveAsync_PreservesProfileAndModOrder()
+    {
+        var first = new ModProfile { Name = "First" };
+        first.Mods.Add(new ModEntry { Name = "Low priority", Order = 1 });
+        first.Mods.Add(new ModEntry { Name = "High priority", Order = 2 });
+        var second = new ModProfile { Name = "Second" };
+
+        await _store.SaveAsync(new AppSettings { Profiles = [second, first] });
+        var loaded = await _store.LoadAsync();
+
+        Assert.Equal(["Second", "First"], loaded.Profiles.Select(profile => profile.Name));
+        Assert.Equal(
+            ["Low priority", "High priority"],
+            loaded.Profiles[1].Mods.Select(mod => mod.Name));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))
