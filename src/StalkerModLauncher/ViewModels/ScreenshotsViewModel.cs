@@ -11,6 +11,7 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
 {
     private readonly CancellationTokenSource _loadCancellation = new();
     private readonly IScreenshotClipboardService _clipboardService;
+    private CancellationTokenSource? _statusCancellation;
     private BitmapImage? _selectedScreenshot;
     private bool _isFullScreen;
     private bool _isLoading = true;
@@ -183,11 +184,11 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
         try
         {
             _clipboardService.Copy(item.Source);
-            StatusText = $"Скопировано: {Path.GetFileName(item.FilePath)}";
+            ShowTemporaryStatus($"Скопировано: {Path.GetFileName(item.FilePath)}");
         }
         catch (Exception ex)
         {
-            StatusText = $"Не удалось скопировать скриншот: {ex.Message}";
+            ShowTemporaryStatus($"Не удалось скопировать скриншот: {ex.Message}");
         }
     }
 
@@ -195,6 +196,27 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
     {
         _loadCancellation.Cancel();
         _loadCancellation.Dispose();
+        _statusCancellation?.Cancel();
+        _statusCancellation?.Dispose();
+        _statusCancellation = null;
+    }
+
+    private async void ShowTemporaryStatus(string message)
+    {
+        _statusCancellation?.Cancel();
+        _statusCancellation?.Dispose();
+        _statusCancellation = new CancellationTokenSource();
+        var cancellationToken = _statusCancellation.Token;
+
+        StatusText = message;
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+            StatusText = string.Empty;
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 
     private async Task LoadScreenshotsAsync(
