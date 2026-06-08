@@ -174,7 +174,7 @@
                             Background="{StaticResource FieldBackgroundBrush}"
                             BorderBrush="{StaticResource StrokeBrush}"
                             BorderThickness="1"
-                            CornerRadius="4"
+                            CornerRadius="6"
                             Padding="10,8"
                             Margin="0,0,0,10">
                         <Border.Style>
