@@ -32,13 +32,20 @@ public partial class MainWindow : Window
     private readonly AppPaths _paths;
     private readonly DialogService _dialogService;
     private readonly SettingsStore _settingsStore;
+    private readonly ProfileHealthService _profileHealthService;
 
-    public MainWindow(MainViewModel viewModel, AppPaths paths, DialogService dialogService, SettingsStore settingsStore)
+    public MainWindow(
+        MainViewModel viewModel,
+        AppPaths paths,
+        DialogService dialogService,
+        SettingsStore settingsStore,
+        ProfileHealthService profileHealthService)
     {
         InitializeComponent();
         _paths = paths;
         _dialogService = dialogService;
         _settingsStore = settingsStore;
+        _profileHealthService = profileHealthService;
         viewModel.PropertyChanged += ViewModel_PropertyChanged;
         DataContext = viewModel;
     }
@@ -217,6 +224,27 @@ public partial class MainWindow : Window
 
         var vm = new ScreenshotsViewModel(profile, ViewModel!.GameInstallPath);
         var window = new ScreenshotsWindow(vm)
+        {
+            Owner = this
+        };
+
+        window.ShowDialog();
+    }
+
+    private void ProfileHealthButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        var profile = ViewModel?.SelectedProfile;
+        if (profile is null)
+        {
+            return;
+        }
+
+        var viewModel = new ProfileHealthViewModel(
+            profile,
+            ViewModel!.GameInstallPath,
+            _profileHealthService,
+            _dialogService);
+        var window = new ProfileHealthWindow(viewModel)
         {
             Owner = this
         };

@@ -15,10 +15,12 @@ src/
       AboutWindow.xaml
       NotesWindow.xaml
       ScreenshotsWindow.xaml
+      ProfileHealthWindow.xaml
       ScanResultsWindow.xaml
     ViewModels/
       MainViewModel.cs
       ProfileSettingsViewModel.cs
+      ProfileHealthViewModel.cs
       NotesViewModel.cs
       ScreenshotsViewModel.cs
     Models/
@@ -37,6 +39,7 @@ src/
       LaunchCoordinator.cs
       GameSessionTracker.cs
       GameExitDiagnosticsService.cs
+      ProfileHealthService.cs
       ModScannerService.cs
       DiscordPresenceService.cs
       DialogService.cs
@@ -66,6 +69,7 @@ tests/
 - **Дополнительные возможности:** импорт/экспорт профилей, поиск модов, заметки, просмотр скриншотов, учет игрового времени и Discord Rich Presence.
 - **Дублирование профиля:** кнопка `Копия` или `Ctrl+D` создает профиль с новыми ID и отдельным читаемо названным workspace, сохраняя настройки и список модов без переноса сохранений и игрового времени.
 - **Диагностика завершения:** при быстром завершении игры лаунчер показывает код выхода и пути к свежим игровым логам или crash dump в журнале.
+- **Состояние профиля:** отдельное read-only окно проверяет игру, моды, бинарник, workspace, сохранения, логи и crash dump; отчет можно скопировать для диагностики.
 
 ## Почему оригинальная игра не меняется
 

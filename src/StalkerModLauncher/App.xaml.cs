@@ -93,7 +93,8 @@ public partial class App : Application
             _services.CreateMainViewModel(),
             _services.Paths,
             _services.DialogService,
-            _services.SettingsStore);
+            _services.SettingsStore,
+            _services.ProfileHealthService);
     }
 
     private async Task ShowAboutIfNeededAsync()

@@ -19,6 +19,7 @@ public sealed class AppServices
         ModScannerService = new ModScannerService();
         ModListEditor = new ModListEditor();
         GameExitDiagnosticsService = new GameExitDiagnosticsService();
+        ProfileHealthService = new ProfileHealthService(GameValidator);
     }
 
     public AppPaths Paths { get; }
@@ -32,6 +33,7 @@ public sealed class AppServices
     public ModScannerService ModScannerService { get; }
     public ModListEditor ModListEditor { get; }
     public GameExitDiagnosticsService GameExitDiagnosticsService { get; }
+    public ProfileHealthService ProfileHealthService { get; }
 
     public MainViewModel CreateMainViewModel()
     {

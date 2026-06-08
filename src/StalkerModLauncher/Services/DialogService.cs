@@ -56,4 +56,24 @@ public sealed class DialogService
             UseShellExecute = false
         });
     }
+
+    public void OpenFileLocation(string path)
+    {
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException("File was not found.", path);
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "explorer.exe",
+            Arguments = $"/select,\"{path}\"",
+            UseShellExecute = false
+        });
+    }
+
+    public void CopyText(string text)
+    {
+        Clipboard.SetText(text);
+    }
 }
