@@ -111,8 +111,11 @@ public partial class App : Application
 
             if (about.DontShowAgain)
             {
-                settings.DontShowAboutOnStartup = true;
-                await _services.SettingsStore.SaveAsync(settings);
+                await _services.SettingsStore.UpdateAsync(current =>
+                {
+                    current.DontShowAboutOnStartup = true;
+                    return current;
+                });
             }
         }
     }

@@ -15,12 +15,14 @@ public sealed class AppPaths
     {
         ConfigDirectory = configDirectory;
         SettingsFile = Path.Combine(ConfigDirectory, "settings.json");
+        SettingsBackupFile = Path.Combine(ConfigDirectory, "settings.backup.json");
         WorkspaceRoot = workspaceRoot;
         _preferGameDriveWorkspace = preferGameDriveWorkspace;
     }
 
     public string ConfigDirectory { get; }
     public string SettingsFile { get; }
+    public string SettingsBackupFile { get; }
     public string WorkspaceRoot { get; }
 
     public string GetPreferredWorkspaceRoot(string? gameInstallPath)

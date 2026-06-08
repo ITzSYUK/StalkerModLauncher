@@ -315,16 +315,14 @@ public sealed class MainViewModel : ObservableObject
             {
                 _modListEditor.Renumber(profile);
             }
-            var existing = await _settingsStore.LoadAsync();
-            var settings = new AppSettings
+            await _settingsStore.UpdateAsync(existing => new AppSettings
             {
                 GameInstallPath = _gameInstallPath,
                 Profiles = Profiles.ToList(),
                 DontShowAboutOnStartup = existing.DontShowAboutOnStartup,
                 IsLogVisible = _isLogVisible,
                 DiscordClientId = existing.DiscordClientId
-            };
-            await _settingsStore.SaveAsync(settings);
+            });
             Log("Settings saved.");
         }
         catch (Exception ex)
@@ -335,9 +333,11 @@ public sealed class MainViewModel : ObservableObject
 
     public async Task SaveAboutPreferenceAsync(bool dontShowAgain)
     {
-        var settings = await _settingsStore.LoadAsync();
-        settings.DontShowAboutOnStartup = dontShowAgain;
-        await _settingsStore.SaveAsync(settings);
+        await _settingsStore.UpdateAsync(settings =>
+        {
+            settings.DontShowAboutOnStartup = dontShowAgain;
+            return settings;
+        });
     }
 
     private void ExportProfile()

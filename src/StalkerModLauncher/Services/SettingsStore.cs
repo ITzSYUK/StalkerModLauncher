@@ -12,7 +12,7 @@ public sealed class SettingsStore
     };
 
     private readonly AppPaths _paths;
-    private readonly SemaphoreSlim _saveLock = new(1, 1);
+    private readonly SemaphoreSlim _ioLock = new(1, 1);
 
     public SettingsStore(AppPaths paths)
     {
@@ -21,42 +21,95 @@ public sealed class SettingsStore
 
     public async Task<AppSettings> LoadAsync()
     {
-        Directory.CreateDirectory(_paths.ConfigDirectory);
-
-        if (!File.Exists(_paths.SettingsFile))
+        await _ioLock.WaitAsync();
+        try
         {
-            return new AppSettings();
+            return await LoadCoreAsync();
         }
-
-        await using var stream = File.OpenRead(_paths.SettingsFile);
-        return await JsonSerializer.DeserializeAsync<AppSettings>(stream, JsonOptions) ?? new AppSettings();
+        finally
+        {
+            _ioLock.Release();
+        }
     }
 
     public async Task SaveAsync(AppSettings settings)
     {
-        await _saveLock.WaitAsync();
+        var snapshot = JsonSerializer.SerializeToUtf8Bytes(settings, JsonOptions);
+        await _ioLock.WaitAsync();
         try
         {
-            Directory.CreateDirectory(_paths.ConfigDirectory);
-            var tempPath = _paths.SettingsFile + ".tmp";
-
-            await using (var stream = File.Create(tempPath))
-            {
-                await JsonSerializer.SerializeAsync(stream, settings, JsonOptions);
-            }
-
-            if (File.Exists(_paths.SettingsFile))
-            {
-                File.Replace(tempPath, _paths.SettingsFile, null);
-            }
-            else
-            {
-                File.Move(tempPath, _paths.SettingsFile);
-            }
+            await SaveSnapshotCoreAsync(snapshot);
         }
         finally
         {
-            _saveLock.Release();
+            _ioLock.Release();
+        }
+    }
+
+    public async Task<AppSettings> UpdateAsync(Func<AppSettings, AppSettings> update)
+    {
+        await _ioLock.WaitAsync();
+        try
+        {
+            var current = await LoadCoreAsync();
+            var updated = update(current);
+            await SaveSnapshotCoreAsync(JsonSerializer.SerializeToUtf8Bytes(updated, JsonOptions));
+            return updated;
+        }
+        finally
+        {
+            _ioLock.Release();
+        }
+    }
+
+    private async Task<AppSettings> LoadCoreAsync()
+    {
+        Directory.CreateDirectory(_paths.ConfigDirectory);
+        var primary = await TryLoadFileAsync(_paths.SettingsFile);
+        if (primary is not null)
+        {
+            return primary;
+        }
+
+        var backup = await TryLoadFileAsync(_paths.SettingsBackupFile);
+        return backup ?? new AppSettings();
+    }
+
+    private static async Task<AppSettings?> TryLoadFileAsync(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            await using var stream = File.OpenRead(path);
+            return await JsonSerializer.DeserializeAsync<AppSettings>(stream, JsonOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+    }
+
+    private async Task SaveSnapshotCoreAsync(byte[] snapshot)
+    {
+        Directory.CreateDirectory(_paths.ConfigDirectory);
+        var tempPath = _paths.SettingsFile + ".tmp";
+        await File.WriteAllBytesAsync(tempPath, snapshot);
+
+        if (File.Exists(_paths.SettingsFile))
+        {
+            File.Replace(tempPath, _paths.SettingsFile, _paths.SettingsBackupFile);
+        }
+        else
+        {
+            File.Move(tempPath, _paths.SettingsFile);
         }
     }
 }
