@@ -606,7 +606,7 @@ public partial class MainWindow : Window
     {
         return FindAncestor<System.Windows.Controls.Primitives.ButtonBase>(source) is not null ||
                FindAncestor<TextBox>(source) is not null ||
-               FindAncestor<Border>(source) is { Name: "ActionRail" };
+               FindAncestor<Grid>(source) is { Name: "ActionRail" };
     }
 
     private static void AutoScroll(ItemsControl list, WpfPoint position)

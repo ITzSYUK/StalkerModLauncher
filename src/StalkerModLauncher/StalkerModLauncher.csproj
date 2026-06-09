@@ -17,8 +17,8 @@
   <ItemGroup>
     <Resource Include="Resources\radiation_off.png" />
     <Resource Include="Resources\radiation_on.png" />
-    <Resource Include="..\..\icons\left-chevron.png" Link="Resources\left-chevron.png" />
-    <Resource Include="..\..\icons\right_chevron.png" Link="Resources\right_chevron.png" />
+    <Resource Include="..\..\icons\arrow_variant_two\left-arrow.png" Link="Resources\left-arrow.png" />
+    <Resource Include="..\..\icons\arrow_variant_two\right-arrow.png" Link="Resources\right-arrow.png" />
     <EmbeddedResource Include="Resources\ModLauncherLogo.png" />
   </ItemGroup>
   <ItemGroup>
