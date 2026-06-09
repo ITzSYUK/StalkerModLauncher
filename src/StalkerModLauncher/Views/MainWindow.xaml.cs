@@ -268,17 +268,6 @@ public partial class MainWindow : Window
         window.ShowDialog();
     }
 
-    private void MoreProfileActionsButton_OnClick(object sender, RoutedEventArgs e)
-    {
-        if (sender is not Button { ContextMenu: { } menu } button)
-        {
-            return;
-        }
-
-        menu.PlacementTarget = button;
-        menu.IsOpen = true;
-    }
-
     private void ApplyDarkWindowFrame()
     {
         var handle = new WindowInteropHelper(this).Handle;

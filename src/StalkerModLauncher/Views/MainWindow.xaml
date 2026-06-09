@@ -23,6 +23,54 @@
             <Setter Property="Margin" Value="2,0"/>
             <Setter Property="MinHeight" Value="26"/>
         </Style>
+        <Style x:Key="ProfileActionsToggleButtonStyle"
+               TargetType="ToggleButton">
+            <Setter Property="Width" Value="38"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="ToolTipService.InitialShowDelay" Value="450"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Chrome"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="6">
+                            <Grid>
+                                <Viewbox x:Name="CollapsedArrow"
+                                         Width="14"
+                                         Height="18">
+                                    <Path Fill="{StaticResource TextBrush}"
+                                          Data="M335.99,42.42 L336,468.99 C336,492.44 316.98,511.45 293.54,511.45 C282.48,511.45 272.42,507.23 264.86,500.3 L15.37,293.87 C-2.67,278.95 -5.19,252.21 9.73,234.17 C11.22,232.37 12.85,230.71 14.55,229.21 L265.69,10.42 C283.35,-4.96 310.16,-3.09 325.54,14.57 C332.54,22.61 335.97,32.53 335.99,42.42 Z"/>
+                                </Viewbox>
+                                <Viewbox x:Name="ExpandedArrow"
+                                         Width="14"
+                                         Height="18"
+                                         Opacity="0">
+                                    <Path Fill="{StaticResource TextBrush}"
+                                          Data="M0,469 V42.42 C0.02,32.53 3.46,22.61 10.45,14.57 C25.84,-3.09 52.65,-4.96 70.31,10.42 L321.46,229.2 C323.15,230.71 324.78,232.37 326.27,234.17 C341.19,252.21 338.67,278.95 320.63,293.87 L71.14,500.3 C63.58,507.23 53.52,511.46 42.46,511.46 C19.02,511.46 0,492.44 0,469 Z"/>
+                                </Viewbox>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource PanelHoverBrush}"/>
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#5C604F"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource PanelPressedBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CollapsedArrow" Property="Opacity" Value="0"/>
+                                <Setter TargetName="ExpandedArrow" Property="Opacity" Value="1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="ProfileHeaderIconButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource {x:Type Button}}">
@@ -707,40 +755,102 @@
                             </StackPanel>
                         </Grid>
 
-                        <WrapPanel Grid.Column="1"
-                                   HorizontalAlignment="Right"
-                                   VerticalAlignment="Top"
-                                   Margin="16,0,0,0">
-                            <Button Content="Настройки"
-                                    Click="EditProfileButton_OnClick"
-                                    Margin="0,0,8,8"/>
-                            <Button Content="Папка профиля"
-                                    Command="{Binding OpenProfileFolderCommand}"
-                                    Margin="0,0,8,8"/>
-                            <Button Content="Скриншоты"
-                                    Click="ScreenshotsButton_OnClick"
-                                    Margin="0,0,8,8"/>
-                            <Button Content="Заметки"
-                                    Click="NotesButton_OnClick"
-                                    Margin="0,0,8,8"/>
-                            <Button Content="Ещё"
-                                    Click="MoreProfileActionsButton_OnClick"
-                                    Margin="0,0,8,8">
-                                <Button.ContextMenu>
-                                    <ContextMenu Placement="Bottom">
-                                        <MenuItem Header="Состояние и диагностика"
-                                                  Click="ProfileHealthButton_OnClick"/>
-                                        <MenuItem Header="Экспорт профиля"
-                                                  Command="{Binding PlacementTarget.DataContext.ExportProfileCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                    </ContextMenu>
-                                </Button.ContextMenu>
-                            </Button>
-                            <Button Content="Запустить"
+                        <Grid Grid.Column="1"
+                              HorizontalAlignment="Right"
+                              VerticalAlignment="Top"
+                              Margin="16,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0"
+                                    Height="38"
+                                    HorizontalAlignment="Right"
+                                    ClipToBounds="True"
+                                    Margin="0,0,4,8"
+                                    Width="0"
+                                    Opacity="0">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="IsHitTestVisible" Value="False"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsChecked, ElementName=ProfileActionsToggle}" Value="True">
+                                                <Setter Property="IsHitTestVisible" Value="True"/>
+                                                <DataTrigger.EnterActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="Width"
+                                                                             To="624"
+                                                                             Duration="0:0:0.46">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <CubicEase EasingMode="EaseOut"/>
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                             To="1"
+                                                                             BeginTime="0:0:0.08"
+                                                                             Duration="0:0:0.30"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.EnterActions>
+                                                <DataTrigger.ExitActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="Width"
+                                                                             To="0"
+                                                                             Duration="0:0:0.42">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <CubicEase EasingMode="EaseInOut"/>
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                             To="0"
+                                                                             Duration="0:0:0.26"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.ExitActions>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel Width="624"
+                                            Orientation="Horizontal"
+                                            HorizontalAlignment="Right">
+                                    <Button Content="Состояние"
+                                            Click="ProfileHealthButton_OnClick"
+                                            Margin="0,0,8,0"/>
+                                    <Button Content="Настройки"
+                                            Click="EditProfileButton_OnClick"
+                                            Margin="0,0,8,0"/>
+                                    <Button Content="Экспорт"
+                                            Command="{Binding ExportProfileCommand}"
+                                            Margin="0,0,8,0"/>
+                                    <Button Content="Папка профиля"
+                                            Command="{Binding OpenProfileFolderCommand}"
+                                            Margin="0,0,8,0"/>
+                                    <Button Content="Скриншоты"
+                                            Click="ScreenshotsButton_OnClick"
+                                            Margin="0,0,8,0"/>
+                                    <Button Content="Заметки"
+                                            Click="NotesButton_OnClick"/>
+                                </StackPanel>
+                            </Border>
+
+                            <ToggleButton x:Name="ProfileActionsToggle"
+                                          Grid.Column="1"
+                                          Style="{StaticResource ProfileActionsToggleButtonStyle}"
+                                          ToolTip="Показать или скрыть действия профиля"
+                                          Margin="0,0,6,8"/>
+
+                            <Button Grid.Column="2"
+                                    Content="Запустить"
                                     Command="{Binding LaunchCommand}"
                                     Style="{StaticResource PrimaryButtonStyle}"
                                     Margin="0,0,0,8"
                                     MinWidth="112"/>
-                        </WrapPanel>
+                        </Grid>
                     </Grid>
 
                     <Border Grid.Row="2"
