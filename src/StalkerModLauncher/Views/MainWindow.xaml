@@ -61,6 +61,12 @@
                                     </TextBlock.Style>
                                 </TextBlock>
 
+                                <Border x:Name="ActionShade"
+                                        Grid.RowSpan="2"
+                                        Background="#B3000000"
+                                        Opacity="0"
+                                        IsHitTestVisible="False"/>
+
                                 <Grid x:Name="ActionRail"
                                       Grid.RowSpan="2"
                                       Width="38"
@@ -144,6 +150,14 @@
                                                          To="1"
                                                          BeginTime="0:0:0.10"
                                                          Duration="0:0:0.30"/>
+                                        <DoubleAnimation Storyboard.TargetName="ActionShade"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0.65"
+                                                         Duration="0:0:0.42">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
                                         <DoubleAnimation Storyboard.TargetName="LeftChevron"
                                                          Storyboard.TargetProperty="Opacity"
                                                          To="0"
@@ -170,6 +184,14 @@
                                                          Storyboard.TargetProperty="Opacity"
                                                          To="0"
                                                          Duration="0:0:0.30"/>
+                                        <DoubleAnimation Storyboard.TargetName="ActionShade"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0"
+                                                         Duration="0:0:0.42">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseInOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
                                         <DoubleAnimation Storyboard.TargetName="LeftChevron"
                                                          Storyboard.TargetProperty="Opacity"
                                                          To="1"
