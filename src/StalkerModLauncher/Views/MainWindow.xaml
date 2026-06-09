@@ -26,12 +26,13 @@
         <Style x:Key="ProfileHeaderIconButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Width" Value="34"/>
-            <Setter Property="Height" Value="34"/>
-            <Setter Property="MinHeight" Value="34"/>
-            <Setter Property="Padding" Value="7"/>
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="6"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
             <Setter Property="ToolTipService.InitialShowDelay" Value="450"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -41,24 +42,16 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="6">
-                            <Grid Margin="{TemplateBinding Padding}">
-                                <ContentPresenter x:Name="OutlineIcon"
-                                                  Content="{TemplateBinding Content}"
-                                                  HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center"/>
-                                <ContentPresenter x:Name="FilledIcon"
-                                                  Content="{TemplateBinding Tag}"
-                                                  HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center"
-                                                  Opacity="0"/>
-                            </Grid>
+                            <ContentPresenter Content="{TemplateBinding Content}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{StaticResource PanelHoverBrush}"/>
                                 <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource StrokeBrush}"/>
-                                <Setter TargetName="OutlineIcon" Property="Opacity" Value="0"/>
-                                <Setter TargetName="FilledIcon" Property="Opacity" Value="1"/>
+                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{StaticResource PanelPressedBrush}"/>
@@ -74,12 +67,13 @@
         <Style x:Key="InlineProfileActionButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Width" Value="30"/>
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="MinHeight" Value="30"/>
-            <Setter Property="Padding" Value="7"/>
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="6"/>
             <Setter Property="Margin" Value="3,0"/>
-            <Setter Property="Background" Value="{StaticResource PanelAltBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="ToolTipService.InitialShowDelay" Value="450"/>
         </Style>
         <Style x:Key="ProfileListBoxItemStyle"
@@ -116,18 +110,35 @@
                                             Command="{Binding DataContext.InlineDuplicateProfileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                             CommandParameter="{Binding}"
                                             ToolTip="Создать копию профиля">
-                                        <Viewbox Width="16" Height="18">
-                                            <Path Fill="{StaticResource TextBrush}"
-                                                  Data="M131.07,372.11 C131.44,373.11 131.64,374.19 131.64,375.31 V454.43 C131.64,465.17 136.05,474.96 143.14,482.05 C150.23,489.14 160.01,493.54 170.76,493.54 H409.21 C419.96,493.54 429.74,489.14 436.83,482.05 C443.92,474.96 448.32,465.17 448.32,454.43 V152.42 C448.32,141.87 444.11,132.27 437.3,125.24 L436.83,124.81 C429.74,117.72 419.96,113.31 409.21,113.31 H170.19 C159.44,113.31 149.66,117.72 142.57,124.81 C135.48,131.9 131.07,141.68 131.07,152.42 Z M112.4,384.65 H57.23 C41.41,384.65 27.13,378.07 16.78,367.54 C6.41,356.97 0,342.4 0,326.52 V57.79 C0,41.93 6.5,27.49 16.97,17.01 C27.51,6.49 41.94,0 57.79,0 H301.42 C317.29,0 331.72,6.51 342.19,16.98 C352.7,27.46 359.21,41.94 359.21,57.79 V94.64 H409.21 C425.11,94.64 439.57,101.14 450.03,111.6 C460.5,122.06 467,136.52 467,152.42 V454.43 C467,470.33 460.5,484.79 450.04,495.25 C439.57,505.72 425.11,512.22 409.21,512.22 H170.19 C154.29,512.22 139.84,505.72 129.37,495.25 C118.9,484.79 112.4,470.33 112.4,454.43 Z"/>
+                                        <Viewbox Width="19" Height="19">
+                                            <Canvas Width="24" Height="24">
+                                                <Rectangle Canvas.Left="8"
+                                                           Canvas.Top="7"
+                                                           Width="11"
+                                                           Height="13"
+                                                           RadiusX="2"
+                                                           RadiusY="2"
+                                                           Stroke="{StaticResource TextBrush}"
+                                                           StrokeThickness="1.8"/>
+                                                <Path Data="M16,7 V5.5 C16,4.672 15.328,4 14.5,4 H5.5 C4.672,4 4,4.672 4,5.5 V16.5 C4,17.328 4.672,18 5.5,18 H8"
+                                                      Stroke="{StaticResource TextBrush}"
+                                                      StrokeThickness="1.8"
+                                                      StrokeStartLineCap="Round"
+                                                      StrokeEndLineCap="Round"
+                                                      StrokeLineJoin="Round"/>
+                                            </Canvas>
                                         </Viewbox>
                                     </Button>
                                     <Button Style="{StaticResource InlineProfileActionButtonStyle}"
                                             Command="{Binding DataContext.InlineDeleteProfileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                             CommandParameter="{Binding}"
                                             ToolTip="Удалить профиль">
-                                        <Viewbox Width="16" Height="16">
-                                            <Path Fill="{StaticResource DangerBrush}"
-                                                  Data="M1.63,97.99 L38.18,61.44 L1.63,24.89 C-0.54,22.72 -0.54,19.16 1.63,16.99 L16.99,1.63 C19.16,-0.54 22.72,-0.54 24.89,1.63 L61.44,38.18 L97.99,1.63 C100.16,-0.54 103.72,-0.54 105.89,1.63 L121.25,16.99 C123.42,19.16 123.42,22.72 121.25,24.89 L84.7,61.44 L121.25,97.99 C123.42,100.16 123.42,103.72 121.25,105.89 L105.89,121.25 C103.72,123.42 100.16,123.42 97.99,121.25 L61.44,84.7 L24.89,121.25 C22.72,123.42 19.16,123.42 16.99,121.25 L1.63,105.89 C-0.54,103.72 -0.54,100.16 1.63,97.99 Z"/>
+                                        <Viewbox Width="18" Height="18">
+                                            <Path Data="M5,5 L19,19 M19,5 L5,19"
+                                                  Stroke="{StaticResource DangerBrush}"
+                                                  StrokeThickness="2"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"/>
                                         </Viewbox>
                                     </Button>
                                 </StackPanel>
@@ -476,34 +487,61 @@
                                         Style="{StaticResource ProfileHeaderIconButtonStyle}"
                                         ToolTip="Создать профиль"
                                         Margin="0,0,3,0">
-                                    <Button.Content>
-                                        <Viewbox Width="20" Height="20">
-                                            <Path Fill="{StaticResource TextBrush}"
-                                                  Data="M6.87,0 H49.49 C53.28,0 56.36,3.08 56.36,6.87 V49.3 C56.36,53.09 53.28,56.17 49.49,56.17 H6.87 C3.08,56.17 0,53.09 0,49.3 V6.87 C0,3.08 3.08,0 6.87,0 Z M90.78,66.91 H101.15 C103.28,66.91 105,68.63 105,70.75 V84.81 H119 C121.12,84.81 122.84,86.52 122.84,88.64 V99 C122.84,101.12 121.12,102.83 119,102.83 H105 V116.9 C105,119.02 103.28,120.74 101.17,120.74 H90.78 C88.67,120.74 87,119.02 87,116.9 V102.84 H72.89 C70.77,102.84 69.05,101.12 69.05,99 V88.64 C69.05,86.52 70.77,84.81 72.89,84.81 H87 V70.75 C87,68.63 88.67,66.91 90.78,66.91 Z M6.87,64.87 H49.49 C53.28,64.87 56.36,67.95 56.36,71.74 V114.17 C56.36,117.96 53.28,121.04 49.49,121.04 H6.87 C3.08,121.04 0,117.96 0,114.17 V71.74 C0,67.95 3.08,64.87 6.87,64.87 Z M72.64,0 H115.26 C119.05,0 122.13,3.08 122.13,6.87 V49.3 C122.13,53.09 119.05,56.17 115.26,56.17 H72.64 C68.85,56.17 65.77,53.09 65.77,49.3 V6.87 C65.77,3.08 68.85,0 72.64,0 Z"/>
-                                        </Viewbox>
-                                    </Button.Content>
-                                    <Button.Tag>
-                                        <Viewbox Width="20" Height="20">
-                                            <Path Fill="{StaticResource AccentBrush}"
-                                                  Data="M91.32,69.14 H101.43 C103.5,69.14 105.17,70.81 105.17,72.88 V86.61 H118.89 C120.96,86.61 122.64,88.28 122.64,90.35 V100.46 C122.64,102.53 120.96,104.2 118.89,104.2 H105.17 V117.93 C105.17,120 103.5,121.67 101.43,121.67 H91.32 C89.25,121.67 87.57,120 87.57,117.93 V104.2 H73.85 C71.78,104.2 70.11,102.53 70.11,100.46 V90.35 C70.11,88.28 71.78,86.61 73.85,86.61 H87.57 V72.88 C87.57,70.81 89.25,69.14 91.32,69.14 Z M3.68,69.14 H49.1 C51.13,69.14 52.78,70.79 52.78,72.81 V118 C52.78,120.03 51.13,121.67 49.1,121.67 H3.68 C1.65,121.67 0,120.03 0,118 V72.81 C0,70.79 1.65,69.14 3.68,69.14 Z M73.78,0 H119.21 C121.24,0 122.88,1.64 122.88,3.67 V48.9 C122.88,50.93 121.24,52.58 119.21,52.58 H73.78 C71.75,52.58 70.1,50.93 70.1,48.9 V3.67 C70.1,1.64 71.75,0 73.78,0 Z M3.68,0 H49.1 C51.13,0 52.78,1.64 52.78,3.67 V48.9 C52.78,50.93 51.13,52.58 49.1,52.58 H3.68 C1.65,52.58 0,50.93 0,48.9 V3.67 C0,1.64 1.65,0 3.68,0 Z"/>
-                                        </Viewbox>
-                                    </Button.Tag>
+                                    <Viewbox Width="23" Height="23">
+                                        <Canvas Width="24" Height="24">
+                                            <Rectangle Canvas.Left="4"
+                                                       Canvas.Top="4"
+                                                       Width="6"
+                                                       Height="6"
+                                                       RadiusX="1"
+                                                       RadiusY="1"
+                                                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                       StrokeThickness="1.7"/>
+                                            <Rectangle Canvas.Left="14"
+                                                       Canvas.Top="4"
+                                                       Width="6"
+                                                       Height="6"
+                                                       RadiusX="1"
+                                                       RadiusY="1"
+                                                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                       StrokeThickness="1.7"/>
+                                            <Rectangle Canvas.Left="4"
+                                                       Canvas.Top="14"
+                                                       Width="6"
+                                                       Height="6"
+                                                       RadiusX="1"
+                                                       RadiusY="1"
+                                                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                       StrokeThickness="1.7"/>
+                                            <Path Data="M17,14 V20 M14,17 H20"
+                                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                  StrokeThickness="1.9"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"/>
+                                        </Canvas>
+                                    </Viewbox>
                                 </Button>
                                 <Button Command="{Binding ImportProfileCommand}"
                                         Style="{StaticResource ProfileHeaderIconButtonStyle}"
                                         ToolTip="Импортировать профиль">
-                                    <Button.Content>
-                                        <Viewbox Width="20" Height="20">
-                                            <Path Fill="{StaticResource TextBrush}"
-                                                  Data="M27.25,0 H95.63 C110.68,0 122.88,12.2 122.88,27.25 V95.63 C122.88,110.68 110.68,122.88 95.63,122.88 H27.25 C12.2,122.88 0,110.68 0,95.63 V27.25 C0,12.2 12.2,0 27.25,0 Z M71.59,50.47 C74.25,47.84 78.5,51.67 76.33,55.3 L63.48,68 C62.16,69.3 60.05,69.3 58.73,68 L46.07,55.48 C43.41,52.85 47.37,48.1 50.81,50.65 L57.81,57.56 L57.88,33.23 C57.88,28.72 64.65,28.72 64.65,33.28 L64.58,57.43 Z M34.48,81.55 L34.53,68.31 C34.53,63.8 41.3,63.8 41.3,68.37 L41.27,78.01 H81.59 L81.62,68.31 C81.62,63.8 88.4,63.8 88.4,68.37 L88.35,81.55 C88.35,83.41 86.84,84.78 85,84.78 H37.89 C36.04,84.78 34.53,83.41 34.48,81.55 Z M95.63,7 H27.25 C16.05,7 7,16.05 7,27.25 V95.63 C7,106.83 16.05,115.92 27.25,115.92 H95.63 C106.83,115.92 115.92,106.83 115.92,95.63 V27.25 C115.92,16.05 106.83,7 95.63,7 Z"/>
-                                        </Viewbox>
-                                    </Button.Content>
-                                    <Button.Tag>
-                                        <Viewbox Width="20" Height="20">
-                                            <Path Fill="{StaticResource AccentBrush}"
-                                                  Data="M25.2,0 H97.68 C111.55,0 122.88,11.33 122.88,25.2 V97.68 C122.88,111.55 111.55,122.88 97.68,122.88 H25.2 C11.33,122.88 0,111.55 0,97.68 V25.2 C0,11.33 11.33,0 25.2,0 Z M72.92,49.32 C76.51,45.78 81.87,51.24 78.29,54.78 L63.75,69.14 C62.27,70.6 59.86,70.6 58.38,69.14 L44.05,55 C40.46,51.46 45.82,46 49.41,49.54 L57.3,57.36 L57.38,29.83 C57.38,24.72 65.04,24.72 65.04,29.89 L65,57.19 Z M31,84.48 L31.05,69.48 C31.05,64.37 38.71,64.37 38.71,69.55 L38.68,80.46 H84.29 L84.32,69.46 C84.32,64.35 91.98,64.35 91.98,69.53 L91.93,84.44 C91.93,86.56 90.2,88.13 88,88.13 H34.72 C32.62,88.13 31.05,86.56 31,84.48 Z"/>
-                                        </Viewbox>
-                                    </Button.Tag>
+                                    <Viewbox Width="23" Height="23">
+                                        <Canvas Width="24" Height="24">
+                                            <Rectangle Canvas.Left="4"
+                                                       Canvas.Top="3"
+                                                       Width="16"
+                                                       Height="18"
+                                                       RadiusX="3"
+                                                       RadiusY="3"
+                                                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                       StrokeThickness="1.7"/>
+                                            <Path Data="M12,6 V15 M8.5,11.5 L12,15 L15.5,11.5 M8,18 H16"
+                                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                  StrokeThickness="1.7"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round"/>
+                                        </Canvas>
+                                    </Viewbox>
                                 </Button>
                             </StackPanel>
                         </Grid>
