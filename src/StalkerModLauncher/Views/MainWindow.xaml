@@ -26,10 +26,12 @@
         <Style x:Key="ModToolbarIconButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Width" Value="38"/>
-            <Setter Property="Height" Value="38"/>
-            <Setter Property="MinHeight" Value="38"/>
-            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="MinHeight" Value="40"/>
+            <Setter Property="Padding" Value="7"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="ToolTipService.InitialShowDelay" Value="450"/>
@@ -590,27 +592,53 @@
                                     Style="{StaticResource ModToolbarIconButtonStyle}"
                                     ToolTip="Найти моды в выбранной папке"
                                     Margin="0,0,8,8">
-                                <Rectangle Width="22"
-                                           Height="22"
-                                           Fill="{StaticResource TextBrush}">
-                                    <Rectangle.OpacityMask>
-                                        <ImageBrush ImageSource="/Resources/scan_add_mods.png"
-                                                    Stretch="Uniform"/>
-                                    </Rectangle.OpacityMask>
-                                </Rectangle>
+                                <Viewbox Width="26" Height="26">
+                                    <Canvas Width="24" Height="24">
+                                        <Path Data="M4,5.5 C4,4.672 4.672,4 5.5,4 H10 L12,6 H18.5 C19.328,6 20,6.672 20,7.5 V10"
+                                              Stroke="{StaticResource TextBrush}"
+                                              StrokeThickness="1.7"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round"/>
+                                        <Path Data="M11.4,19.5 H5.5 C4.672,19.5 4,18.828 4,18 V8"
+                                              Stroke="{StaticResource TextBrush}"
+                                              StrokeThickness="1.7"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round"/>
+                                        <Ellipse Canvas.Left="12"
+                                                 Canvas.Top="11"
+                                                 Width="7"
+                                                 Height="7"
+                                                 Stroke="{StaticResource AccentBrush}"
+                                                 StrokeThickness="1.7"/>
+                                        <Path Data="M17.5,16.5 L21,20"
+                                              Stroke="{StaticResource AccentBrush}"
+                                              StrokeThickness="1.7"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"/>
+                                    </Canvas>
+                                </Viewbox>
                             </Button>
                             <Button Command="{Binding AddModCommand}"
                                     Style="{StaticResource ModToolbarIconButtonStyle}"
                                     ToolTip="Добавить папку мода"
                                     Margin="0,0,8,8">
-                                <Rectangle Width="22"
-                                           Height="22"
-                                           Fill="{StaticResource TextBrush}">
-                                    <Rectangle.OpacityMask>
-                                        <ImageBrush ImageSource="/Resources/add_mods.png"
-                                                    Stretch="Uniform"/>
-                                    </Rectangle.OpacityMask>
-                                </Rectangle>
+                                <Viewbox Width="26" Height="26">
+                                    <Canvas Width="24" Height="24">
+                                        <Path Data="M4,18 V6.5 C4,5.672 4.672,5 5.5,5 H10 L12,7 H18.5 C19.328,7 20,7.672 20,8.5 V18 C20,18.828 19.328,19.5 18.5,19.5 H5.5 C4.672,19.5 4,18.828 4,18 Z"
+                                              Stroke="{StaticResource TextBrush}"
+                                              StrokeThickness="1.7"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round"/>
+                                        <Path Data="M12,10 V16 M9,13 H15"
+                                              Stroke="{StaticResource AccentBrush}"
+                                              StrokeThickness="1.8"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"/>
+                                    </Canvas>
+                                </Viewbox>
                             </Button>
                         </WrapPanel>
                     </Grid>
