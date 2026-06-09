@@ -66,7 +66,7 @@
                                       Width="38"
                                       Height="30"
                                       HorizontalAlignment="Right"
-                                      VerticalAlignment="Top"
+                                      VerticalAlignment="Center"
                                       Margin="0,0,2,0"
                                       Background="Transparent"
                                       ClipToBounds="True"
@@ -161,24 +161,23 @@
                                         <DoubleAnimation Storyboard.TargetName="ActionRail"
                                                          Storyboard.TargetProperty="Width"
                                                          To="38"
-                                                         BeginTime="0:0:0.08"
-                                                         Duration="0:0:0.34">
+                                                         Duration="0:0:0.42">
                                             <DoubleAnimation.EasingFunction>
-                                                <CubicEase EasingMode="EaseIn"/>
+                                                <CubicEase EasingMode="EaseInOut"/>
                                             </DoubleAnimation.EasingFunction>
                                         </DoubleAnimation>
                                         <DoubleAnimation Storyboard.TargetName="ActionButtons"
                                                          Storyboard.TargetProperty="Opacity"
                                                          To="0"
-                                                         Duration="0:0:0.20"/>
+                                                         Duration="0:0:0.30"/>
                                         <DoubleAnimation Storyboard.TargetName="LeftChevron"
                                                          Storyboard.TargetProperty="Opacity"
                                                          To="1"
-                                                         Duration="0:0:0.22"/>
+                                                         Duration="0:0:0.30"/>
                                         <DoubleAnimation Storyboard.TargetName="RightChevron"
                                                          Storyboard.TargetProperty="Opacity"
                                                          To="0"
-                                                         Duration="0:0:0.22"/>
+                                                         Duration="0:0:0.30"/>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </EventTrigger>
