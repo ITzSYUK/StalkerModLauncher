@@ -23,6 +23,22 @@
             <Setter Property="Margin" Value="2,0"/>
             <Setter Property="MinHeight" Value="26"/>
         </Style>
+        <Style x:Key="ModToolbarIconButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Width" Value="38"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="MinHeight" Value="38"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="ToolTipService.InitialShowDelay" Value="450"/>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.42"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
         <Style x:Key="ModListViewItemStyle"
                TargetType="ListViewItem"
                BasedOn="{StaticResource {x:Type ListViewItem}}">
@@ -570,12 +586,32 @@
                                     </ToolTip>
                                 </ToggleButton.ToolTip>
                             </ToggleButton>
-                            <Button Content="Сканировать"
-                                    Command="{Binding ScanForModsCommand}"
-                                    Margin="0,0,8,8"/>
-                            <Button Content="Добавить"
-                                    Command="{Binding AddModCommand}"
-                                    Margin="0,0,8,8"/>
+                            <Button Command="{Binding ScanForModsCommand}"
+                                    Style="{StaticResource ModToolbarIconButtonStyle}"
+                                    ToolTip="Найти моды в выбранной папке"
+                                    Margin="0,0,8,8">
+                                <Rectangle Width="22"
+                                           Height="22"
+                                           Fill="{StaticResource TextBrush}">
+                                    <Rectangle.OpacityMask>
+                                        <ImageBrush ImageSource="/Resources/scan_add_mods.png"
+                                                    Stretch="Uniform"/>
+                                    </Rectangle.OpacityMask>
+                                </Rectangle>
+                            </Button>
+                            <Button Command="{Binding AddModCommand}"
+                                    Style="{StaticResource ModToolbarIconButtonStyle}"
+                                    ToolTip="Добавить папку мода"
+                                    Margin="0,0,8,8">
+                                <Rectangle Width="22"
+                                           Height="22"
+                                           Fill="{StaticResource TextBrush}">
+                                    <Rectangle.OpacityMask>
+                                        <ImageBrush ImageSource="/Resources/add_mods.png"
+                                                    Stretch="Uniform"/>
+                                    </Rectangle.OpacityMask>
+                                </Rectangle>
+                            </Button>
                         </WrapPanel>
                     </Grid>
 
