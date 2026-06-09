@@ -608,7 +608,12 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel>
-                                        <TextBlock Text="{Binding Name}"/>
+                                        <TextBlock Text="{Binding Name}"
+                                                   TextWrapping="Wrap"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   LineHeight="17"
+                                                   MaxHeight="51"
+                                                   ToolTip="{Binding Name}"/>
                                         <TextBlock Text="Запущен"
                                                    FontSize="10"
                                                    Foreground="{StaticResource AccentBrush}"
@@ -706,7 +711,9 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <Grid Grid.Column="0">
+                        <Grid Grid.Column="0"
+                              Margin="0,0,728,0"
+                              ClipToBounds="True">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
@@ -731,7 +738,11 @@
                                 <TextBlock Text="{Binding SelectedProfile.Name, FallbackValue=Профиль}"
                                            FontSize="22"
                                            FontWeight="SemiBold"
-                                           TextWrapping="Wrap"/>
+                                           TextWrapping="Wrap"
+                                           TextTrimming="CharacterEllipsis"
+                                           LineHeight="28"
+                                           MaxHeight="56"
+                                           ToolTip="{Binding SelectedProfile.Name}"/>
                                 <TextBlock Foreground="{StaticResource MutedTextBrush}"
                                            FontSize="11"
                                            Margin="0,1,0,0">
