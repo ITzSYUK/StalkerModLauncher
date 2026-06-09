@@ -50,6 +50,7 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{StaticResource PanelHoverBrush}"/>
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#5C604F"/>
                                 <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
@@ -66,10 +67,10 @@
         <Style x:Key="InlineProfileActionButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Width" Value="25"/>
-            <Setter Property="Height" Value="25"/>
-            <Setter Property="MinHeight" Value="25"/>
-            <Setter Property="Padding" Value="4"/>
+            <Setter Property="Width" Value="29"/>
+            <Setter Property="Height" Value="29"/>
+            <Setter Property="MinHeight" Value="29"/>
+            <Setter Property="Padding" Value="5"/>
             <Setter Property="Margin" Value="2,0"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
@@ -79,6 +80,7 @@
                TargetType="ListBoxItem"
                BasedOn="{StaticResource {x:Type ListBoxItem}}">
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="MinHeight" Value="40"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
@@ -88,7 +90,7 @@
                                 BorderThickness="0"
                                 CornerRadius="0">
                             <Grid ClipToBounds="True">
-                                <ContentPresenter Margin="12,6"
+                                <ContentPresenter Margin="12,8"
                                                   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                                 <Border x:Name="ActionShade"
@@ -109,7 +111,7 @@
                                             Command="{Binding DataContext.InlineDuplicateProfileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                             CommandParameter="{Binding}"
                                             ToolTip="Создать копию профиля">
-                                        <Viewbox Width="17" Height="17">
+                                        <Viewbox Width="19" Height="19">
                                             <Canvas Width="24" Height="24">
                                                 <Rectangle Canvas.Left="8"
                                                            Canvas.Top="8"
@@ -132,15 +134,30 @@
                                             Command="{Binding DataContext.InlineDeleteProfileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                             CommandParameter="{Binding}"
                                             ToolTip="Удалить профиль">
-                                        <Viewbox Width="17" Height="17">
-                                            <Canvas Width="24" Height="24">
-                                                <Path Data="M6,6 L18,18 M18,6 L6,18"
-                                                      Stroke="{StaticResource DangerBrush}"
-                                                      StrokeThickness="2.1"
-                                                      StrokeStartLineCap="Round"
-                                                      StrokeEndLineCap="Round"/>
-                                            </Canvas>
-                                        </Viewbox>
+                                        <Grid Width="16" Height="16">
+                                            <Border Width="17"
+                                                    Height="2"
+                                                    CornerRadius="1"
+                                                    Background="{StaticResource DangerBrush}"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    RenderTransformOrigin="0.5,0.5">
+                                                <Border.RenderTransform>
+                                                    <RotateTransform Angle="45"/>
+                                                </Border.RenderTransform>
+                                            </Border>
+                                            <Border Width="17"
+                                                    Height="2"
+                                                    CornerRadius="1"
+                                                    Background="{StaticResource DangerBrush}"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    RenderTransformOrigin="0.5,0.5">
+                                                <Border.RenderTransform>
+                                                    <RotateTransform Angle="-45"/>
+                                                </Border.RenderTransform>
+                                            </Border>
+                                        </Grid>
                                     </Button>
                                 </StackPanel>
                             </Grid>
@@ -481,7 +498,10 @@
                                        Text="Профили"
                                        FontSize="18"
                                        FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
+                                       VerticalAlignment="Center"
+                                       ToolTip="Профили можно перетаскивать для изменения порядка"
+                                       ToolTipService.InitialShowDelay="700"
+                                       ToolTipService.ShowDuration="5000"/>
                             <StackPanel Grid.Column="1"
                                         Orientation="Horizontal">
                                 <Button Command="{Binding NewProfileCommand}"
@@ -559,7 +579,6 @@
                                  DragOver="ProfilesList_OnDragOver"
                                  DragLeave="ProfilesList_OnDragLeave"
                                  Drop="ProfilesList_OnDrop"
-                                 ToolTip="Профили можно перетаскивать для изменения порядка"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
