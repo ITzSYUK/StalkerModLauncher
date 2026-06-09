@@ -141,9 +141,19 @@
                                                   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                                 <Border x:Name="ActionShade"
-                                        Background="#B3000000"
                                         Opacity="0"
-                                        IsHitTestVisible="False"/>
+                                        IsHitTestVisible="False">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0.5"
+                                                             EndPoint="1,0.5">
+                                            <GradientStop Color="#00000000" Offset="0"/>
+                                            <GradientStop Color="#00000000" Offset="0.42"/>
+                                            <GradientStop Color="#66000000" Offset="0.64"/>
+                                            <GradientStop Color="#E6000000" Offset="0.82"/>
+                                            <GradientStop Color="#F2000000" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
                                 <StackPanel x:Name="ProfileActions"
                                             Orientation="Horizontal"
                                             HorizontalAlignment="Right"
@@ -219,8 +229,12 @@
                                     <Storyboard>
                                         <DoubleAnimation Storyboard.TargetName="ActionShade"
                                                          Storyboard.TargetProperty="Opacity"
-                                                         To="0.45"
-                                                         Duration="0:0:0.32"/>
+                                                         To="1"
+                                                         Duration="0:0:0.38">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
                                         <DoubleAnimation Storyboard.TargetName="ProfileActions"
                                                          Storyboard.TargetProperty="Opacity"
                                                          To="1"
@@ -246,7 +260,11 @@
                                         <DoubleAnimation Storyboard.TargetName="ActionShade"
                                                          Storyboard.TargetProperty="Opacity"
                                                          To="0"
-                                                         Duration="0:0:0.32"/>
+                                                         Duration="0:0:0.36">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseInOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
                                         <DoubleAnimation Storyboard.TargetName="ProfileActions"
                                                          Storyboard.TargetProperty="Opacity"
                                                          To="0"
