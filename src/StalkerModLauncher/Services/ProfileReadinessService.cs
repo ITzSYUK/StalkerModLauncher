@@ -46,7 +46,7 @@ public sealed class ProfileReadinessService
                     enabledMods.Length == 1 &&
                     Directory.Exists(enabledMods[0].SourcePath) &&
                     executableIsSafe;
-        return CreateResult(ready, ready ? "Автономный мод готов к запуску." : string.Join(Environment.NewLine, messages), messages);
+        return CreateResult(ready, ready ? "Готов к запуску." : string.Join(Environment.NewLine, messages), messages);
     }
 
     private ValidationResult ValidateOverlay(ModProfile profile, string defaultGamePath)

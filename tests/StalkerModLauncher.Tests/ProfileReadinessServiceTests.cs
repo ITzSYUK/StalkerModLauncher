@@ -53,6 +53,20 @@ public sealed class ProfileReadinessServiceTests : IDisposable
         Assert.Contains("must not leave", result.Summary);
     }
 
+    [Fact]
+    public void Validate_UsesCommonReadySummaryForStandaloneProfile()
+    {
+        var modPath = Path.Combine(_root, "standalone");
+        Directory.CreateDirectory(modPath);
+        var profile = new ModProfile { IsStandalone = true };
+        profile.Mods.Add(new ModEntry { Name = "Standalone", SourcePath = modPath });
+
+        var result = _service.Validate(profile, string.Empty);
+
+        Assert.True(result.IsValid);
+        Assert.Equal("Готов к запуску.", result.Summary);
+    }
+
     private void CreateFile(string relativePath)
     {
         var path = Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));
