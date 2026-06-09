@@ -755,10 +755,11 @@
                             </StackPanel>
                         </Grid>
 
-                        <Grid Grid.Column="1"
+                        <Grid Grid.Column="0"
+                              Grid.ColumnSpan="2"
                               HorizontalAlignment="Right"
                               VerticalAlignment="Top"
-                              Margin="16,0,0,0">
+                              Panel.ZIndex="2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -782,7 +783,7 @@
                                                     <BeginStoryboard>
                                                         <Storyboard>
                                                             <DoubleAnimation Storyboard.TargetProperty="Width"
-                                                                             To="624"
+                                                                             To="552"
                                                                              Duration="0:0:0.46">
                                                                 <DoubleAnimation.EasingFunction>
                                                                     <CubicEase EasingMode="EaseOut"/>
@@ -815,7 +816,7 @@
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
-                                <StackPanel Width="624"
+                                <StackPanel Width="552"
                                             Orientation="Horizontal"
                                             HorizontalAlignment="Right">
                                     <Button Content="Состояние"
