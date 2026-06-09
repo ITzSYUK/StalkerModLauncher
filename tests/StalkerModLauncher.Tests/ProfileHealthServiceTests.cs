@@ -132,6 +132,51 @@ public sealed class ProfileHealthServiceTests : IDisposable
         Assert.Equal(workspace, report.ProfileFolderPath);
     }
 
+    [Fact]
+    public async Task AnalyzeAsync_ReportsLastEnabledModAsExecutableSource()
+    {
+        var game = CreateGame();
+        var mainMod = Path.Combine(_root, "liquidation");
+        var patch = Path.Combine(_root, "liquidation-patch");
+        var mainExecutable = CreateFileAtPath(Path.Combine(mainMod, "bin_x64", "xrEngine.exe"));
+        var patchExecutable = CreateFileAtPath(Path.Combine(patch, "bin_x64", "xrEngine.exe"));
+        var profile = new ModProfile
+        {
+            GameInstallPath = game,
+            ExecutableRelativePath = @"bin_x64\xrEngine.exe"
+        };
+        profile.Mods.Add(new ModEntry { Name = "Liquidation", SourcePath = mainMod, Order = 1 });
+        profile.Mods.Add(new ModEntry { Name = "Patch", SourcePath = patch, Order = 2 });
+
+        var report = await _service.AnalyzeAsync(profile, string.Empty);
+
+        var executableCheck = Assert.Single(report.Checks, check => check.Title == "Бинарник запуска");
+        Assert.NotEqual(mainExecutable, executableCheck.Details);
+        Assert.Equal(patchExecutable, executableCheck.Details);
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_IgnoresDisabledLaterExecutableProvider()
+    {
+        var game = CreateGame();
+        var mainMod = Path.Combine(_root, "main");
+        var disabledPatch = Path.Combine(_root, "disabled-patch");
+        var mainExecutable = CreateFileAtPath(Path.Combine(mainMod, "bin_x64", "xrEngine.exe"));
+        CreateFileAtPath(Path.Combine(disabledPatch, "bin_x64", "xrEngine.exe"));
+        var profile = new ModProfile
+        {
+            GameInstallPath = game,
+            ExecutableRelativePath = @"bin_x64\xrEngine.exe"
+        };
+        profile.Mods.Add(new ModEntry { Name = "Main", SourcePath = mainMod, Order = 1 });
+        profile.Mods.Add(new ModEntry { Name = "Patch", SourcePath = disabledPatch, IsEnabled = false, Order = 2 });
+
+        var report = await _service.AnalyzeAsync(profile, string.Empty);
+
+        var executableCheck = Assert.Single(report.Checks, check => check.Title == "Бинарник запуска");
+        Assert.Equal(mainExecutable, executableCheck.Details);
+    }
+
     private string CreateGame()
     {
         var path = Path.Combine(_root, "game");

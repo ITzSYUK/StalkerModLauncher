@@ -139,21 +139,31 @@ public sealed class ProfileHealthService
         var roots = new List<string>();
         if (profile.IsStandalone)
         {
-            roots.AddRange(profile.Mods.Where(mod => mod.IsEnabled).Select(mod => mod.SourcePath));
+            roots.AddRange(profile.Mods
+                .Where(mod => mod.IsEnabled)
+                .OrderBy(mod => mod.Order)
+                .Select(mod => mod.SourcePath));
         }
         else
         {
             roots.Add(gamePath);
-            roots.AddRange(profile.Mods.Where(mod => mod.IsEnabled).Select(mod => mod.SourcePath));
-            if (!string.IsNullOrWhiteSpace(profile.WorkspacePath))
-            {
-                roots.Add(Path.Combine(profile.WorkspacePath, "current"));
-            }
+            roots.AddRange(profile.Mods
+                .Where(mod => mod.IsEnabled)
+                .OrderBy(mod => mod.Order)
+                .Select(mod => mod.SourcePath));
         }
 
-        return roots.Where(Directory.Exists)
+        var source = roots.Where(Directory.Exists)
             .Select(root => Path.Combine(root, profile.ExecutableRelativePath))
-            .FirstOrDefault(File.Exists);
+            .LastOrDefault(File.Exists);
+
+        if (source is not null || profile.IsStandalone || string.IsNullOrWhiteSpace(profile.WorkspacePath))
+        {
+            return source;
+        }
+
+        var cachedExecutable = Path.Combine(profile.WorkspacePath, "current", profile.ExecutableRelativePath);
+        return File.Exists(cachedExecutable) ? cachedExecutable : null;
     }
 
     private static int CountFiles(string path, string pattern, CancellationToken cancellationToken)
