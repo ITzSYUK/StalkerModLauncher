@@ -73,6 +73,18 @@ public sealed class MainViewModel : ObservableObject
         RemoveModCommand = new RelayCommand(RemoveMod, () => CanEditSelectedProfile && SelectedMod is not null);
         MoveModUpCommand = new RelayCommand(() => MoveSelectedMod(-1), () => CanMoveSelectedMod(-1));
         MoveModDownCommand = new RelayCommand(() => MoveSelectedMod(1), () => CanMoveSelectedMod(1));
+        InlineRemoveModCommand = new RelayCommand(
+            parameter => RemoveInlineMod(parameter as ModEntry),
+            parameter => CanEditSelectedProfile && parameter is ModEntry);
+        InlineMoveModUpCommand = new RelayCommand(
+            parameter => MoveInlineMod(parameter as ModEntry, -1),
+            parameter => CanMoveInlineMod(parameter as ModEntry, -1));
+        InlineMoveModDownCommand = new RelayCommand(
+            parameter => MoveInlineMod(parameter as ModEntry, 1),
+            parameter => CanMoveInlineMod(parameter as ModEntry, 1));
+        InlineOpenModFolderCommand = new RelayCommand(
+            parameter => OpenInlineModFolder(parameter as ModEntry),
+            parameter => parameter is ModEntry mod && Directory.Exists(mod.SourcePath));
         LaunchCommand = new AsyncRelayCommand(LaunchAsync, CanLaunch);
         SaveCommand = new AsyncRelayCommand(SaveAsync);
         OpenProfileFolderCommand = new RelayCommand(OpenProfileFolder, () => SelectedProfile is not null);
@@ -231,6 +243,10 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand RemoveModCommand { get; }
     public RelayCommand MoveModUpCommand { get; }
     public RelayCommand MoveModDownCommand { get; }
+    public RelayCommand InlineRemoveModCommand { get; }
+    public RelayCommand InlineMoveModUpCommand { get; }
+    public RelayCommand InlineMoveModDownCommand { get; }
+    public RelayCommand InlineOpenModFolderCommand { get; }
     public AsyncRelayCommand LaunchCommand { get; }
     public AsyncRelayCommand SaveCommand { get; }
     public RelayCommand OpenProfileFolderCommand { get; }
@@ -736,6 +752,53 @@ public sealed class MainViewModel : ObservableObject
         return _modListEditor.CanMoveByOffset(SelectedProfile, SelectedMod, direction);
     }
 
+    private void RemoveInlineMod(ModEntry? mod)
+    {
+        if (mod is not null)
+        {
+            RemoveMods([mod]);
+        }
+    }
+
+    private void MoveInlineMod(ModEntry? mod, int direction)
+    {
+        if (!CanMoveInlineMod(mod, direction) ||
+            SelectedProfile is null ||
+            mod is null ||
+            !_modListEditor.MoveByOffset(SelectedProfile, mod, direction))
+        {
+            return;
+        }
+
+        SelectedMod = mod;
+        RaiseCommandStates();
+    }
+
+    private bool CanMoveInlineMod(ModEntry? mod, int direction)
+    {
+        return CanEditSelectedProfile &&
+               SelectedProfile is not null &&
+               mod is not null &&
+               _modListEditor.CanMoveByOffset(SelectedProfile, mod, direction);
+    }
+
+    private void OpenInlineModFolder(ModEntry? mod)
+    {
+        if (mod is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _dialogService.OpenFolder(mod.SourcePath);
+        }
+        catch (Exception ex)
+        {
+            Log($"Could not open mod folder: {ex.Message}");
+        }
+    }
+
     private bool CanLaunch()
     {
         return !IsBuilding && IsGameValid && SelectedProfile is { IsEnabled: true, IsRunning: false };
@@ -1056,6 +1119,10 @@ public sealed class MainViewModel : ObservableObject
         RemoveModCommand.RaiseCanExecuteChanged();
         MoveModUpCommand.RaiseCanExecuteChanged();
         MoveModDownCommand.RaiseCanExecuteChanged();
+        InlineRemoveModCommand.RaiseCanExecuteChanged();
+        InlineMoveModUpCommand.RaiseCanExecuteChanged();
+        InlineMoveModDownCommand.RaiseCanExecuteChanged();
+        InlineOpenModFolderCommand.RaiseCanExecuteChanged();
         LaunchCommand.RaiseCanExecuteChanged();
         OpenProfileFolderCommand.RaiseCanExecuteChanged();
         OpenSelectedModFolderCommand.RaiseCanExecuteChanged();

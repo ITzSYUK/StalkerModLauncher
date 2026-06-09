@@ -355,12 +355,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private void RemoveModsButton_Click(object sender, RoutedEventArgs e)
-    {
-        var selected = ModsList.SelectedItems.Cast<ModEntry>().ToList();
-        ViewModel?.RemoveMods(selected);
-    }
-
     private void ModsList_OnMouseMove(object sender, WpfMouseEventArgs e)
     {
         var currentPosition = e.GetPosition(ModsList);
@@ -611,7 +605,8 @@ public partial class MainWindow : Window
     private static bool IsInteractiveDragSource(DependencyObject source)
     {
         return FindAncestor<System.Windows.Controls.Primitives.ButtonBase>(source) is not null ||
-               FindAncestor<TextBox>(source) is not null;
+               FindAncestor<TextBox>(source) is not null ||
+               FindAncestor<Border>(source) is { Name: "ActionRail" };
     }
 
     private static void AutoScroll(ItemsControl list, WpfPoint position)

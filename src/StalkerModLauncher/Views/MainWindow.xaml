@@ -15,6 +15,168 @@
         WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <Style x:Key="InlineModActionButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="MinHeight" Value="26"/>
+        </Style>
+        <Style x:Key="ModListViewItemStyle"
+               TargetType="ListViewItem"
+               BasedOn="{StaticResource {x:Type ListViewItem}}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <Border x:Name="RowChrome"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                Padding="{TemplateBinding Padding}">
+                            <Grid ClipToBounds="True">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <GridViewRowPresenter Grid.Row="0"
+                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+
+                                <TextBlock Grid.Row="1"
+                                           Text="Перезаписывает файлы вышестоящих модификаций: могут возникать конфликты."
+                                           Foreground="{StaticResource DangerBrush}"
+                                           FontSize="9"
+                                           Margin="86,0,0,2"
+                                           TextWrapping="Wrap">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasOverlapsAbove}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <Border x:Name="ActionRail"
+                                        Grid.RowSpan="2"
+                                        Width="34"
+                                        Height="30"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Top"
+                                        Margin="0,0,1,0"
+                                        Background="{StaticResource PanelAltBrush}"
+                                        BorderBrush="{StaticResource StrokeBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        ClipToBounds="True"
+                                        Opacity="0"
+                                        IsHitTestVisible="False">
+                                    <Grid Width="330" HorizontalAlignment="Right">
+                                        <StackPanel Orientation="Horizontal"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Center"
+                                                    Margin="3,0,36,0">
+                                            <Button Content="Убрать"
+                                                    Style="{StaticResource InlineModActionButtonStyle}"
+                                                    Command="{Binding DataContext.InlineRemoveModCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"/>
+                                            <Button Content="Выше"
+                                                    Style="{StaticResource InlineModActionButtonStyle}"
+                                                    Command="{Binding DataContext.InlineMoveModUpCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"/>
+                                            <Button Content="Ниже"
+                                                    Style="{StaticResource InlineModActionButtonStyle}"
+                                                    Command="{Binding DataContext.InlineMoveModDownCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"/>
+                                            <Button Content="Открыть"
+                                                    Style="{StaticResource InlineModActionButtonStyle}"
+                                                    Command="{Binding DataContext.InlineOpenModFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"/>
+                                        </StackPanel>
+
+                                        <Border Width="32"
+                                                HorizontalAlignment="Right"
+                                                Background="{StaticResource AccentBrush}">
+                                            <Grid>
+                                                <Image x:Name="LeftChevron"
+                                                       Source="/Resources/left-chevron.png"
+                                                       Width="16"
+                                                       Height="16"/>
+                                                <Image x:Name="RightChevron"
+                                                       Source="/Resources/right_chevron.png"
+                                                       Width="16"
+                                                       Height="16"
+                                                       Opacity="0"/>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RowChrome" Property="Background" Value="{StaticResource PanelAltBrush}"/>
+                                <Setter TargetName="ActionRail" Property="Opacity" Value="1"/>
+                                <Setter TargetName="ActionRail" Property="IsHitTestVisible" Value="True"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="RowChrome" Property="Background" Value="#3A3325"/>
+                                <Setter TargetName="RowChrome" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                            </Trigger>
+                            <EventTrigger SourceName="ActionRail" RoutedEvent="MouseEnter">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ActionRail"
+                                                         Storyboard.TargetProperty="Width"
+                                                         To="330"
+                                                         Duration="0:0:0.22">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="LeftChevron"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0"
+                                                         Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="RightChevron"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1"
+                                                         Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger SourceName="ActionRail" RoutedEvent="MouseLeave">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ActionRail"
+                                                         Storyboard.TargetProperty="Width"
+                                                         To="34"
+                                                         Duration="0:0:0.18">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseIn"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="LeftChevron"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1"
+                                                         Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="RightChevron"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0"
+                                                         Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     <Window.InputBindings>
         <KeyBinding Key="F5" Command="{Binding LaunchCommand}"/>
@@ -384,19 +546,6 @@
                             <Button Content="Добавить"
                                     Command="{Binding AddModCommand}"
                                     Margin="0,0,8,8"/>
-                            <Button Content="Убрать"
-                                    Click="RemoveModsButton_Click"
-                                    IsEnabled="{Binding CanEditSelectedProfile}"
-                                    Margin="0,0,8,8"/>
-                            <Button Content="Выше"
-                                    Command="{Binding MoveModUpCommand}"
-                                    Margin="0,0,8,8"/>
-                            <Button Content="Ниже"
-                                    Command="{Binding MoveModDownCommand}"
-                                    Margin="0,0,8,8"/>
-                            <Button Content="Открыть"
-                                    Command="{Binding OpenSelectedModFolderCommand}"
-                                    Margin="0,0,0,8"/>
                         </WrapPanel>
                     </Grid>
 
@@ -416,6 +565,7 @@
                                        SizeChanged="ModsList_SizeChanged"
                                        ItemsSource="{Binding SelectedProfile.Mods}"
                                        SelectedItem="{Binding SelectedMod}"
+                                       ItemContainerStyle="{StaticResource ModListViewItemStyle}"
                                        AllowDrop="True"
                                        Drop="ModsList_OnDrop"
                                        DragOver="ModsList_OnDragOver"
