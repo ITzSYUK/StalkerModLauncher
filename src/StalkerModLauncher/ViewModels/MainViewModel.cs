@@ -174,6 +174,11 @@ public sealed class MainViewModel : ObservableObject
             RaiseCommandStates();
             _autoSave.Schedule();
         }
+
+        if (e.PropertyName == nameof(ModProfile.ExecutableRelativePath))
+        {
+            RecalculateLockedMods();
+        }
     }
 
     public ModEntry? SelectedMod
@@ -1067,7 +1072,14 @@ public sealed class MainViewModel : ObservableObject
 
     private void ModOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(ModEntry.IsLocked) or nameof(ModEntry.HasOverlapsAbove))
+        if (e.PropertyName is nameof(ModEntry.IsLocked)
+            or nameof(ModEntry.HasOverlapsAbove)
+            or nameof(ModEntry.OverwrittenFileCount)
+            or nameof(ModEntry.OverwrittenModCount)
+            or nameof(ModEntry.ProvidesLaunchExecutable)
+            or nameof(ModEntry.OverlayDetails)
+            or nameof(ModEntry.OverlaySummary)
+            or nameof(ModEntry.HasOverlayInfo))
         {
             return;
         }
@@ -1105,7 +1117,10 @@ public sealed class MainViewModel : ObservableObject
     {
         try
         {
-            var result = await _modConflictAnalyzer.AnalyzeAsync(inputs, cancellationToken);
+            var result = await _modConflictAnalyzer.AnalyzeAsync(
+                inputs,
+                profile.ExecutableRelativePath,
+                cancellationToken);
             await App.Current.Dispatcher.InvokeAsync(() =>
             {
                 if (cancellationToken.IsCancellationRequested || SelectedProfile != profile)
@@ -1118,6 +1133,14 @@ public sealed class MainViewModel : ObservableObject
                     var state = result.GetValueOrDefault(mod.Id);
                     mod.IsLocked = state?.IsLocked ?? false;
                     mod.HasOverlapsAbove = state?.HasOverlapsAbove ?? false;
+                    mod.OverwrittenFileCount = state?.OverwrittenFileCount ?? 0;
+                    mod.OverwrittenModCount = state?.OverwrittenModNames.Count ?? 0;
+                    mod.ProvidesLaunchExecutable = state?.ProvidesLaunchExecutable ?? false;
+                    mod.OverlayDetails = state is { OverwrittenModNames.Count: > 0 }
+                        ? $"Заменяет файлы из: {string.Join(", ", state.OverwrittenModNames)}"
+                        : state?.ProvidesLaunchExecutable == true
+                            ? $"Итоговый запускаемый файл: {profile.ExecutableRelativePath}"
+                            : string.Empty;
                 }
             });
         }

@@ -8,11 +8,20 @@ public sealed class ModConflictAnalyzer
         IReadOnlyList<ModConflictInput> mods,
         CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => Analyze(mods, cancellationToken), cancellationToken);
+        return AnalyzeAsync(mods, null, cancellationToken);
+    }
+
+    public Task<IReadOnlyDictionary<string, ModConflictState>> AnalyzeAsync(
+        IReadOnlyList<ModConflictInput> mods,
+        string? launchExecutableRelativePath,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() => Analyze(mods, launchExecutableRelativePath, cancellationToken), cancellationToken);
     }
 
     private static IReadOnlyDictionary<string, ModConflictState> Analyze(
         IReadOnlyList<ModConflictInput> mods,
+        string? launchExecutableRelativePath,
         CancellationToken cancellationToken)
     {
         var fileCache = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
@@ -22,6 +31,12 @@ public sealed class ModConflictAnalyzer
             cancellationToken.ThrowIfCancellationRequested();
             fileCache[mod.Id] = GetModFileList(mod.SourcePath, cancellationToken);
         }
+
+        var normalizedExecutable = NormalizeRelativePath(launchExecutableRelativePath);
+        var executableProviderId = mods
+            .Where(mod => mod.IsEnabled)
+            .LastOrDefault(mod => fileCache.GetValueOrDefault(mod.Id)?.Contains(normalizedExecutable) == true)
+            ?.Id;
 
         var result = new Dictionary<string, ModConflictState>(StringComparer.OrdinalIgnoreCase);
         for (var index = 0; index < mods.Count; index++)
@@ -40,18 +55,30 @@ public sealed class ModConflictAnalyzer
                 }
             }
 
-            var hasOverlapsAbove = false;
+            var overwrittenFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var overwrittenModNames = new List<string>();
             for (var aboveIndex = 0; aboveIndex < index; aboveIndex++)
             {
                 var upperFiles = fileCache.GetValueOrDefault(mods[aboveIndex].Id);
-                if (HasOverlap(currentFiles, upperFiles))
+                if (currentFiles is null || upperFiles is null)
                 {
-                    hasOverlapsAbove = true;
-                    break;
+                    continue;
+                }
+
+                var overlap = currentFiles.Intersect(upperFiles, StringComparer.OrdinalIgnoreCase).ToArray();
+                if (overlap.Length > 0)
+                {
+                    overwrittenFiles.UnionWith(overlap);
+                    overwrittenModNames.Add(mods[aboveIndex].Name);
                 }
             }
 
-            result[mods[index].Id] = new ModConflictState(hasEnabledBelow, hasOverlapsAbove);
+            result[mods[index].Id] = new ModConflictState(
+                hasEnabledBelow,
+                overwrittenFiles.Count > 0,
+                overwrittenFiles.Count,
+                overwrittenModNames,
+                string.Equals(mods[index].Id, executableProviderId, StringComparison.OrdinalIgnoreCase));
         }
 
         return result;
@@ -75,7 +102,7 @@ public sealed class ModConflictAnalyzer
             foreach (var file in Directory.EnumerateFiles(modPath, "*", SafeEnumerationOptions))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                files.Add(Path.GetRelativePath(modPath, file));
+                files.Add(NormalizeRelativePath(Path.GetRelativePath(modPath, file)));
             }
         }
         catch (OperationCanceledException)
@@ -90,6 +117,13 @@ public sealed class ModConflictAnalyzer
         return files;
     }
 
+    private static string NormalizeRelativePath(string? path)
+    {
+        return string.IsNullOrWhiteSpace(path)
+            ? string.Empty
+            : path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar).TrimStart(Path.DirectorySeparatorChar);
+    }
+
     private static EnumerationOptions SafeEnumerationOptions { get; } = new()
     {
         RecurseSubdirectories = true,
@@ -98,12 +132,17 @@ public sealed class ModConflictAnalyzer
     };
 }
 
-public sealed record ModConflictInput(string Id, string SourcePath, bool IsEnabled)
+public sealed record ModConflictInput(string Id, string Name, string SourcePath, bool IsEnabled)
 {
     public static ModConflictInput FromMod(ModEntry mod)
     {
-        return new ModConflictInput(mod.Id, mod.SourcePath, mod.IsEnabled);
+        return new ModConflictInput(mod.Id, mod.Name, mod.SourcePath, mod.IsEnabled);
     }
 }
 
-public sealed record ModConflictState(bool IsLocked, bool HasOverlapsAbove);
+public sealed record ModConflictState(
+    bool IsLocked,
+    bool HasOverlapsAbove,
+    int OverwrittenFileCount,
+    IReadOnlyList<string> OverwrittenModNames,
+    bool ProvidesLaunchExecutable);

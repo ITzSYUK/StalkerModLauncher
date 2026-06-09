@@ -19,14 +19,16 @@ public sealed class ModConflictAnalyzerTests : IDisposable
 
         var result = await analyzer.AnalyzeAsync(
         [
-            new ModConflictInput("first", first, true),
-            new ModConflictInput("second", second, true)
+            new ModConflictInput("first", "First", first, true),
+            new ModConflictInput("second", "Second", second, true)
         ]);
 
         Assert.True(result["first"].IsLocked);
         Assert.False(result["first"].HasOverlapsAbove);
         Assert.False(result["second"].IsLocked);
         Assert.True(result["second"].HasOverlapsAbove);
+        Assert.Equal(1, result["second"].OverwrittenFileCount);
+        Assert.Equal(["First"], result["second"].OverwrittenModNames);
     }
 
     [Fact]
@@ -38,12 +40,51 @@ public sealed class ModConflictAnalyzerTests : IDisposable
 
         var result = await analyzer.AnalyzeAsync(
         [
-            new ModConflictInput("first", first, true),
-            new ModConflictInput("second", second, false)
+            new ModConflictInput("first", "First", first, true),
+            new ModConflictInput("second", "Second", second, false)
         ]);
 
         Assert.False(result["first"].IsLocked);
         Assert.False(result["second"].HasOverlapsAbove);
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_CountsUniqueOverwrittenFilesAndSourceMods()
+    {
+        var first = CreateMod("first", "shared-a.ltx", "shared-b.ltx");
+        var second = CreateMod("second", "shared-b.ltx", "shared-c.ltx");
+        var patch = CreateMod("patch", "shared-a.ltx", "shared-b.ltx", "shared-c.ltx");
+        var analyzer = new ModConflictAnalyzer();
+
+        var result = await analyzer.AnalyzeAsync(
+        [
+            new ModConflictInput("first", "Main mod", first, true),
+            new ModConflictInput("second", "Addon", second, true),
+            new ModConflictInput("patch", "Patch", patch, true)
+        ]);
+
+        Assert.Equal(3, result["patch"].OverwrittenFileCount);
+        Assert.Equal(["Main mod", "Addon"], result["patch"].OverwrittenModNames);
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_MarksLastEnabledProviderOfLaunchExecutable()
+    {
+        var main = CreateMod("main", "bin_x64/xrEngine.exe");
+        var patch = CreateMod("patch", "bin_x64/xrEngine.exe");
+        var disabledHotfix = CreateMod("disabled", "bin_x64/xrEngine.exe");
+        var analyzer = new ModConflictAnalyzer();
+
+        var result = await analyzer.AnalyzeAsync(
+        [
+            new ModConflictInput("main", "Main mod", main, true),
+            new ModConflictInput("patch", "Patch", patch, true),
+            new ModConflictInput("disabled", "Disabled hotfix", disabledHotfix, false)
+        ], @"bin_x64\xrEngine.exe");
+
+        Assert.False(result["main"].ProvidesLaunchExecutable);
+        Assert.True(result["patch"].ProvidesLaunchExecutable);
+        Assert.False(result["disabled"].ProvidesLaunchExecutable);
     }
 
     private string CreateMod(string name, params string[] relativeFiles)

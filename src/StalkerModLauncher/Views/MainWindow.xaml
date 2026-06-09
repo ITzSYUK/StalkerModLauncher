@@ -310,17 +310,17 @@
                                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
 
                                     <TextBlock Grid.Row="1"
-                                               Text="Перезаписывает файлы предыдущих модов"
+                                               Text="{Binding OverlaySummary}"
                                                Foreground="{StaticResource AccentBrush}"
                                                FontSize="9"
                                                Margin="86,0,0,2"
                                                TextWrapping="Wrap"
-                                               ToolTip="Моды ниже в списке имеют больший приоритет и могут заменять файлы модов выше. Это нормально, если такой порядок выбран намеренно.">
+                                               ToolTip="{Binding OverlayDetails}">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding HasOverlapsAbove}" Value="True">
+                                                    <DataTrigger Binding="{Binding HasOverlayInfo}" Value="True">
                                                         <Setter Property="Visibility" Value="Visible"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>

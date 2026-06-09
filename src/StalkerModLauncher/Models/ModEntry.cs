@@ -1,4 +1,5 @@
 using StalkerModLauncher.Infrastructure;
+using System.Text.Json.Serialization;
 
 namespace StalkerModLauncher.Models;
 
@@ -10,6 +11,10 @@ public sealed class ModEntry : ObservableObject
     private bool _isEnabled = true;
     private bool _isLocked;
     private bool _hasOverlapsAbove;
+    private int _overwrittenFileCount;
+    private int _overwrittenModCount;
+    private bool _providesLaunchExecutable;
+    private string _overlayDetails = string.Empty;
     private int _order;
     private string _notes = string.Empty;
 
@@ -49,6 +54,77 @@ public sealed class ModEntry : ObservableObject
         set => SetProperty(ref _hasOverlapsAbove, value);
     }
 
+    [JsonIgnore]
+    public int OverwrittenFileCount
+    {
+        get => _overwrittenFileCount;
+        set
+        {
+            if (SetProperty(ref _overwrittenFileCount, value))
+            {
+                OnPropertyChanged(nameof(OverlaySummary));
+                OnPropertyChanged(nameof(HasOverlayInfo));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public int OverwrittenModCount
+    {
+        get => _overwrittenModCount;
+        set
+        {
+            if (SetProperty(ref _overwrittenModCount, value))
+            {
+                OnPropertyChanged(nameof(OverlaySummary));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public bool ProvidesLaunchExecutable
+    {
+        get => _providesLaunchExecutable;
+        set
+        {
+            if (SetProperty(ref _providesLaunchExecutable, value))
+            {
+                OnPropertyChanged(nameof(OverlaySummary));
+                OnPropertyChanged(nameof(HasOverlayInfo));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public string OverlayDetails
+    {
+        get => _overlayDetails;
+        set => SetProperty(ref _overlayDetails, value);
+    }
+
+    [JsonIgnore]
+    public bool HasOverlayInfo => OverwrittenFileCount > 0 || ProvidesLaunchExecutable;
+
+    [JsonIgnore]
+    public string OverlaySummary
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (OverwrittenFileCount > 0)
+            {
+                parts.Add($"Заменяет {OverwrittenFileCount:N0} {Pluralize(OverwrittenFileCount, "файл", "файла", "файлов")} из {OverwrittenModCount:N0} {Pluralize(OverwrittenModCount, "мода", "модов", "модов")}");
+            }
+
+            if (ProvidesLaunchExecutable)
+            {
+                parts.Add("предоставляет запускаемый бинарник");
+            }
+
+            return string.Join(" · ", parts);
+        }
+    }
+
     public int Order
     {
         get => _order;
@@ -59,5 +135,21 @@ public sealed class ModEntry : ObservableObject
     {
         get => _notes;
         set => SetProperty(ref _notes, value);
+    }
+
+    private static string Pluralize(int value, string one, string few, string many)
+    {
+        var absolute = Math.Abs(value) % 100;
+        if (absolute is >= 11 and <= 19)
+        {
+            return many;
+        }
+
+        return (absolute % 10) switch
+        {
+            1 => one,
+            >= 2 and <= 4 => few,
+            _ => many
+        };
     }
 }
