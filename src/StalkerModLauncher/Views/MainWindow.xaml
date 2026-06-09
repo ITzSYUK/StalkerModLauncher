@@ -767,8 +767,9 @@
                             </Grid.ColumnDefinitions>
 
                             <Border Grid.Column="0"
-                                    Height="38"
+                                    Height="40"
                                     HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
                                     ClipToBounds="True"
                                     Margin="0,0,4,8"
                                     Width="0"
@@ -817,8 +818,10 @@
                                     </Style>
                                 </Border.Style>
                                 <StackPanel Width="564"
+                                            Height="38"
                                             Orientation="Horizontal"
-                                            HorizontalAlignment="Right">
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Top">
                                     <Button Content="Состояние"
                                             Click="ProfileHealthButton_OnClick"
                                             Margin="0,0,8,0"/>
