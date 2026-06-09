@@ -68,6 +68,12 @@ public sealed class MainViewModel : ObservableObject
         NewProfileCommand = new RelayCommand(NewProfile);
         DuplicateProfileCommand = new RelayCommand(DuplicateProfile, () => SelectedProfile is not null);
         DeleteProfileCommand = new RelayCommand(DeleteProfile, () => SelectedProfile is not null);
+        InlineDuplicateProfileCommand = new RelayCommand(
+            parameter => DuplicateProfile(parameter as ModProfile),
+            parameter => parameter is ModProfile);
+        InlineDeleteProfileCommand = new RelayCommand(
+            parameter => DeleteProfile(parameter as ModProfile),
+            parameter => parameter is ModProfile { IsRunning: false });
         BrowseExecutableCommand = new RelayCommand(BrowseExecutable, () => SelectedProfile is not null);
         AddModCommand = new RelayCommand(AddMod, CanAddMod);
         RemoveModCommand = new RelayCommand(RemoveMod, () => CanEditSelectedProfile && SelectedMod is not null);
@@ -238,6 +244,8 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand NewProfileCommand { get; }
     public RelayCommand DuplicateProfileCommand { get; }
     public RelayCommand DeleteProfileCommand { get; }
+    public RelayCommand InlineDuplicateProfileCommand { get; }
+    public RelayCommand InlineDeleteProfileCommand { get; }
     public RelayCommand BrowseExecutableCommand { get; }
     public RelayCommand AddModCommand { get; }
     public RelayCommand RemoveModCommand { get; }
@@ -575,12 +583,17 @@ public sealed class MainViewModel : ObservableObject
 
     private void DuplicateProfile()
     {
-        if (SelectedProfile is null)
+        DuplicateProfile(SelectedProfile);
+    }
+
+    private void DuplicateProfile(ModProfile? sourceProfile)
+    {
+        if (sourceProfile is null)
         {
             return;
         }
 
-        var profile = _profileManager.Duplicate(Profiles, SelectedProfile);
+        var profile = _profileManager.Duplicate(Profiles, sourceProfile);
         Profiles.Add(profile);
         SelectedProfile = profile;
         Log($"Profile duplicated: {profile.Name}");
@@ -589,12 +602,16 @@ public sealed class MainViewModel : ObservableObject
 
     private void DeleteProfile()
     {
-        if (SelectedProfile is null)
+        DeleteProfile(SelectedProfile);
+    }
+
+    private void DeleteProfile(ModProfile? profile)
+    {
+        if (profile is null)
         {
             return;
         }
 
-        var profile = SelectedProfile;
         var deleteMessage = profile.IsStandalone
             ? $"Удалить профиль '{profile.Name}'? Файлы мода останутся нетронутыми."
             : $"Удалить профиль '{profile.Name}' вместе с его рабочей папкой, сохранениями и логами?";
@@ -1114,6 +1131,8 @@ public sealed class MainViewModel : ObservableObject
     {
         DeleteProfileCommand.RaiseCanExecuteChanged();
         DuplicateProfileCommand.RaiseCanExecuteChanged();
+        InlineDuplicateProfileCommand.RaiseCanExecuteChanged();
+        InlineDeleteProfileCommand.RaiseCanExecuteChanged();
         BrowseExecutableCommand.RaiseCanExecuteChanged();
         AddModCommand.RaiseCanExecuteChanged();
         RemoveModCommand.RaiseCanExecuteChanged();
