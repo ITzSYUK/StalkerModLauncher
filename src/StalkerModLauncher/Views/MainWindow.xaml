@@ -26,10 +26,10 @@
         <Style x:Key="ProfileHeaderIconButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Width" Value="36"/>
-            <Setter Property="Height" Value="36"/>
-            <Setter Property="MinHeight" Value="36"/>
-            <Setter Property="Padding" Value="6"/>
+            <Setter Property="Width" Value="38"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="MinHeight" Value="38"/>
+            <Setter Property="Padding" Value="7"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
@@ -50,7 +50,6 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{StaticResource PanelHoverBrush}"/>
-                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource StrokeBrush}"/>
                                 <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
@@ -67,11 +66,11 @@
         <Style x:Key="InlineProfileActionButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Width" Value="32"/>
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="MinHeight" Value="32"/>
-            <Setter Property="Padding" Value="6"/>
-            <Setter Property="Margin" Value="3,0"/>
+            <Setter Property="Width" Value="25"/>
+            <Setter Property="Height" Value="25"/>
+            <Setter Property="MinHeight" Value="25"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="Margin" Value="2,0"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="ToolTipService.InitialShowDelay" Value="450"/>
@@ -100,7 +99,7 @@
                                             Orientation="Horizontal"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center"
-                                            Margin="0,0,5,0"
+                                            Margin="0,0,7,0"
                                             Opacity="0"
                                             IsHitTestVisible="False">
                                     <StackPanel.RenderTransform>
@@ -110,17 +109,17 @@
                                             Command="{Binding DataContext.InlineDuplicateProfileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                             CommandParameter="{Binding}"
                                             ToolTip="Создать копию профиля">
-                                        <Viewbox Width="19" Height="19">
+                                        <Viewbox Width="17" Height="17">
                                             <Canvas Width="24" Height="24">
                                                 <Rectangle Canvas.Left="8"
-                                                           Canvas.Top="7"
+                                                           Canvas.Top="8"
                                                            Width="11"
-                                                           Height="13"
+                                                           Height="11"
                                                            RadiusX="2"
                                                            RadiusY="2"
                                                            Stroke="{StaticResource TextBrush}"
                                                            StrokeThickness="1.8"/>
-                                                <Path Data="M16,7 V5.5 C16,4.672 15.328,4 14.5,4 H5.5 C4.672,4 4,4.672 4,5.5 V16.5 C4,17.328 4.672,18 5.5,18 H8"
+                                                <Path Data="M16,8 V6 C16,4.895 15.105,4 14,4 H6 C4.895,4 4,4.895 4,6 V14 C4,15.105 4.895,16 6,16 H8"
                                                       Stroke="{StaticResource TextBrush}"
                                                       StrokeThickness="1.8"
                                                       StrokeStartLineCap="Round"
@@ -133,12 +132,14 @@
                                             Command="{Binding DataContext.InlineDeleteProfileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                             CommandParameter="{Binding}"
                                             ToolTip="Удалить профиль">
-                                        <Viewbox Width="18" Height="18">
-                                            <Path Data="M5,5 L19,19 M19,5 L5,19"
-                                                  Stroke="{StaticResource DangerBrush}"
-                                                  StrokeThickness="2"
-                                                  StrokeStartLineCap="Round"
-                                                  StrokeEndLineCap="Round"/>
+                                        <Viewbox Width="17" Height="17">
+                                            <Canvas Width="24" Height="24">
+                                                <Path Data="M6,6 L18,18 M18,6 L6,18"
+                                                      Stroke="{StaticResource DangerBrush}"
+                                                      StrokeThickness="2.1"
+                                                      StrokeStartLineCap="Round"
+                                                      StrokeEndLineCap="Round"/>
+                                            </Canvas>
                                         </Viewbox>
                                     </Button>
                                 </StackPanel>
