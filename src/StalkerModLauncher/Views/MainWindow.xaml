@@ -508,7 +508,7 @@
                                         Style="{StaticResource ProfileHeaderIconButtonStyle}"
                                         ToolTip="Создать профиль"
                                         Margin="0,0,3,0">
-                                    <Viewbox Width="23" Height="23">
+                                    <Viewbox Width="25" Height="25">
                                         <Canvas Width="24" Height="24">
                                             <Rectangle Canvas.Left="4"
                                                        Canvas.Top="4"
@@ -545,7 +545,7 @@
                                 <Button Command="{Binding ImportProfileCommand}"
                                         Style="{StaticResource ProfileHeaderIconButtonStyle}"
                                         ToolTip="Импортировать профиль">
-                                    <Viewbox Width="23" Height="23">
+                                    <Viewbox Width="25" Height="25">
                                         <Canvas Width="24" Height="24">
                                             <Rectangle Canvas.Left="4"
                                                        Canvas.Top="3"
