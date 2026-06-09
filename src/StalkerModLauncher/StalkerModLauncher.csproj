@@ -15,8 +15,6 @@
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Resource Include="..\..\icons\arrow_variant_two\left-arrow.png" Link="Resources\left-arrow.png" />
-    <Resource Include="..\..\icons\arrow_variant_two\right-arrow.png" Link="Resources\right-arrow.png" />
     <Resource Include="..\..\icons\add_mods.png" Link="Resources\add_mods.png" />
     <Resource Include="..\..\icons\scan_add_mods.png" Link="Resources\scan_add_mods.png" />
     <EmbeddedResource Include="Resources\ModLauncherLogo.png" />
