@@ -612,8 +612,7 @@
                                                    TextWrapping="Wrap"
                                                    TextTrimming="CharacterEllipsis"
                                                    LineHeight="17"
-                                                   MaxHeight="51"
-                                                   ToolTip="{Binding Name}"/>
+                                                   MaxHeight="51"/>
                                         <TextBlock Text="Запущен"
                                                    FontSize="10"
                                                    Foreground="{StaticResource AccentBrush}"
@@ -712,8 +711,43 @@
                         </Grid.ColumnDefinitions>
 
                         <Grid Grid.Column="0"
-                              Margin="0,0,728,0"
                               ClipToBounds="True">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Margin" Value="0,0,160,0"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsChecked, ElementName=ProfileActionsToggle}"
+                                                     Value="True">
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <ThicknessAnimation Storyboard.TargetProperty="Margin"
+                                                                            To="0,0,728,0"
+                                                                            Duration="0:0:0.46">
+                                                            <ThicknessAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut"/>
+                                                            </ThicknessAnimation.EasingFunction>
+                                                        </ThicknessAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                            <DataTrigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <ThicknessAnimation Storyboard.TargetProperty="Margin"
+                                                                            To="0,0,160,0"
+                                                                            Duration="0:0:0.42">
+                                                            <ThicknessAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseInOut"/>
+                                                            </ThicknessAnimation.EasingFunction>
+                                                        </ThicknessAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.ExitActions>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
@@ -741,8 +775,7 @@
                                            TextWrapping="Wrap"
                                            TextTrimming="CharacterEllipsis"
                                            LineHeight="28"
-                                           MaxHeight="56"
-                                           ToolTip="{Binding SelectedProfile.Name}"/>
+                                           MaxHeight="56"/>
                                 <TextBlock Foreground="{StaticResource MutedTextBrush}"
                                            FontSize="11"
                                            Margin="0,1,0,0">
