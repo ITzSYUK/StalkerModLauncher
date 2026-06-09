@@ -18,6 +18,24 @@
         <SolidColorBrush x:Key="AccentPressedBrush" Color="#A86D23"/>
         <SolidColorBrush x:Key="AccentGreenBrush" Color="#87A15A"/>
         <SolidColorBrush x:Key="DangerBrush" Color="#AD5848"/>
+        <DrawingImage x:Key="RadiationOffImage">
+            <DrawingImage.Drawing>
+                <GeometryDrawing Brush="#756A32"
+                                 Geometry="M86.71,104.87 C70.13,113.36 53.44,113.59 36.63,104.85 L54.62,74.2 C58.71,76.63 63.51,76.65 69.01,74.21 L86.71,104.87 Z M61.44,0 C78.41,0 93.77,6.88 104.88,18 C116,29.12 122.88,44.48 122.88,61.44 C122.88,78.41 116,93.77 104.88,104.88 C93.76,116 78.4,122.88 61.44,122.88 C44.47,122.88 29.11,116 18,104.88 C6.88,93.77 0,78.41 0,61.44 C0,44.47 6.88,29.11 18,18 C29.11,6.88 44.47,0 61.44,0 Z M101.53,21.35 C91.27,11.09 77.1,4.74 61.44,4.74 C45.78,4.74 31.61,11.09 21.35,21.35 C11.09,31.61 4.74,45.78 4.74,61.44 C4.74,77.1 11.09,91.27 21.35,101.53 C31.61,111.79 45.78,118.14 61.44,118.14 C77.1,118.14 91.27,111.79 101.53,101.53 C111.79,91.27 118.14,77.1 118.14,61.44 C118.14,45.78 111.79,31.61 101.53,21.35 Z M86.45,17.73 C102.09,27.84 110.64,42.18 111.47,61.11 L75.92,60.86 C75.98,56.1 73.6,51.94 68.74,48.4 L86.45,17.73 Z M61.5,52.41 C66.83,52.41 71.15,56.73 71.15,62.06 C71.15,67.39 66.83,71.71 61.5,71.71 C56.17,71.71 51.85,67.39 51.85,62.06 C51.85,56.73 56.17,52.41 61.5,52.41 Z M11.53,61.33 C12.46,42.73 20.61,28.16 36.59,17.97 L54.15,48.88 C50,51.21 47.59,55.35 46.95,61.33 L11.53,61.33 Z"/>
+            </DrawingImage.Drawing>
+        </DrawingImage>
+        <DrawingImage x:Key="RadiationOnImage">
+            <DrawingImage.Drawing>
+                <DrawingGroup>
+                    <GeometryDrawing Brush="#11110D"
+                                     Geometry="M61.44,0 A61.44,61.44 0 1 1 61.44,122.88 A61.44,61.44 0 1 1 61.44,0 Z"/>
+                    <GeometryDrawing Brush="#FFC903"
+                                     Geometry="M61.44,6.67 A54.77,54.77 0 1 1 61.44,116.21 A54.77,54.77 0 1 1 61.44,6.67 Z"/>
+                    <GeometryDrawing Brush="#11110D"
+                                     Geometry="M61.5,53.07 A8.95,8.95 0 1 1 61.5,70.97 A8.95,8.95 0 1 1 61.5,53.07 Z M15.17,61.89 C16,44.64 23.59,31.13 38.4,21.68 L54.68,50.34 C50.83,52.5 48.59,56.34 48,61.89 Z M84.63,21.46 C99.13,30.84 107.05,44.13 107.83,61.69 L74.83,61.45 C74.83,57.04 72.68,53.18 68.17,49.9 Z M84.87,101.71 C69.51,109.59 54.03,109.8 38.44,101.71 L55.12,73.27 C58.91,75.52 63.36,75.54 68.46,73.27 Z"/>
+                </DrawingGroup>
+            </DrawingImage.Drawing>
+        </DrawingImage>
         <Style TargetType="Window">
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="Background" Value="{StaticResource WindowBackgroundBrush}"/>
@@ -137,7 +155,7 @@
                                         VerticalAlignment="Center"
                                         Margin="{TemplateBinding Padding}">
                                 <Image x:Name="StateImage"
-                                       Source="Resources/radiation_off.png"
+                                       Source="{StaticResource RadiationOffImage}"
                                        Width="16" Height="16"
                                        Stretch="Uniform"
                                        Margin="0,0,7,0"/>
@@ -148,7 +166,7 @@
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="#293820"/>
                                 <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource AccentGreenBrush}"/>
-                                <Setter TargetName="StateImage" Property="Source" Value="Resources/radiation_on.png"/>
+                                <Setter TargetName="StateImage" Property="Source" Value="{StaticResource RadiationOnImage}"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="BorderBrush" Value="#5C604F"/>
@@ -185,7 +203,7 @@
                                     HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                     VerticalAlignment="Center">
                             <Image x:Name="CheckImage"
-                                   Source="Resources/radiation_off.png"
+                                   Source="{StaticResource RadiationOffImage}"
                                    Width="20" Height="20"
                                    Stretch="Uniform"
                                    Margin="0,0,6,0"/>
@@ -195,7 +213,7 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="CheckImage" Property="Source"
-                                        Value="Resources/radiation_on.png"/>
+                                        Value="{StaticResource RadiationOnImage}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="CheckImage" Property="Opacity" Value="0.35"/>
