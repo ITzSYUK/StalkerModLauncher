@@ -32,43 +32,42 @@
                         <Border x:Name="RowChrome"
                                 Background="Transparent"
                                 BorderBrush="Transparent"
-                                BorderThickness="1"
-                                Padding="{TemplateBinding Padding}">
+                                BorderThickness="1">
                             <Grid ClipToBounds="True">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
+                                <Grid Margin="{TemplateBinding Padding}">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
 
-                                <GridViewRowPresenter Grid.Row="0"
-                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                    <GridViewRowPresenter Grid.Row="0"
+                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
 
-                                <TextBlock Grid.Row="1"
-                                           Text="Перезаписывает файлы вышестоящих модификаций: могут возникать конфликты."
-                                           Foreground="{StaticResource DangerBrush}"
-                                           FontSize="9"
-                                           Margin="86,0,0,2"
-                                           TextWrapping="Wrap">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasOverlapsAbove}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
+                                    <TextBlock Grid.Row="1"
+                                               Text="Перезаписывает файлы вышестоящих модификаций: могут возникать конфликты."
+                                               Foreground="{StaticResource DangerBrush}"
+                                               FontSize="9"
+                                               Margin="86,0,0,2"
+                                               TextWrapping="Wrap">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasOverlapsAbove}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
 
                                 <Border x:Name="ActionShade"
-                                        Grid.RowSpan="2"
                                         Background="#B3000000"
                                         Opacity="0"
                                         IsHitTestVisible="False"/>
 
                                 <Grid x:Name="ActionRail"
-                                      Grid.RowSpan="2"
                                       Width="38"
                                       Height="30"
                                       HorizontalAlignment="Right"
