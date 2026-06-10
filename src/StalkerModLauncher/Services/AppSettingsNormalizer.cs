@@ -1,0 +1,90 @@
+using StalkerModLauncher.Models;
+
+namespace StalkerModLauncher.Services;
+
+public static class AppSettingsNormalizer
+{
+    public static AppSettings Normalize(AppSettings settings)
+    {
+        settings.LastBrowsedGamePath ??= string.Empty;
+        settings.DiscordClientId ??= string.Empty;
+        if (string.IsNullOrWhiteSpace(settings.LastBrowsedGamePath) &&
+            !string.IsNullOrWhiteSpace(settings.LegacyGameInstallPath))
+        {
+            settings.LastBrowsedGamePath = settings.LegacyGameInstallPath;
+        }
+
+        settings.LegacyGameInstallPath = null;
+        settings.SchemaVersion = AppSettings.CurrentSchemaVersion;
+        settings.Profiles ??= [];
+        settings.Profiles = settings.Profiles.Where(profile => profile is not null).ToList();
+
+        var profileIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var profileIndex = 0; profileIndex < settings.Profiles.Count; profileIndex++)
+        {
+            var profile = settings.Profiles[profileIndex];
+            profile.Id = EnsureUniqueId(profile.Id, profileIds);
+            profile.Name = string.IsNullOrWhiteSpace(profile.Name) ? $"Profile {profileIndex + 1}" : profile.Name.Trim();
+            profile.Description ??= string.Empty;
+            profile.LaunchArguments ??= string.Empty;
+            profile.ExecutableRelativePath = string.IsNullOrWhiteSpace(profile.ExecutableRelativePath)
+                ? @"bin\xr_3da.exe"
+                : profile.ExecutableRelativePath;
+            profile.WorkspacePath ??= string.Empty;
+            profile.WorkingDirectoryRelative ??= string.Empty;
+            profile.ConfigNotes ??= string.Empty;
+            profile.GameInstallPath ??= string.Empty;
+            profile.IsRunning = false;
+            profile.Mods ??= [];
+            profile.Mods = new System.Collections.ObjectModel.ObservableCollection<ModEntry>(
+                profile.Mods.Where(mod => mod is not null));
+
+            var modIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var order = 1;
+            foreach (var mod in profile.Mods)
+            {
+                mod.Id = EnsureUniqueId(mod.Id, modIds);
+                mod.SourcePath ??= string.Empty;
+                mod.Name = string.IsNullOrWhiteSpace(mod.Name)
+                    ? GetFallbackModName(mod.SourcePath, order)
+                    : mod.Name.Trim();
+                mod.Notes ??= string.Empty;
+                mod.Order = order++;
+                mod.IsLocked = false;
+                mod.HasOverlapsAbove = false;
+            }
+        }
+
+        return settings;
+    }
+
+    private static string GetFallbackModName(string sourcePath, int order)
+    {
+        try
+        {
+            var name = Path.GetFileName(sourcePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            return string.IsNullOrWhiteSpace(name) ? $"Mod {order}" : name;
+        }
+        catch
+        {
+            return $"Mod {order}";
+        }
+    }
+
+    private static string EnsureUniqueId(string? id, HashSet<string> existing)
+    {
+        var candidate = id?.Trim() ?? string.Empty;
+        if (candidate.Length > 0 && existing.Add(candidate))
+        {
+            return candidate;
+        }
+
+        do
+        {
+            candidate = Guid.NewGuid().ToString("N");
+        }
+        while (!existing.Add(candidate));
+
+        return candidate;
+    }
+}

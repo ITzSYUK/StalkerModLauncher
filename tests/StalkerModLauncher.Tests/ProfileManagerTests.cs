@@ -133,8 +133,8 @@ public sealed class ProfileManagerTests
             standalone.Mods.Add(new ModEntry { SourcePath = standaloneRoot, IsEnabled = true });
             var overlay = new ModProfile { WorkspacePath = @"D:\Workspace" };
 
-            Assert.Equal(standaloneRoot, _manager.GetProfileFolderPath(standalone, string.Empty));
-            Assert.Equal(@"D:\Workspace", _manager.GetProfileFolderPath(overlay, string.Empty));
+            Assert.Equal(standaloneRoot, _manager.GetProfileFolderPath(standalone));
+            Assert.Equal(@"D:\Workspace", _manager.GetProfileFolderPath(overlay));
         }
         finally
         {

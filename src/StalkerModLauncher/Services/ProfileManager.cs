@@ -98,7 +98,7 @@ public sealed class ProfileManager
         return profiles.FirstOrDefault();
     }
 
-    public string? GetProfileFolderPath(ModProfile profile, string defaultGamePath)
+    public string? GetProfileFolderPath(ModProfile profile)
     {
         if (profile.IsStandalone)
         {
@@ -112,10 +112,7 @@ public sealed class ProfileManager
             return profile.WorkspacePath;
         }
 
-        var gamePath = string.IsNullOrWhiteSpace(profile.GameInstallPath)
-            ? defaultGamePath
-            : profile.GameInstallPath;
-        return CreateWorkspacePath(profile, gamePath);
+        return CreateWorkspacePath(profile, profile.GameInstallPath);
     }
 
     public static string GetUniqueName(IEnumerable<ModProfile> profiles, string requestedName)

@@ -20,7 +20,6 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
 
     public ScreenshotsViewModel(
         ModProfile profile,
-        string defaultGamePath,
         ScreenshotScannerService screenshotScannerService,
         IScreenshotClipboardService clipboardService)
     {
@@ -48,7 +47,7 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
             }
         });
 
-        _ = LoadScreenshotsAsync(profile, defaultGamePath, screenshotScannerService);
+        _ = LoadScreenshotsAsync(profile, screenshotScannerService);
     }
 
     public ObservableCollection<ScreenshotItem> Screenshots { get; } = new();
@@ -221,13 +220,12 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
 
     private async Task LoadScreenshotsAsync(
         ModProfile profile,
-        string defaultGamePath,
         ScreenshotScannerService screenshotScannerService)
     {
         var cancellationToken = _loadCancellation.Token;
         try
         {
-            var files = await screenshotScannerService.ScanAsync(profile, defaultGamePath, cancellationToken);
+            var files = await screenshotScannerService.ScanAsync(profile, cancellationToken);
             foreach (var file in files)
             {
                 cancellationToken.ThrowIfCancellationRequested();

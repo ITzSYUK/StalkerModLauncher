@@ -9,7 +9,6 @@ namespace StalkerModLauncher.ViewModels;
 public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
 {
     private readonly ModProfile _profile;
-    private readonly string _defaultGamePath;
     private readonly ProfileHealthService _healthService;
     private readonly DialogService _dialogService;
     private ProfileHealthReport? _report;
@@ -19,12 +18,10 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
 
     public ProfileHealthViewModel(
         ModProfile profile,
-        string defaultGamePath,
         ProfileHealthService healthService,
         DialogService dialogService)
     {
         _profile = profile;
-        _defaultGamePath = defaultGamePath;
         _healthService = healthService;
         _dialogService = dialogService;
 
@@ -76,7 +73,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         {
             IsChecking = true;
             Summary = "Проверка состояния профиля...";
-            var report = await _healthService.AnalyzeAsync(_profile, _defaultGamePath, _refreshCancellation.Token);
+            var report = await _healthService.AnalyzeAsync(_profile, _refreshCancellation.Token);
             _report = report;
             Checks.Clear();
             foreach (var check in report.Checks)

@@ -21,21 +21,17 @@ public sealed class ScreenshotScannerService
 
     public Task<IReadOnlyList<string>> ScanAsync(
         ModProfile profile,
-        string defaultGamePath,
         CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => Scan(profile, defaultGamePath, cancellationToken), cancellationToken);
+        return Task.Run(() => Scan(profile, cancellationToken), cancellationToken);
     }
 
     private IReadOnlyList<string> Scan(
         ModProfile profile,
-        string defaultGamePath,
         CancellationToken cancellationToken)
     {
         var directories = new List<string>(_dataPathResolver.GetScreenshotDirectories(profile));
-        var gamePath = string.IsNullOrWhiteSpace(profile.GameInstallPath)
-            ? defaultGamePath
-            : profile.GameInstallPath;
+        var gamePath = profile.GameInstallPath;
 
         if (!string.IsNullOrWhiteSpace(gamePath))
         {

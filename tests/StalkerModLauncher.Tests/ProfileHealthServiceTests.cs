@@ -32,7 +32,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
         var profile = new ModProfile { GameInstallPath = game, WorkspacePath = workspace };
         profile.Mods.Add(new ModEntry { Name = "Mod", SourcePath = Path.GetDirectoryName(Path.GetDirectoryName(mod))!, Order = 1 });
 
-        var report = await _service.AnalyzeAsync(profile, string.Empty);
+        var report = await _service.AnalyzeAsync(profile);
 
         Assert.True(report.IsReady);
         Assert.Equal(0, report.ErrorCount);
@@ -42,10 +42,10 @@ public sealed class ProfileHealthServiceTests : IDisposable
     [Fact]
     public async Task AnalyzeAsync_RejectsOverlayProfileWithoutOwnGamePath()
     {
-        var defaultGame = CreateGame();
+        _ = CreateGame();
         var profile = new ModProfile { GameInstallPath = string.Empty };
 
-        var report = await _service.AnalyzeAsync(profile, defaultGame);
+        var report = await _service.AnalyzeAsync(profile);
 
         Assert.False(report.IsReady);
         Assert.Contains(
@@ -65,7 +65,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
         };
         profile.Mods.Add(new ModEntry { Name = "Missing", SourcePath = Path.Combine(_root, "missing"), Order = 1 });
 
-        var report = await _service.AnalyzeAsync(profile, string.Empty);
+        var report = await _service.AnalyzeAsync(profile);
 
         Assert.False(report.IsReady);
         Assert.Contains(report.Checks, check => check.Title.Contains("Missing") && check.Status == ProfileHealthStatus.Error);
@@ -84,7 +84,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
             Order = 1
         });
 
-        var report = await _service.AnalyzeAsync(profile, string.Empty);
+        var report = await _service.AnalyzeAsync(profile);
 
         Assert.True(report.IsReady);
         Assert.Contains(report.Checks, check => check.Title.Contains("Disabled") && check.Status == ProfileHealthStatus.Warning);
@@ -106,7 +106,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
         };
         profile.Mods.Add(new ModEntry { Name = "Standalone", SourcePath = modRoot, Order = 1 });
 
-        var report = await _service.AnalyzeAsync(profile, string.Empty);
+        var report = await _service.AnalyzeAsync(profile);
 
         Assert.Equal(log, report.LatestLogPath);
         Assert.Equal(dump, report.LatestCrashDumpPath);
@@ -129,7 +129,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
         };
         profile.Mods.Add(new ModEntry { Name = "ОП ОГСР", SourcePath = modRoot, Order = 1 });
 
-        var report = await _service.AnalyzeAsync(profile, string.Empty);
+        var report = await _service.AnalyzeAsync(profile);
 
         Assert.Equal(log, report.LatestLogPath);
         Assert.Equal(Path.GetDirectoryName(save), report.SavedGamesPath);
@@ -143,7 +143,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
         Directory.CreateDirectory(workspace);
         var profile = new ModProfile { GameInstallPath = CreateGame(), WorkspacePath = workspace };
 
-        var report = await _service.AnalyzeAsync(profile, string.Empty);
+        var report = await _service.AnalyzeAsync(profile);
 
         Assert.Equal(workspace, report.ProfileFolderPath);
     }
@@ -164,7 +164,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
         profile.Mods.Add(new ModEntry { Name = "Liquidation", SourcePath = mainMod, Order = 1 });
         profile.Mods.Add(new ModEntry { Name = "Patch", SourcePath = patch, Order = 2 });
 
-        var report = await _service.AnalyzeAsync(profile, string.Empty);
+        var report = await _service.AnalyzeAsync(profile);
 
         var executableCheck = Assert.Single(report.Checks, check => check.Title == "Бинарник запуска");
         Assert.NotEqual(mainExecutable, executableCheck.Details);
@@ -187,7 +187,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
         profile.Mods.Add(new ModEntry { Name = "Main", SourcePath = mainMod, Order = 1 });
         profile.Mods.Add(new ModEntry { Name = "Patch", SourcePath = disabledPatch, IsEnabled = false, Order = 2 });
 
-        var report = await _service.AnalyzeAsync(profile, string.Empty);
+        var report = await _service.AnalyzeAsync(profile);
 
         var executableCheck = Assert.Single(report.Checks, check => check.Title == "Бинарник запуска");
         Assert.Equal(mainExecutable, executableCheck.Details);

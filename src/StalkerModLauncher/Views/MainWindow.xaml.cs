@@ -236,7 +236,6 @@ public partial class MainWindow : Window
 
         var vm = new ScreenshotsViewModel(
             profile,
-            ViewModel!.GameInstallPath,
             _screenshotScannerService,
             _screenshotClipboardService);
         var window = new ScreenshotsWindow(vm)
@@ -257,7 +256,6 @@ public partial class MainWindow : Window
 
         var viewModel = new ProfileHealthViewModel(
             profile,
-            ViewModel!.GameInstallPath,
             _profileHealthService,
             _dialogService);
         var window = new ProfileHealthWindow(viewModel)

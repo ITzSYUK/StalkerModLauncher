@@ -22,13 +22,13 @@ public sealed class SettingsStoreTests : IDisposable
     [Fact]
     public async Task LoadAsync_ReturnsBackupWhenPrimaryJsonIsCorrupted()
     {
-        await _store.SaveAsync(new AppSettings { GameInstallPath = "first" });
-        await _store.SaveAsync(new AppSettings { GameInstallPath = "second" });
+        await _store.SaveAsync(new AppSettings { LastBrowsedGamePath = "first" });
+        await _store.SaveAsync(new AppSettings { LastBrowsedGamePath = "second" });
         await File.WriteAllTextAsync(_paths.SettingsFile, "{ broken json");
 
         var loaded = await _store.LoadAsync();
 
-        Assert.Equal("first", loaded.GameInstallPath);
+        Assert.Equal("first", loaded.LastBrowsedGamePath);
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public sealed class SettingsStoreTests : IDisposable
         await Task.WhenAll(
             _store.UpdateAsync(settings =>
             {
-                settings.GameInstallPath = "game";
+                settings.LastBrowsedGamePath = "game";
                 return settings;
             }),
             _store.UpdateAsync(settings =>
@@ -49,20 +49,20 @@ public sealed class SettingsStoreTests : IDisposable
             }));
 
         var loaded = await _store.LoadAsync();
-        Assert.Equal("game", loaded.GameInstallPath);
+        Assert.Equal("game", loaded.LastBrowsedGamePath);
         Assert.True(loaded.DontShowAboutOnStartup);
     }
 
     [Fact]
     public async Task SaveAsync_CapturesSnapshotBeforeWaitingForWrite()
     {
-        var settings = new AppSettings { GameInstallPath = "snapshot" };
+        var settings = new AppSettings { LastBrowsedGamePath = "snapshot" };
         var save = _store.SaveAsync(settings);
-        settings.GameInstallPath = "mutated";
+        settings.LastBrowsedGamePath = "mutated";
         await save;
 
         var loaded = await _store.LoadAsync();
-        Assert.Equal("snapshot", loaded.GameInstallPath);
+        Assert.Equal("snapshot", loaded.LastBrowsedGamePath);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public sealed class SettingsStoreTests : IDisposable
 
         var loaded = await _store.LoadAsync();
 
-        Assert.Equal(string.Empty, loaded.GameInstallPath);
+        Assert.Equal(string.Empty, loaded.LastBrowsedGamePath);
         Assert.Empty(loaded.Profiles);
     }
 
@@ -93,6 +93,86 @@ public sealed class SettingsStoreTests : IDisposable
         Assert.Equal(
             ["Low priority", "High priority"],
             loaded.Profiles[1].Mods.Select(mod => mod.Name));
+    }
+
+    [Fact]
+    public async Task LoadAsync_MigratesLegacyGlobalGamePath()
+    {
+        Directory.CreateDirectory(_paths.ConfigDirectory);
+        await File.WriteAllTextAsync(
+            _paths.SettingsFile,
+            """{"GameInstallPath":"D:\\Games\\STALKER","Profiles":[]}""");
+
+        var loaded = await _store.LoadAsync();
+
+        Assert.Equal(AppSettings.CurrentSchemaVersion, loaded.SchemaVersion);
+        Assert.Equal(@"D:\Games\STALKER", loaded.LastBrowsedGamePath);
+        Assert.Null(loaded.LegacyGameInstallPath);
+    }
+
+    [Fact]
+    public async Task SaveAsync_DoesNotPersistRuntimeProperties()
+    {
+        var profile = new ModProfile { IsRunning = true };
+        profile.Mods.Add(new ModEntry { IsLocked = true, HasOverlapsAbove = true });
+
+        await _store.SaveAsync(new AppSettings { Profiles = [profile] });
+        var json = await File.ReadAllTextAsync(_paths.SettingsFile);
+
+        Assert.DoesNotContain("\"IsRunning\"", json);
+        Assert.DoesNotContain("\"IsLocked\"", json);
+        Assert.DoesNotContain("\"HasOverlapsAbove\"", json);
+        Assert.DoesNotContain("\"PlaytimeDisplay\"", json);
+        Assert.DoesNotContain("\"LastPlayedDisplay\"", json);
+    }
+
+    [Fact]
+    public async Task LoadAsync_RepairsDuplicateIdsAndModOrder()
+    {
+        Directory.CreateDirectory(_paths.ConfigDirectory);
+        await File.WriteAllTextAsync(
+            _paths.SettingsFile,
+            """
+            {
+              "Profiles": [
+                { "Id": "same", "Mods": [{ "Id": "mod", "Order": 8 }, { "Id": "mod", "Order": 3 }] },
+                { "Id": "same", "Mods": [] }
+              ]
+            }
+            """);
+
+        var loaded = await _store.LoadAsync();
+
+        Assert.NotEqual(loaded.Profiles[0].Id, loaded.Profiles[1].Id);
+        Assert.NotEqual(loaded.Profiles[0].Mods[0].Id, loaded.Profiles[0].Mods[1].Id);
+        Assert.Equal([1, 2], loaded.Profiles[0].Mods.Select(mod => mod.Order));
+    }
+
+    [Fact]
+    public async Task SaveAndLoadAsync_HandlesLargeProfileCollection()
+    {
+        var settings = new AppSettings();
+        for (var profileIndex = 0; profileIndex < 100; profileIndex++)
+        {
+            var profile = new ModProfile { Name = $"Profile {profileIndex}" };
+            for (var modIndex = 0; modIndex < 50; modIndex++)
+            {
+                profile.Mods.Add(new ModEntry
+                {
+                    Name = $"Mod {modIndex}",
+                    SourcePath = $@"D:\Mods\Profile-{profileIndex}\Mod-{modIndex}",
+                    Order = modIndex + 1
+                });
+            }
+
+            settings.Profiles.Add(profile);
+        }
+
+        await _store.SaveAsync(settings);
+        var loaded = await _store.LoadAsync();
+
+        Assert.Equal(100, loaded.Profiles.Count);
+        Assert.All(loaded.Profiles, profile => Assert.Equal(50, profile.Mods.Count));
     }
 
     public void Dispose()

@@ -10,10 +10,22 @@ namespace StalkerModLauncher;
 public partial class App : Application
 {
     private readonly AppServices _services = new();
+    private readonly SingleInstanceGuard _singleInstance = new("StalkerModLauncher");
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        if (!_singleInstance.IsPrimaryInstance)
+        {
+            MessageBox.Show(
+                "Лаунчер уже запущен. Используйте открытое окно программы.",
+                "S.T.A.L.K.E.R. Mod Launcher",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            Shutdown();
+            return;
+        }
 
         BitmapImage? bitmap = null;
         try
@@ -85,6 +97,12 @@ public partial class App : Application
             splash.BeginAnimation(UIElement.OpacityProperty, timer);
         };
         splash.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _singleInstance.Dispose();
+        base.OnExit(e);
     }
 
     private Views.MainWindow CreateMainWindow()

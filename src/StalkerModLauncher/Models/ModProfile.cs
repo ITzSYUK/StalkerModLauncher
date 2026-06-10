@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text.Json.Serialization;
 using StalkerModLauncher.Infrastructure;
 
 namespace StalkerModLauncher.Models;
@@ -87,6 +88,7 @@ public sealed class ModProfile : ObservableObject
         }
     }
 
+    [JsonIgnore]
     public string PlaytimeDisplay
     {
         get
@@ -106,6 +108,7 @@ public sealed class ModProfile : ObservableObject
         }
     }
 
+    [JsonIgnore]
     public string LastPlayedDisplay => _lastPlayedAt?.ToString("g") ?? "—";
 
     public string WorkspacePath
@@ -132,6 +135,7 @@ public sealed class ModProfile : ObservableObject
         set => SetProperty(ref _gameInstallPath, value);
     }
 
+    [JsonIgnore]
     public bool IsRunning
     {
         get => _isRunning;

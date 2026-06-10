@@ -24,7 +24,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly ApplicationLogService _applicationLogService;
     private readonly DebouncedAsyncAction _autoSave;
     private CancellationTokenSource? _conflictAnalysisCancellation;
-    private string _gameInstallPath = string.Empty;
+    private string _lastBrowsedGamePath = string.Empty;
     private ModProfile? _selectedProfile;
     private ModEntry? _selectedMod;
     private string _validationSummary = "Выберите папку с установленной игрой.";
@@ -111,10 +111,9 @@ public sealed class MainViewModel : ObservableObject
 
     public string GameInstallPath
     {
-        get => SelectedProfile?.GameInstallPath ?? _gameInstallPath;
+        get => SelectedProfile?.GameInstallPath ?? _lastBrowsedGamePath;
         set
         {
-            _gameInstallPath = value;
             if (SelectedProfile is not null)
             {
                 if (SelectedProfile.GameInstallPath != value)
@@ -127,6 +126,7 @@ public sealed class MainViewModel : ObservableObject
             }
             else
             {
+                _lastBrowsedGamePath = value;
                 OnPropertyChanged(nameof(GameInstallPath));
                 RefreshValidation();
                 _autoSave.Schedule();
@@ -361,7 +361,7 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             var settings = await _settingsStore.LoadAsync();
-            _gameInstallPath = settings.GameInstallPath;
+            _lastBrowsedGamePath = settings.LastBrowsedGamePath;
             OnPropertyChanged(nameof(GameInstallPath));
             _isLogVisible = settings.IsLogVisible;
             OnPropertyChanged(nameof(IsLogVisible));
@@ -402,7 +402,7 @@ public sealed class MainViewModel : ObservableObject
             }
             await _settingsStore.UpdateAsync(existing => new AppSettings
             {
-                GameInstallPath = _gameInstallPath,
+                LastBrowsedGamePath = _lastBrowsedGamePath,
                 Profiles = Profiles.ToList(),
                 DontShowAboutOnStartup = existing.DontShowAboutOnStartup,
                 IsLogVisible = _isLogVisible,
@@ -572,6 +572,7 @@ public sealed class MainViewModel : ObservableObject
             return;
         }
 
+        _lastBrowsedGamePath = selected;
         GameInstallPath = selected;
         RefreshValidation();
         Log($"Game folder selected: {selected}");
@@ -666,7 +667,7 @@ public sealed class MainViewModel : ObservableObject
 
         var initialPath = Directory.Exists(SelectedMod?.SourcePath) ? SelectedMod.SourcePath
             : !string.IsNullOrWhiteSpace(SelectedProfile.GameInstallPath) ? SelectedProfile.GameInstallPath
-            : _gameInstallPath;
+            : _lastBrowsedGamePath;
         var selected = _dialogService.PickExecutable("Choose launch executable", initialPath);
         if (selected is null)
         {
@@ -960,7 +961,7 @@ public sealed class MainViewModel : ObservableObject
 
         try
         {
-            var path = _profileManager.GetProfileFolderPath(SelectedProfile, _gameInstallPath)
+            var path = _profileManager.GetProfileFolderPath(SelectedProfile)
                 ?? throw new DirectoryNotFoundException("Папка включенного автономного мода не найдена.");
 
             Directory.CreateDirectory(path);
@@ -991,7 +992,7 @@ public sealed class MainViewModel : ObservableObject
 
     private void RefreshValidation()
     {
-        var result = _profileReadinessService.Validate(SelectedProfile, _gameInstallPath);
+        var result = _profileReadinessService.Validate(SelectedProfile);
         IsGameValid = result.IsValid;
         ValidationSummary = result.Summary;
         RaiseCommandStates();

@@ -4,6 +4,11 @@ namespace StalkerModLauncher.Services;
 
 public sealed class ModConflictAnalyzer
 {
+    private static readonly TimeSpan CacheLifetime = TimeSpan.FromSeconds(30);
+    private const int MaxCacheEntries = 128;
+    private readonly object _cacheSync = new();
+    private readonly Dictionary<string, FileListCacheEntry> _fileCache = new(StringComparer.OrdinalIgnoreCase);
+
     public Task<IReadOnlyDictionary<string, ModConflictState>> AnalyzeAsync(
         IReadOnlyList<ModConflictInput> mods,
         CancellationToken cancellationToken = default)
@@ -19,7 +24,7 @@ public sealed class ModConflictAnalyzer
         return Task.Run(() => Analyze(mods, launchExecutableRelativePath, cancellationToken), cancellationToken);
     }
 
-    private static IReadOnlyDictionary<string, ModConflictState> Analyze(
+    private IReadOnlyDictionary<string, ModConflictState> Analyze(
         IReadOnlyList<ModConflictInput> mods,
         string? launchExecutableRelativePath,
         CancellationToken cancellationToken)
@@ -89,20 +94,32 @@ public sealed class ModConflictAnalyzer
         return left is { Count: > 0 } && right is { Count: > 0 } && left.Overlaps(right);
     }
 
-    private static HashSet<string> GetModFileList(string modPath, CancellationToken cancellationToken)
+    private HashSet<string> GetModFileList(string modPath, CancellationToken cancellationToken)
     {
-        var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (!Directory.Exists(modPath))
         {
-            return files;
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
+        var fullPath = Path.GetFullPath(modPath);
+        var rootWriteTime = Directory.GetLastWriteTimeUtc(fullPath);
+        lock (_cacheSync)
+        {
+            if (_fileCache.TryGetValue(fullPath, out var cached) &&
+                cached.RootWriteTimeUtc == rootWriteTime &&
+                DateTime.UtcNow - cached.CreatedAtUtc < CacheLifetime)
+            {
+                return cached.Files;
+            }
+        }
+
+        var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
         {
-            foreach (var file in Directory.EnumerateFiles(modPath, "*", SafeEnumerationOptions))
+            foreach (var file in Directory.EnumerateFiles(fullPath, "*", SafeEnumerationOptions))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                files.Add(NormalizeRelativePath(Path.GetRelativePath(modPath, file)));
+                files.Add(NormalizeRelativePath(Path.GetRelativePath(fullPath, file)));
             }
         }
         catch (OperationCanceledException)
@@ -112,6 +129,16 @@ public sealed class ModConflictAnalyzer
         catch
         {
             // An inaccessible mod is handled by profile validation; conflict analysis stays best-effort.
+        }
+
+        lock (_cacheSync)
+        {
+            _fileCache[fullPath] = new FileListCacheEntry(files, rootWriteTime, DateTime.UtcNow);
+            if (_fileCache.Count > MaxCacheEntries)
+            {
+                var oldest = _fileCache.MinBy(pair => pair.Value.CreatedAtUtc).Key;
+                _fileCache.Remove(oldest);
+            }
         }
 
         return files;
@@ -130,6 +157,11 @@ public sealed class ModConflictAnalyzer
         IgnoreInaccessible = true,
         AttributesToSkip = FileAttributes.ReparsePoint
     };
+
+    private sealed record FileListCacheEntry(
+        HashSet<string> Files,
+        DateTime RootWriteTimeUtc,
+        DateTime CreatedAtUtc);
 }
 
 public sealed record ModConflictInput(string Id, string Name, string SourcePath, bool IsEnabled)

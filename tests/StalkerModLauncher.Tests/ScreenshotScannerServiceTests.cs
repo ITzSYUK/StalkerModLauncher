@@ -20,10 +20,10 @@ public sealed class ScreenshotScannerServiceTests : IDisposable
         var profileScreenshot = CreateFile(workspace, "userdata", "screenshots", "profile.png");
         var gameScreenshot = CreateFile(game, "appdata", "screenshots", "game.jpg");
         CreateFile(game, "appdata", "screenshots", "ignored.dds");
-        var profile = new ModProfile { WorkspacePath = workspace };
+        var profile = new ModProfile { WorkspacePath = workspace, GameInstallPath = game };
         var service = new ScreenshotScannerService(_resolver);
 
-        var result = await service.ScanAsync(profile, game);
+        var result = await service.ScanAsync(profile);
 
         Assert.Equal(2, result.Count);
         Assert.Contains(profileScreenshot, result);
@@ -38,7 +38,7 @@ public sealed class ScreenshotScannerServiceTests : IDisposable
         profile.Mods.Add(new ModEntry { SourcePath = _root, IsEnabled = true });
         var service = new ScreenshotScannerService(_resolver);
 
-        var result = await service.ScanAsync(profile, string.Empty);
+        var result = await service.ScanAsync(profile);
 
         Assert.Contains(screenshot, result);
     }
@@ -52,7 +52,7 @@ public sealed class ScreenshotScannerServiceTests : IDisposable
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => service.ScanAsync(profile, string.Empty, cancellation.Token));
+            () => service.ScanAsync(profile, cancellation.Token));
     }
 
     private static string CreateFile(string root, params string[] parts)

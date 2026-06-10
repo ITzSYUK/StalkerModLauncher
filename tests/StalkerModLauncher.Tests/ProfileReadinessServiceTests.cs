@@ -19,7 +19,7 @@ public sealed class ProfileReadinessServiceTests : IDisposable
         CreateFile("game/bin/xr_3da.exe");
         var profile = new ModProfile { GameInstallPath = Path.Combine(_root, "game") };
 
-        var result = _service.Validate(profile, string.Empty);
+        var result = _service.Validate(profile);
 
         Assert.True(result.IsValid);
         Assert.Equal("Готов к запуску.", result.Summary);
@@ -32,7 +32,7 @@ public sealed class ProfileReadinessServiceTests : IDisposable
         CreateFile("default-game/bin/xr_3da.exe");
         var profile = new ModProfile { GameInstallPath = string.Empty };
 
-        var result = _service.Validate(profile, Path.Combine(_root, "default-game"));
+        var result = _service.Validate(profile);
 
         Assert.False(result.IsValid);
         Assert.Contains("Выберите папку с установленной игрой.", result.Summary);
@@ -46,7 +46,7 @@ public sealed class ProfileReadinessServiceTests : IDisposable
         var profile = new ModProfile { GameInstallPath = Path.Combine(_root, "game") };
         profile.Mods.Add(new ModEntry { Name = "Missing", SourcePath = Path.Combine(_root, "missing") });
 
-        var result = _service.Validate(profile, string.Empty);
+        var result = _service.Validate(profile);
 
         Assert.False(result.IsValid);
         Assert.Contains("Папка мода не найдена: Missing", result.Summary);
@@ -60,7 +60,7 @@ public sealed class ProfileReadinessServiceTests : IDisposable
         var profile = new ModProfile { IsStandalone = true, ExecutableRelativePath = @"..\outside.exe" };
         profile.Mods.Add(new ModEntry { Name = "Standalone", SourcePath = modPath });
 
-        var result = _service.Validate(profile, string.Empty);
+        var result = _service.Validate(profile);
 
         Assert.False(result.IsValid);
         Assert.Contains("must not leave", result.Summary);
@@ -74,7 +74,7 @@ public sealed class ProfileReadinessServiceTests : IDisposable
         var profile = new ModProfile { IsStandalone = true };
         profile.Mods.Add(new ModEntry { Name = "Standalone", SourcePath = modPath });
 
-        var result = _service.Validate(profile, string.Empty);
+        var result = _service.Validate(profile);
 
         Assert.True(result.IsValid);
         Assert.Equal("Готов к запуску.", result.Summary);

@@ -42,12 +42,14 @@ public sealed class ModEntry : ObservableObject
         set => SetProperty(ref _isEnabled, value);
     }
 
+    [JsonIgnore]
     public bool IsLocked
     {
         get => _isLocked;
         set => SetProperty(ref _isLocked, value);
     }
 
+    [JsonIgnore]
     public bool HasOverlapsAbove
     {
         get => _hasOverlapsAbove;

@@ -11,11 +11,11 @@ public sealed class ProfileReadinessService
         _gameValidator = gameValidator;
     }
 
-    public ValidationResult Validate(ModProfile? profile, string defaultGamePath)
+    public ValidationResult Validate(ModProfile? profile)
     {
         if (profile is null)
         {
-            return _gameValidator.Validate(defaultGamePath);
+            return _gameValidator.Validate(string.Empty);
         }
 
         return profile.IsStandalone

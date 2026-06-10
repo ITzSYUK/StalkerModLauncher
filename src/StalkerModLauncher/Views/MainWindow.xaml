@@ -622,7 +622,11 @@
                                  DragOver="ProfilesList_OnDragOver"
                                  DragLeave="ProfilesList_OnDragLeave"
                                  Drop="ProfilesList_OnDrop"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ScrollViewer.CanContentScroll="True"
+                                 VirtualizingPanel.IsVirtualizing="True"
+                                 VirtualizingPanel.VirtualizationMode="Recycling"
+                                 VirtualizingPanel.ScrollUnit="Pixel">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel>
@@ -1092,7 +1096,9 @@
                                        MouseMove="ModsList_OnMouseMove"
                                         ToolTip="Моды можно перетаскивать между строками; нижние имеют больший приоритет"
                                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                        ScrollViewer.CanContentScroll="False"
+                                        ScrollViewer.CanContentScroll="True"
+                                        VirtualizingPanel.IsVirtualizing="True"
+                                        VirtualizingPanel.VirtualizationMode="Recycling"
                                         VirtualizingPanel.ScrollUnit="Pixel"
                                        ScrollViewer.VerticalScrollBarVisibility="Auto">
                                   <ListView.View>

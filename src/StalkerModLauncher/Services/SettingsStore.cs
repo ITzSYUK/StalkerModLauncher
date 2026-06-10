@@ -85,7 +85,8 @@ public sealed class SettingsStore
         try
         {
             await using var stream = File.OpenRead(path);
-            return await JsonSerializer.DeserializeAsync<AppSettings>(stream, JsonOptions);
+            var settings = await JsonSerializer.DeserializeAsync<AppSettings>(stream, JsonOptions);
+            return settings is null ? null : AppSettingsNormalizer.Normalize(settings);
         }
         catch (JsonException)
         {

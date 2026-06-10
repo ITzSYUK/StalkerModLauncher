@@ -20,13 +20,12 @@ public sealed class ProfileHealthService
 
     public Task<ProfileHealthReport> AnalyzeAsync(
         ModProfile profile,
-        string defaultGamePath,
         CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => Analyze(profile, defaultGamePath, cancellationToken), cancellationToken);
+        return Task.Run(() => Analyze(profile, cancellationToken), cancellationToken);
     }
 
-    private ProfileHealthReport Analyze(ModProfile profile, string defaultGamePath, CancellationToken cancellationToken)
+    private ProfileHealthReport Analyze(ModProfile profile, CancellationToken cancellationToken)
     {
         var checks = new List<ProfileHealthCheck>();
         var gamePath = profile.GameInstallPath;
@@ -75,7 +74,7 @@ public sealed class ProfileHealthService
                 ? $"Не найден: {profile.ExecutableRelativePath}"
                 : executableSource));
 
-        var profileFolderPath = _profileManager.GetProfileFolderPath(profile, defaultGamePath) ?? string.Empty;
+        var profileFolderPath = _profileManager.GetProfileFolderPath(profile) ?? string.Empty;
         var savedGamePaths = _dataPathResolver.GetSavedGameDirectories(profile);
         var savedGamesPath = savedGamePaths.FirstOrDefault(Directory.Exists)
             ?? savedGamePaths.FirstOrDefault()
