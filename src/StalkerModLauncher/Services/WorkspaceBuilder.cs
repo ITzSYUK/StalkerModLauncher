@@ -46,6 +46,11 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             return BuildStandalone(profile, gamePath, progress, cancellationToken);
         }
 
+        if (string.IsNullOrWhiteSpace(gamePath))
+        {
+            throw new InvalidOperationException("Для неавтономного профиля выберите папку игры.");
+        }
+
         if (!Directory.Exists(gamePath))
         {
             throw new DirectoryNotFoundException($"Game folder was not found: {gamePath}");

@@ -149,6 +149,19 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildAsync_RejectsEmptyOverlayGamePathBeforeCreatingWorkspace()
+    {
+        var profile = CreateProfile(CreateMod("mod", "mod"));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _builder.BuildAsync(string.Empty, profile, new ProgressLog()));
+
+        Assert.Contains("выберите папку игры", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(profile.WorkspacePath);
+        Assert.False(Directory.Exists(_workspaceRoot));
+    }
+
+    [Fact]
     public async Task BuildAsync_CancellationDoesNotChangeSourcesOrWriteManifest()
     {
         var modPath = CreateMod("mod", "mod source");

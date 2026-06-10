@@ -20,7 +20,7 @@ public sealed class ProfileReadinessService
 
         return profile.IsStandalone
             ? ValidateStandalone(profile)
-            : ValidateOverlay(profile, defaultGamePath);
+            : ValidateOverlay(profile);
     }
 
     private static ValidationResult ValidateStandalone(ModProfile profile)
@@ -49,10 +49,9 @@ public sealed class ProfileReadinessService
         return CreateResult(ready, ready ? "Готов к запуску." : string.Join(Environment.NewLine, messages), messages);
     }
 
-    private ValidationResult ValidateOverlay(ModProfile profile, string defaultGamePath)
+    private ValidationResult ValidateOverlay(ModProfile profile)
     {
-        var gamePath = string.IsNullOrWhiteSpace(profile.GameInstallPath) ? defaultGamePath : profile.GameInstallPath;
-        var gameValidation = _gameValidator.Validate(gamePath);
+        var gameValidation = _gameValidator.Validate(profile.GameInstallPath);
         var messages = new List<string>(gameValidation.Messages);
         if (!profile.IsEnabled)
         {

@@ -29,7 +29,7 @@ public sealed class ProfileHealthService
     private ProfileHealthReport Analyze(ModProfile profile, string defaultGamePath, CancellationToken cancellationToken)
     {
         var checks = new List<ProfileHealthCheck>();
-        var gamePath = string.IsNullOrWhiteSpace(profile.GameInstallPath) ? defaultGamePath : profile.GameInstallPath;
+        var gamePath = profile.GameInstallPath;
 
         if (profile.IsStandalone)
         {

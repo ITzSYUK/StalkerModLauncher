@@ -26,6 +26,19 @@ public sealed class ProfileReadinessServiceTests : IDisposable
     }
 
     [Fact]
+    public void Validate_RejectsOverlayProfileWithoutOwnGamePath()
+    {
+        CreateFile("default-game/fsgame.ltx");
+        CreateFile("default-game/bin/xr_3da.exe");
+        var profile = new ModProfile { GameInstallPath = string.Empty };
+
+        var result = _service.Validate(profile, Path.Combine(_root, "default-game"));
+
+        Assert.False(result.IsValid);
+        Assert.Contains("Выберите папку с установленной игрой.", result.Summary);
+    }
+
+    [Fact]
     public void Validate_RejectsMissingEnabledMod()
     {
         CreateFile("game/fsgame.ltx");

@@ -40,6 +40,22 @@ public sealed class ProfileHealthServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AnalyzeAsync_RejectsOverlayProfileWithoutOwnGamePath()
+    {
+        var defaultGame = CreateGame();
+        var profile = new ModProfile { GameInstallPath = string.Empty };
+
+        var report = await _service.AnalyzeAsync(profile, defaultGame);
+
+        Assert.False(report.IsReady);
+        Assert.Contains(
+            report.Checks,
+            check => check.Title == "Базовая игра" &&
+                     check.Status == ProfileHealthStatus.Error &&
+                     check.Details.Contains("Папка игры не выбрана."));
+    }
+
+    [Fact]
     public async Task AnalyzeAsync_ReportsMissingModAndExecutable()
     {
         var profile = new ModProfile

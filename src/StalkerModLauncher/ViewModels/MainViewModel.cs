@@ -867,10 +867,6 @@ public sealed class MainViewModel : ObservableObject
                 BuildProgressText = msg;
             });
             var gamePath = SelectedProfile.GameInstallPath;
-            if (string.IsNullOrWhiteSpace(gamePath))
-            {
-                gamePath = _gameInstallPath;
-            }
 
             var session = await _launchCoordinator.StartAsync(gamePath, SelectedProfile, progress);
             await SaveAsync();
@@ -1182,14 +1178,10 @@ public sealed class MainViewModel : ObservableObject
 
         var roots = new List<string>();
         var gamePath = SelectedProfile.GameInstallPath;
-        if (string.IsNullOrWhiteSpace(gamePath))
-        {
-            gamePath = _gameInstallPath;
-        }
 
         if (Directory.Exists(gamePath))
         {
-            roots.Add(GameInstallPath);
+            roots.Add(gamePath);
         }
 
         roots.AddRange(SelectedProfile.Mods.Where(mod => Directory.Exists(mod.SourcePath)).Select(mod => mod.SourcePath));
