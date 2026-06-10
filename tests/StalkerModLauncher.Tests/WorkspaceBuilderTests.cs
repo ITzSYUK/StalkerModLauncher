@@ -112,6 +112,19 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildAsync_DoesNotFallbackToDedicatedServerExecutable()
+    {
+        File.Delete(Path.Combine(_gamePath, "bin", "xr_3da.exe"));
+        CreateFile(_gamePath, "bin/dedicated/XR_3DA.exe", "dedicated server");
+        var profile = CreateProfile();
+
+        var exception = await Assert.ThrowsAsync<FileNotFoundException>(
+            () => _builder.BuildAsync(_gamePath, profile, new ProgressLog()));
+
+        Assert.Contains("Profile executable was not found", exception.Message);
+    }
+
+    [Fact]
     public void DeleteProfileWorkspace_RejectsUnmanagedDirectoryEvenWithMarker()
     {
         var outside = Path.Combine(_root, "outside");

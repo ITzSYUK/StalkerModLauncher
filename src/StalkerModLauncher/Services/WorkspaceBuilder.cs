@@ -116,6 +116,10 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         }
 
         progress.Report($"Workspace is ready. Linked: {stats.LinkedFiles:N0}, symlinked: {stats.SymbolicLinkedFiles:N0}, protected copies: {stats.ProtectedCopies:N0}, copied fallback: {stats.CopiedFiles:N0}.");
+        if (stats.CopiedFiles > 0)
+        {
+            progress.Report($"Symbolic links were unavailable for {stats.CopiedFiles:N0} file(s); copied them instead. Enabling Windows Developer Mode can reduce workspace disk usage for mods stored on another drive.");
+        }
         WriteBuildManifest(workspaceRoot, buildSignature);
         return new WorkspaceBuildResult(
             currentWorkspace,
@@ -425,6 +429,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
     private static string? TryDetectExecutable(string workspaceRoot, string requestedRelativePath, IProgress<string> progress)
     {
         var requestedName = Path.GetFileName(requestedRelativePath);
+        var requestedIsDedicated = IsDedicatedExecutable(requestedRelativePath);
         var candidates = Directory.EnumerateFiles(workspaceRoot, "*.exe", SafeEnumerationOptions)
             .Select(path => new
             {
@@ -432,6 +437,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
                 RelativePath = Path.GetRelativePath(workspaceRoot, path),
                 Name = Path.GetFileName(path)
             })
+            .Where(candidate => requestedIsDedicated || !IsDedicatedExecutable(candidate.RelativePath))
             .OrderBy(candidate => GetExecutableRank(candidate.RelativePath, requestedName))
             .ThenBy(candidate => candidate.RelativePath, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -450,6 +456,14 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
 
         progress.Report($"Requested executable '{requestedRelativePath}' was not found. Using detected executable '{best.RelativePath}'.");
         return best.FullPath;
+    }
+
+    private static bool IsDedicatedExecutable(string relativePath)
+    {
+        var segments = relativePath
+            .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
+            .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+        return segments.Contains("dedicated", StringComparer.OrdinalIgnoreCase);
     }
 
     private static int GetExecutableRank(string relativePath, string requestedName)
@@ -652,12 +666,14 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             return;
         }
 
-        if (TryCreateSymbolicFileLink(targetFile, sourceFile))
+        if (TryCreateSymbolicFileLink(targetFile, sourceFile) && File.Exists(targetFile))
         {
             stats.SymbolicLinkedFiles++;
             return;
         }
 
+        // File.Delete also removes a dangling symbolic link and is a no-op when no entry exists.
+        File.Delete(targetFile);
         File.Copy(sourceFile, targetFile, overwrite: false);
         stats.CopiedFiles++;
     }
@@ -692,6 +708,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
     private static extern bool CreateHardLink(string lpFileName, string lpExistingFileName, IntPtr lpSecurityAttributes);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.U1)]
     private static extern bool CreateSymbolicLink(string lpSymlinkFileName, string lpTargetFileName, int dwFlags);
 
     private static EnumerationOptions SafeEnumerationOptions { get; } = new()
