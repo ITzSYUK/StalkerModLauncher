@@ -45,16 +45,16 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_CopiesMutableFilesSoWorkspaceWritesCannotChangeSources()
+    public async Task BuildAsync_LinksModConfigurationWithoutCopyingIt()
     {
         var modPath = CreateMod("mod", "mod source");
         var profile = CreateProfile(modPath);
 
         var result = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
-        File.WriteAllText(Path.Combine(result.WorkspaceRoot, "gamedata", "config", "shared.ltx"), "workspace write");
 
         Assert.Equal("mod source", File.ReadAllText(Path.Combine(modPath, "gamedata", "config", "shared.ltx")));
         Assert.Equal("base", File.ReadAllText(Path.Combine(_gamePath, "gamedata", "config", "shared.ltx")));
+        Assert.True(File.Exists(Path.Combine(result.WorkspaceRoot, "gamedata", "config", "shared.ltx")));
     }
 
     [Fact]

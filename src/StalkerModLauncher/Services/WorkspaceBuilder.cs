@@ -16,6 +16,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
 {
     private const string MarkerFileName = ".stalker-launcher-workspace";
     private const string ManifestFileName = "build-manifest.json";
+    private const string WorkspaceFormatVersion = "strict-links-v1";
     private readonly AppPaths _paths;
 
     public WorkspaceBuilder(AppPaths paths)
@@ -73,6 +74,8 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
                 profile.WorkingDirectoryRelative);
         }
 
+        ValidateCrossVolumeSymbolicLinkSupport(sourceSnapshot, workspaceRoot, progress);
+
         progress.Report("Preparing clean profile workspace...");
         FileSystemSafety.DeleteDirectoryContents(currentWorkspace, workspaceRoot);
         Directory.CreateDirectory(currentWorkspace);
@@ -115,11 +118,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             executableRelativePath = Path.GetRelativePath(currentWorkspace, detectedExecutable);
         }
 
-        progress.Report($"Workspace is ready. Linked: {stats.LinkedFiles:N0}, symlinked: {stats.SymbolicLinkedFiles:N0}, protected copies: {stats.ProtectedCopies:N0}, copied fallback: {stats.CopiedFiles:N0}.");
-        if (stats.CopiedFiles > 0)
-        {
-            progress.Report($"Symbolic links were unavailable for {stats.CopiedFiles:N0} file(s); copied them instead. Enabling Windows Developer Mode can reduce workspace disk usage for mods stored on another drive.");
-        }
+        progress.Report($"Workspace is ready. Hard links: {stats.LinkedFiles:N0}, symbolic links: {stats.SymbolicLinkedFiles:N0}, profile-local copies: {stats.ProtectedCopies:N0}.");
         WriteBuildManifest(workspaceRoot, buildSignature);
         return new WorkspaceBuildResult(
             currentWorkspace,
@@ -345,6 +344,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
     private static string CreateBuildSignature(ModProfile profile, WorkspaceSourceSnapshot sourceSnapshot)
     {
         var builder = new StringBuilder();
+        builder.AppendLine(WorkspaceFormatVersion);
         AppendDirectoryFingerprint(builder, sourceSnapshot.Game);
         builder.AppendLine(profile.ExecutableRelativePath);
         builder.AppendLine(profile.IsStandalone ? "standalone" : "overlay");
@@ -672,10 +672,61 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             return;
         }
 
-        // File.Delete also removes a dangling symbolic link and is a no-op when no entry exists.
+        // File.Delete removes a dangling symbolic link and does not touch its source.
         File.Delete(targetFile);
-        File.Copy(sourceFile, targetFile, overwrite: false);
-        stats.CopiedFiles++;
+        throw CreateLinkFailureException(sourceFile, targetFile);
+    }
+
+    private static void ValidateCrossVolumeSymbolicLinkSupport(
+        WorkspaceSourceSnapshot sourceSnapshot,
+        string workspaceRoot,
+        IProgress<string> progress)
+    {
+        var workspaceVolume = Path.GetPathRoot(Path.GetFullPath(workspaceRoot));
+        var sources = new[] { sourceSnapshot.Game }.Concat(sourceSnapshot.Mods.Values);
+        var crossVolumeFiles = sources
+            .Select(snapshot => snapshot.Files.FirstOrDefault(file => !WorkspaceFileStrategy.MustCopy(file.RelativePath)))
+            .Where(file => file is not null)
+            .Cast<SourceFileSnapshot>()
+            .Where(file => !string.Equals(
+                Path.GetPathRoot(Path.GetFullPath(file.FullPath)),
+                workspaceVolume,
+                StringComparison.OrdinalIgnoreCase))
+            .GroupBy(file => Path.GetPathRoot(Path.GetFullPath(file.FullPath)), StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToArray();
+
+        if (crossVolumeFiles.Length == 0)
+        {
+            return;
+        }
+
+        progress.Report("Checking symbolic link support for files stored on other drives...");
+        foreach (var sourceFile in crossVolumeFiles)
+        {
+            var testLink = Path.Combine(workspaceRoot, $".stalker-launcher-link-test-{Guid.NewGuid():N}");
+            try
+            {
+                if (!TryCreateSymbolicFileLink(testLink, sourceFile.FullPath) || !File.Exists(testLink))
+                {
+                    throw CreateLinkFailureException(sourceFile.FullPath, testLink);
+                }
+            }
+            finally
+            {
+                File.Delete(testLink);
+            }
+        }
+    }
+
+    private static IOException CreateLinkFailureException(string sourceFile, string targetFile)
+    {
+        return new IOException(
+            "Не удалось создать ссылку для экономного workspace." + Environment.NewLine +
+            $"Источник: {sourceFile}" + Environment.NewLine +
+            $"Workspace: {targetFile}" + Environment.NewLine +
+            "Лаунчер не будет копировать файл целиком. Включите режим разработчика Windows, " +
+            "запустите лаунчер от имени администратора либо разместите workspace и исходные файлы на одном NTFS-диске.");
     }
 
     private static bool TryCreateHardLink(string targetFile, string existingFile)
@@ -791,7 +842,6 @@ internal sealed class WorkspaceBuildStats
     public int LinkedFiles { get; set; }
     public int SymbolicLinkedFiles { get; set; }
     public int ProtectedCopies { get; set; }
-    public int CopiedFiles { get; set; }
 }
 
 internal sealed class WorkspaceBuildManifest
