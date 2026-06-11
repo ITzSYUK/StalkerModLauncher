@@ -880,7 +880,7 @@ public sealed class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log($"Launch failed: {ex.Message}");
-            _dialogService.ShowError("Launch failed", ex.Message);
+            _dialogService.ShowError("Не удалось запустить профиль", ex.Message);
         }
         finally
         {

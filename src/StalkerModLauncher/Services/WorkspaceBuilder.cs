@@ -721,12 +721,32 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
 
     private static IOException CreateLinkFailureException(string sourceFile, string targetFile)
     {
+        var sourceVolume = GetVolumeDisplayName(sourceFile);
+        var workspaceVolume = GetVolumeDisplayName(targetFile);
+        var differentVolumes = !string.Equals(sourceVolume, workspaceVolume, StringComparison.OrdinalIgnoreCase);
+        var reason = differentVolumes
+            ? $"Файлы мода находятся на диске {sourceVolume}, а workspace создаётся на диске {workspaceVolume}. Windows не разрешила создать символическую ссылку между ними."
+            : $"Windows не разрешила создать ссылку на диске {sourceVolume}. Возможно, диск не использует NTFS или у лаунчера недостаточно прав.";
+
         return new IOException(
-            "Не удалось создать ссылку для экономного workspace." + Environment.NewLine +
-            $"Источник: {sourceFile}" + Environment.NewLine +
-            $"Workspace: {targetFile}" + Environment.NewLine +
-            "Лаунчер не будет копировать файл целиком. Включите режим разработчика Windows, " +
-            "запустите лаунчер от имени администратора либо разместите workspace и исходные файлы на одном NTFS-диске.");
+            "Не удалось подключить файлы мода к профилю без копирования." + Environment.NewLine +
+            Environment.NewLine +
+            reason + Environment.NewLine +
+            Environment.NewLine +
+            "Чтобы исправить проблему:" + Environment.NewLine +
+            "1. Включите «Режим разработчика» в параметрах Windows: Система → Для разработчиков." + Environment.NewLine +
+            "2. Или запустите лаунчер от имени администратора." + Environment.NewLine +
+            $"3. Или перенесите мод на диск {workspaceVolume}." + Environment.NewLine +
+            Environment.NewLine +
+            "Сборка остановлена. Файлы игры и мода не изменены.");
+    }
+
+    private static string GetVolumeDisplayName(string path)
+    {
+        var root = Path.GetPathRoot(Path.GetFullPath(path));
+        return string.IsNullOrWhiteSpace(root)
+            ? "неизвестный"
+            : root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
     }
 
     private static bool TryCreateHardLink(string targetFile, string existingFile)
