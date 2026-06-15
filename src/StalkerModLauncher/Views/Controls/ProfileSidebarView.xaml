@@ -1,0 +1,119 @@
+<UserControl x:Class="StalkerModLauncher.Views.Controls.ProfileSidebarView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <Border Background="{StaticResource PanelBrush}"
+            BorderBrush="{StaticResource StrokeBrush}"
+            BorderThickness="1"
+            CornerRadius="6"
+            ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="12,12,12,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Профили"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           ToolTip="Профили можно перетаскивать для изменения порядка"
+                           ToolTipService.InitialShowDelay="700"
+                           ToolTipService.ShowDuration="5000"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Command="{Binding NewProfileCommand}"
+                            Style="{DynamicResource ProfileHeaderIconButtonStyle}"
+                            ToolTip="Создать профиль"
+                            Margin="0,0,3,0">
+                        <Viewbox Width="26" Height="26">
+                            <Canvas Width="24" Height="24">
+                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      Data="M11,13 V16 C11,16.283 11.096,16.521 11.288,16.713 C11.48,16.905 11.717,17.001 12,17 C12.283,16.999 12.52,16.903 12.713,16.712 C12.906,16.521 13.001,16.283 13,16 V13 H16 C16.283,13 16.521,12.904 16.713,12.712 C16.905,12.52 17.001,12.283 17,12 C16.999,11.717 16.903,11.48 16.712,11.288 C16.521,11.096 16.283,11 16,11 H13 V8 C13,7.717 12.904,7.479 12.712,7.288 C12.52,7.097 12.283,7.001 12,7 C11.717,6.999 11.48,7.095 11.288,7.288 C11.096,7.481 11,7.718 11,8 V11 H8 C7.717,11 7.479,11.096 7.288,11.288 C7.097,11.48 7.001,11.717 7,12 C6.999,12.283 7.095,12.52 7.288,12.713 C7.481,12.906 7.718,13.001 8,13 Z M5,21 C4.45,21 3.979,20.804 3.588,20.413 C3.197,20.022 3.001,19.551 3,19 V5 C3,4.45 3.196,3.979 3.588,3.588 C3.98,3.197 4.451,3.001 5,3 H19 C19.55,3 20.021,3.196 20.413,3.588 C20.805,3.98 21.001,4.451 21,5 V19 C21,19.55 20.804,20.021 20.413,20.413 C20.022,20.805 19.551,21.001 19,21 Z"/>
+                            </Canvas>
+                        </Viewbox>
+                    </Button>
+                    <Button Command="{Binding ImportProfileCommand}"
+                            Style="{DynamicResource ProfileHeaderIconButtonStyle}"
+                            ToolTip="Импортировать профиль">
+                        <Viewbox Width="26" Height="26">
+                            <Canvas Width="24" Height="24">
+                                <Rectangle Canvas.Left="4"
+                                           Canvas.Top="3"
+                                           Width="16"
+                                           Height="18"
+                                           RadiusX="3"
+                                           RadiusY="3"
+                                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                           StrokeThickness="1.7"/>
+                                <Path Data="M12,6 V15 M8.5,11.5 L12,15 L15.5,11.5 M8,18 H16"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.7"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"/>
+                            </Canvas>
+                        </Viewbox>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <ListBox x:Name="ProfilesList"
+                     Grid.Row="1"
+                     ItemsSource="{Binding Profiles}"
+                     SelectedItem="{Binding SelectedProfile}"
+                     ItemContainerStyle="{DynamicResource ProfileListBoxItemStyle}"
+                     BorderThickness="0"
+                     AllowDrop="True"
+                     PreviewMouseLeftButtonDown="ProfilesList_OnPreviewMouseLeftButtonDown"
+                     MouseMove="ProfilesList_OnMouseMove"
+                     DragOver="ProfilesList_OnDragOver"
+                     DragLeave="ProfilesList_OnDragLeave"
+                     Drop="ProfilesList_OnDrop"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.CanContentScroll="True"
+                     VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.VirtualizationMode="Recycling"
+                     VirtualizingPanel.ScrollUnit="Pixel">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel>
+                            <TextBlock Text="{Binding Name}"
+                                       TextWrapping="Wrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       LineHeight="17"
+                                       MaxHeight="51"/>
+                            <TextBlock Text="Запущен"
+                                       FontSize="10"
+                                       Foreground="{StaticResource AccentBrush}"
+                                       FontWeight="SemiBold"
+                                       Margin="0,-1,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <Button Grid.Row="2"
+                    Content="{Binding ActivityLog.ToggleText}"
+                    Command="{Binding ActivityLog.ToggleCommand}"
+                    Margin="12,10,12,12"
+                    Padding="6,4"/>
+        </Grid>
+    </Border>
+</UserControl>

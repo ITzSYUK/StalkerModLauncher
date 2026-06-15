@@ -9,12 +9,15 @@ public sealed class AppServices
         Paths = new AppPaths();
         SettingsStore = new SettingsStore(Paths);
         DialogService = new DialogService();
+        WindowSystemIntegrationService = new WindowSystemIntegrationService();
 
         var workspaceBuilder = new WorkspaceBuilder(Paths);
+        WorkspaceManagementService = new WorkspaceManagementService(workspaceBuilder);
         ProfileManager = new ProfileManager(Paths, workspaceBuilder);
         LaunchCoordinator = new LaunchCoordinator(new ProfileLauncher(workspaceBuilder), new GameSessionTracker());
         GameValidator = new GameInstallationValidator();
         ProfileReadinessService = new ProfileReadinessService(GameValidator);
+        LaunchPreflightService = new LaunchPreflightService(GameValidator, ProfileManager);
         ApplicationLogService = new ApplicationLogService(Paths);
         ModConflictAnalyzer = new ModConflictAnalyzer();
         ProfileTransferService = new ProfileTransferService();
@@ -24,16 +27,27 @@ public sealed class AppServices
         ScreenshotScannerService = new ScreenshotScannerService(ProfileDataPathResolver);
         ScreenshotClipboardService = new ScreenshotClipboardService();
         GameExitDiagnosticsService = new GameExitDiagnosticsService(ProfileDataPathResolver);
-        ProfileHealthService = new ProfileHealthService(GameValidator, ProfileManager, ProfileDataPathResolver);
+        ProfileHealthService = new ProfileHealthService(GameValidator, ProfileManager, ProfileDataPathResolver, WorkspaceManagementService);
+        WindowNavigationService = new WindowNavigationService(
+            Paths,
+            DialogService,
+            SettingsStore,
+            ProfileHealthService,
+            WorkspaceManagementService,
+            ScreenshotScannerService,
+            ScreenshotClipboardService);
     }
 
     public AppPaths Paths { get; }
     public SettingsStore SettingsStore { get; }
     public DialogService DialogService { get; }
+    public WindowSystemIntegrationService WindowSystemIntegrationService { get; }
     public ProfileManager ProfileManager { get; }
     public LaunchCoordinator LaunchCoordinator { get; }
     public GameInstallationValidator GameValidator { get; }
     public ProfileReadinessService ProfileReadinessService { get; }
+    public LaunchPreflightService LaunchPreflightService { get; }
+    public WorkspaceManagementService WorkspaceManagementService { get; }
     public ApplicationLogService ApplicationLogService { get; }
     public ModConflictAnalyzer ModConflictAnalyzer { get; }
     public ProfileTransferService ProfileTransferService { get; }
@@ -44,6 +58,7 @@ public sealed class AppServices
     public ProfileDataPathResolver ProfileDataPathResolver { get; }
     public ScreenshotScannerService ScreenshotScannerService { get; }
     public ScreenshotClipboardService ScreenshotClipboardService { get; }
+    public WindowNavigationService WindowNavigationService { get; }
 
     public MainViewModel CreateMainViewModel()
     {
@@ -59,6 +74,7 @@ public sealed class AppServices
             ProfileManager,
             GameExitDiagnosticsService,
             ProfileReadinessService,
+            LaunchPreflightService,
             ApplicationLogService);
     }
 }

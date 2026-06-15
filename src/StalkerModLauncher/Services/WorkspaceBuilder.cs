@@ -1,8 +1,4 @@
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Text.Json;
-using System.Text;
 using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
@@ -10,14 +6,27 @@ namespace StalkerModLauncher.Services;
 public interface IProfileWorkspaceManager
 {
     void DeleteProfileWorkspace(ModProfile profile, string gamePath);
+    void ClearProfileWorkspaceCache(ModProfile profile, string gamePath);
 }
 
 public sealed class WorkspaceBuilder : IProfileWorkspaceManager
 {
     private const string MarkerFileName = ".stalker-launcher-workspace";
+    internal const string RootMarkerFileName = ".stalker-launcher-workspace-root";
     private const string ManifestFileName = "build-manifest.json";
     private const string WorkspaceFormatVersion = "strict-links-v1";
     private readonly AppPaths _paths;
+    private readonly WorkspaceSourceScanner _sourceScanner = new();
+    private readonly WorkspaceManifestStore _manifestStore = new();
+    private readonly WorkspaceMaterializer _materializer = new();
+    private readonly WorkspaceExecutableResolver _executableResolver = new();
+    private readonly ProfileDataConfigurator _dataConfigurator = new();
+    private static EnumerationOptions SafeEnumerationOptions { get; } = new()
+    {
+        RecurseSubdirectories = true,
+        IgnoreInaccessible = false,
+        AttributesToSkip = FileAttributes.ReparsePoint
+    };
 
     public WorkspaceBuilder(AppPaths paths)
     {
@@ -61,9 +70,9 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var currentWorkspace = Path.Combine(workspaceRoot, "current");
         FileSystemSafety.EnsureDirectoryInside(currentWorkspace, workspaceRoot);
         progress.Report("Checking game and mod files...");
-        var sourceSnapshot = CaptureSources(gamePath, profile, cancellationToken);
-        var buildSignature = CreateBuildSignature(profile, sourceSnapshot);
-        var cachedExecutable = TryUseCachedWorkspace(workspaceRoot, currentWorkspace, profile, buildSignature, progress);
+        var sourceSnapshot = _sourceScanner.Capture(gamePath, profile, cancellationToken);
+        var buildSignature = _sourceScanner.CreateBuildSignature(WorkspaceFormatVersion, profile, sourceSnapshot);
+        var cachedExecutable = _manifestStore.TryGetCachedExecutable(workspaceRoot, currentWorkspace, profile, buildSignature, progress);
         if (cachedExecutable is not null)
         {
             return new WorkspaceBuildResult(
@@ -74,7 +83,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
                 profile.WorkingDirectoryRelative);
         }
 
-        ValidateCrossVolumeSymbolicLinkSupport(sourceSnapshot, workspaceRoot, progress);
+        _materializer.ValidateLinkSupport(sourceSnapshot, workspaceRoot, progress);
 
         progress.Report("Preparing clean profile workspace...");
         FileSystemSafety.DeleteDirectoryContents(currentWorkspace, workspaceRoot);
@@ -83,21 +92,21 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var stats = new WorkspaceBuildStats();
 
         progress.Report("Linking base game into isolated workspace...");
-        MirrorBaseGame(sourceSnapshot.Game, currentWorkspace, progress, stats, cancellationToken);
+        _materializer.MirrorBaseGame(sourceSnapshot.Game, currentWorkspace, progress, stats, cancellationToken);
 
         foreach (var mod in profile.Mods.Where(mod => mod.IsEnabled).OrderBy(mod => mod.Order))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            ApplyMod(currentWorkspace, mod, sourceSnapshot.Mods[mod.Id], progress, stats, cancellationToken);
+            _materializer.ApplyMod(currentWorkspace, mod, sourceSnapshot.Mods[mod.Id], progress, stats, cancellationToken);
         }
 
-        var workingDirectoryRelative = ResolveWorkingDirectory(gamePath, currentWorkspace, workspaceRoot, progress);
+        var workingDirectoryRelative = _dataConfigurator.Configure(gamePath, currentWorkspace, workspaceRoot, progress);
 
         var executablePath = Path.Combine(currentWorkspace, profile.ExecutableRelativePath);
         var executableRelativePath = profile.ExecutableRelativePath;
         if (!File.Exists(executablePath))
         {
-            var detectedExecutable = TryDetectExecutable(currentWorkspace, profile.ExecutableRelativePath, progress);
+            var detectedExecutable = _executableResolver.Resolve(currentWorkspace, profile.ExecutableRelativePath, progress);
             if (detectedExecutable is null)
             {
                 var discovered = Directory.EnumerateFiles(currentWorkspace, "*.exe", SafeEnumerationOptions)
@@ -119,7 +128,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         }
 
         progress.Report($"Workspace is ready. Hard links: {stats.LinkedFiles:N0}, symbolic links: {stats.SymbolicLinkedFiles:N0}, profile-local copies: {stats.ProtectedCopies:N0}.");
-        WriteBuildManifest(workspaceRoot, buildSignature);
+        _manifestStore.Write(workspaceRoot, buildSignature, stats);
         return new WorkspaceBuildResult(
             currentWorkspace,
             executablePath,
@@ -146,11 +155,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         }
 
         var workspacePath = Path.GetFullPath(profile.WorkspacePath);
-        var allowedRoot = _paths.GetManagedWorkspaceRoots(gamePath)
-            .Select(Path.GetFullPath)
-            .FirstOrDefault(root =>
-                FileSystemSafety.IsDirectoryInside(workspacePath, root) &&
-                !FileSystemSafety.IsSameDirectory(workspacePath, root));
+        var allowedRoot = FindAllowedWorkspaceParent(workspacePath, gamePath);
 
         if (allowedRoot is null)
         {
@@ -166,6 +171,33 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         FileSystemSafety.DeleteDirectoryContents(workspacePath, allowedRoot);
     }
 
+    public void ClearProfileWorkspaceCache(ModProfile profile, string gamePath)
+    {
+        if (string.IsNullOrWhiteSpace(profile.WorkspacePath) || !Directory.Exists(profile.WorkspacePath))
+        {
+            return;
+        }
+
+        var workspacePath = Path.GetFullPath(profile.WorkspacePath);
+        var allowedRoot = FindAllowedWorkspaceParent(workspacePath, gamePath);
+        if (allowedRoot is null || !File.Exists(Path.Combine(workspacePath, MarkerFileName)))
+        {
+            throw new InvalidOperationException("Лаунчер отказался очищать папку без защитного маркера workspace.");
+        }
+
+        var current = Path.Combine(workspacePath, "current");
+        if (Directory.Exists(current))
+        {
+            FileSystemSafety.DeleteDirectoryContents(current, workspacePath);
+        }
+
+        var manifest = Path.Combine(workspacePath, ManifestFileName);
+        if (File.Exists(manifest))
+        {
+            File.Delete(manifest);
+        }
+    }
+
     private string EnsureProfileWorkspace(ModProfile profile, string gamePath)
     {
         var preferredRoot = _paths.GetPreferredWorkspaceRoot(gamePath);
@@ -177,14 +209,18 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             ? generatedWorkspacePath
             : profile.WorkspacePath;
 
-        if (!string.IsNullOrWhiteSpace(profile.WorkspacePath) &&
+        var hasCustomWorkspaceMarker = !string.IsNullOrWhiteSpace(profile.WorkspacePath) &&
+                                       File.Exists(Path.Combine(profile.WorkspacePath, MarkerFileName)) &&
+                                       HasManagedParentMarker(profile.WorkspacePath);
+        if (!hasCustomWorkspaceMarker &&
+            !string.IsNullOrWhiteSpace(profile.WorkspacePath) &&
             !string.IsNullOrWhiteSpace(gamePath) &&
             !FileSystemSafety.IsSameDirectory(Path.GetPathRoot(workspacePath)!, Path.GetPathRoot(preferredRoot)!))
         {
             workspacePath = Path.Combine(preferredRoot, $"{FileSystemSafety.SanitizeName(profile.Name)}-{profile.Id}");
         }
 
-        if (!managedRoots.Any(root =>
+        if (!hasCustomWorkspaceMarker && !managedRoots.Any(root =>
                 FileSystemSafety.IsDirectoryInside(workspacePath, root) &&
                 !FileSystemSafety.IsSameDirectory(workspacePath, root)))
         {
@@ -200,6 +236,32 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         }
 
         return workspacePath;
+    }
+
+    private string? FindAllowedWorkspaceParent(string workspacePath, string gamePath)
+    {
+        var managedRoot = _paths.GetManagedWorkspaceRoots(gamePath)
+            .Select(Path.GetFullPath)
+            .FirstOrDefault(root =>
+                FileSystemSafety.IsDirectoryInside(workspacePath, root) &&
+                !FileSystemSafety.IsSameDirectory(workspacePath, root));
+        if (managedRoot is not null)
+        {
+            return managedRoot;
+        }
+
+        if (!File.Exists(Path.Combine(workspacePath, MarkerFileName)) || !HasManagedParentMarker(workspacePath))
+        {
+            return null;
+        }
+
+        return Directory.GetParent(workspacePath)?.FullName;
+    }
+
+    private static bool HasManagedParentMarker(string workspacePath)
+    {
+        var parent = Directory.GetParent(Path.GetFullPath(workspacePath))?.FullName;
+        return parent is not null && File.Exists(Path.Combine(parent, RootMarkerFileName));
     }
 
     private static bool ShouldRefreshUnusedGeneratedPath(ModProfile profile, IReadOnlyList<string> managedRoots)
@@ -221,574 +283,6 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
                directoryName.EndsWith($"-{profile.Id}", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void MirrorBaseGame(
-        DirectorySnapshot source,
-        string targetRoot,
-        IProgress<string> progress,
-        WorkspaceBuildStats stats,
-        CancellationToken cancellationToken)
-    {
-        foreach (var relativePath in source.Directories)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            Directory.CreateDirectory(Path.Combine(targetRoot, relativePath));
-        }
-
-        var fileCount = 0;
-        foreach (var file in source.Files)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var targetFile = Path.Combine(targetRoot, file.RelativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
-
-            LinkOrCopyFile(file.FullPath, targetFile, file.RelativePath, stats);
-
-            fileCount++;
-            if (fileCount % 500 == 0)
-            {
-                progress.Report($"Linked {fileCount:N0} base files...");
-            }
-        }
-    }
-
-    private static string? TryUseCachedWorkspace(
-        string workspaceRoot,
-        string currentWorkspace,
-        ModProfile profile,
-        string buildSignature,
-        IProgress<string> progress)
-    {
-        var manifestPath = Path.Combine(workspaceRoot, ManifestFileName);
-        if (!Directory.Exists(currentWorkspace) || !File.Exists(manifestPath))
-        {
-            return null;
-        }
-
-        try
-        {
-            var manifest = JsonSerializer.Deserialize<WorkspaceBuildManifest>(File.ReadAllText(manifestPath));
-            if (!string.Equals(manifest?.Signature, buildSignature, StringComparison.Ordinal))
-            {
-                return null;
-            }
-
-            var executablePath = Path.Combine(currentWorkspace, profile.ExecutableRelativePath);
-            if (!File.Exists(executablePath))
-            {
-                return null;
-            }
-
-            progress.Report("Using cached profile workspace. No file overlay changes detected.");
-            return executablePath;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static void WriteBuildManifest(string workspaceRoot, string buildSignature)
-    {
-        var manifestPath = Path.Combine(workspaceRoot, ManifestFileName);
-        var manifest = new WorkspaceBuildManifest
-        {
-            Signature = buildSignature,
-            BuiltAtUtc = DateTime.UtcNow
-        };
-        File.WriteAllText(manifestPath, JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
-    }
-
-    private static WorkspaceSourceSnapshot CaptureSources(
-        string gamePath,
-        ModProfile profile,
-        CancellationToken cancellationToken)
-    {
-        var game = CaptureDirectory(gamePath, cancellationToken);
-        var mods = new Dictionary<string, DirectorySnapshot>();
-        foreach (var mod in profile.Mods.Where(mod => mod.IsEnabled))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!Directory.Exists(mod.SourcePath))
-            {
-                throw new DirectoryNotFoundException($"Mod folder was not found: {mod.SourcePath}");
-            }
-
-            mods.Add(mod.Id, CaptureDirectory(mod.SourcePath, cancellationToken));
-        }
-
-        return new WorkspaceSourceSnapshot(game, mods);
-    }
-
-    private static DirectorySnapshot CaptureDirectory(string directoryPath, CancellationToken cancellationToken)
-    {
-        var fullRoot = Path.GetFullPath(directoryPath);
-        var directories = Directory.EnumerateDirectories(fullRoot, "*", SafeEnumerationOptions)
-            .Select(path => Path.GetRelativePath(fullRoot, path))
-            .ToArray();
-        var files = Directory.EnumerateFiles(fullRoot, "*", SafeEnumerationOptions)
-            .Select(path =>
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var info = new FileInfo(path);
-                return new SourceFileSnapshot(
-                    path,
-                    Path.GetRelativePath(fullRoot, path),
-                    info.Length,
-                    info.LastWriteTimeUtc.Ticks);
-            })
-            .OrderBy(file => file.RelativePath, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        return new DirectorySnapshot(fullRoot, directories, files);
-    }
-
-    private static string CreateBuildSignature(ModProfile profile, WorkspaceSourceSnapshot sourceSnapshot)
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine(WorkspaceFormatVersion);
-        AppendDirectoryFingerprint(builder, sourceSnapshot.Game);
-        builder.AppendLine(profile.ExecutableRelativePath);
-        builder.AppendLine(profile.IsStandalone ? "standalone" : "overlay");
-
-        foreach (var mod in profile.Mods.OrderBy(mod => mod.Order))
-        {
-            builder.Append(mod.Order).Append('|')
-                .Append(mod.IsEnabled).Append('|')
-                .Append(Path.GetFullPath(mod.SourcePath)).AppendLine();
-
-            if (sourceSnapshot.Mods.TryGetValue(mod.Id, out var modSnapshot))
-            {
-                AppendDirectoryFingerprint(builder, modSnapshot);
-            }
-        }
-
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString())));
-    }
-
-    private static void AppendDirectoryFingerprint(StringBuilder builder, DirectorySnapshot snapshot)
-    {
-        builder.AppendLine(snapshot.RootPath);
-
-        foreach (var file in snapshot.Files)
-        {
-            builder.Append(file.RelativePath).Append('|')
-                .Append(file.Length).Append('|')
-                .Append(file.LastWriteTimeUtcTicks).AppendLine();
-        }
-    }
-
-    private static void ApplyMod(
-        string workspaceRoot,
-        ModEntry mod,
-        DirectorySnapshot source,
-        IProgress<string> progress,
-        WorkspaceBuildStats stats,
-        CancellationToken cancellationToken)
-    {
-        if (!Directory.Exists(mod.SourcePath))
-        {
-            throw new DirectoryNotFoundException($"Mod folder was not found: {mod.SourcePath}");
-        }
-
-        progress.Report($"Applying mod: {mod.Name}");
-
-        var directoryCount = 0;
-        var fileCount = 0;
-
-        foreach (var relativePath in source.Directories)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            Directory.CreateDirectory(Path.Combine(workspaceRoot, relativePath));
-            directoryCount++;
-        }
-
-        foreach (var file in source.Files)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            FileSystemSafety.EnsureRelativePath(file.RelativePath, "Mod file");
-            var targetFile = Path.Combine(workspaceRoot, file.RelativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
-
-            // The base mirror may use links. Deleting the workspace entry before overlaying a mod file
-            // guarantees that the new link or copy points at the mod file, not at the original GOG file.
-            if (File.Exists(targetFile))
-            {
-                File.Delete(targetFile);
-            }
-
-            LinkOrCopyFile(file.FullPath, targetFile, file.RelativePath, stats);
-            fileCount++;
-        }
-
-        progress.Report($"Applied mod '{mod.Name}': {fileCount:N0} files, {directoryCount:N0} folders.");
-        if (fileCount == 0)
-        {
-            progress.Report($"Warning: mod '{mod.Name}' did not contain files visible to the launcher. Check that the profile points to the mod root folder, not an empty wrapper folder.");
-        }
-    }
-
-    private static string? TryDetectExecutable(string workspaceRoot, string requestedRelativePath, IProgress<string> progress)
-    {
-        var requestedName = Path.GetFileName(requestedRelativePath);
-        var requestedIsDedicated = IsDedicatedExecutable(requestedRelativePath);
-        var candidates = Directory.EnumerateFiles(workspaceRoot, "*.exe", SafeEnumerationOptions)
-            .Select(path => new
-            {
-                FullPath = path,
-                RelativePath = Path.GetRelativePath(workspaceRoot, path),
-                Name = Path.GetFileName(path)
-            })
-            .Where(candidate => requestedIsDedicated || !IsDedicatedExecutable(candidate.RelativePath))
-            .OrderBy(candidate => GetExecutableRank(candidate.RelativePath, requestedName))
-            .ThenBy(candidate => candidate.RelativePath, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        var best = candidates.FirstOrDefault();
-        if (best is null)
-        {
-            return null;
-        }
-
-        var rank = GetExecutableRank(best.RelativePath, requestedName);
-        if (rank > 50 && candidates.Length != 1)
-        {
-            return null;
-        }
-
-        progress.Report($"Requested executable '{requestedRelativePath}' was not found. Using detected executable '{best.RelativePath}'.");
-        return best.FullPath;
-    }
-
-    private static bool IsDedicatedExecutable(string relativePath)
-    {
-        var segments = relativePath
-            .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
-            .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
-        return segments.Contains("dedicated", StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static int GetExecutableRank(string relativePath, string requestedName)
-    {
-        var normalized = relativePath.Replace('/', '\\');
-        var fileName = Path.GetFileName(normalized);
-
-        if (!string.IsNullOrWhiteSpace(requestedName) &&
-            fileName.Equals(requestedName, StringComparison.OrdinalIgnoreCase))
-        {
-            return 0;
-        }
-
-        if (normalized.Equals(@"bin_x64\xrEngine.exe", StringComparison.OrdinalIgnoreCase))
-        {
-            return 1;
-        }
-
-        if (normalized.Equals(@"bin\xrEngine.exe", StringComparison.OrdinalIgnoreCase))
-        {
-            return 2;
-        }
-
-        if (normalized.Equals(@"bin\xr_3da.exe", StringComparison.OrdinalIgnoreCase) ||
-            normalized.Equals(@"bin\XR_3DA.exe", StringComparison.OrdinalIgnoreCase))
-        {
-            return 3;
-        }
-
-        if (fileName.Contains("xrEngine", StringComparison.OrdinalIgnoreCase) ||
-            fileName.Contains("OGSR", StringComparison.OrdinalIgnoreCase))
-        {
-            return 10;
-        }
-
-        if (fileName.Contains("xr", StringComparison.OrdinalIgnoreCase))
-        {
-            return 20;
-        }
-
-        return 100;
-    }
-
-    private static string ResolveWorkingDirectory(
-        string gamePath,
-        string currentWorkspace,
-        string profileWorkspace,
-        IProgress<string> progress)
-    {
-        var fsgameName = "fsgame.ltx";
-        var fsgameDir = FindFileDirectory(currentWorkspace, fsgameName);
-        if (fsgameDir is null)
-        {
-            progress.Report($"Warning: {fsgameName} not found in workspace. The game may not start correctly.");
-            return string.Empty;
-        }
-
-        var relativeDir = Path.GetRelativePath(currentWorkspace, fsgameDir);
-        var workingDirectoryRelative = string.Empty;
-        if (relativeDir != ".")
-        {
-            workingDirectoryRelative = relativeDir;
-            progress.Report($"Detected {fsgameName} in '{relativeDir}' — using as working directory.");
-        }
-
-        var fsgamePath = Path.Combine(fsgameDir, fsgameName);
-        var profileDataPath = Path.Combine(profileWorkspace, "userdata");
-        Directory.CreateDirectory(profileDataPath);
-
-        CopyUserLtxFromGame(gamePath, profileDataPath, progress);
-
-        var lines = File.ReadAllLines(fsgamePath, Encoding.Default);
-        for (var index = 0; index < lines.Length; index++)
-        {
-            if (lines[index].TrimStart().StartsWith("$app_data_root$", StringComparison.OrdinalIgnoreCase))
-            {
-                lines[index] = $"$app_data_root$ = true | false| {profileDataPath}";
-                break;
-            }
-        }
-
-        File.Delete(fsgamePath);
-        File.WriteAllLines(fsgamePath, lines, Encoding.Default);
-        progress.Report("fsgame.ltx rewritten for profile-local saves and logs.");
-        return workingDirectoryRelative;
-    }
-
-    private static void CopyUserLtxFromGame(string gamePath, string profileDataPath, IProgress<string> progress)
-    {
-        var searchPaths = new List<string>();
-
-        var gameFsgame = FindFileDirectory(gamePath, "fsgame.ltx");
-        if (gameFsgame is not null)
-        {
-            var gameFsgamePath = Path.Combine(gameFsgame, "fsgame.ltx");
-            foreach (var line in File.ReadAllLines(gameFsgamePath, Encoding.Default))
-            {
-                var trimmed = line.TrimStart();
-                if (trimmed.StartsWith("$app_data_root$", StringComparison.OrdinalIgnoreCase))
-                {
-                    var parts = trimmed.Split('|', StringSplitOptions.TrimEntries);
-                    if (parts.Length >= 3)
-                    {
-                        var appDataRelative = parts[2].Trim();
-                        if (!string.IsNullOrWhiteSpace(appDataRelative))
-                        {
-                            var resolved = Path.GetFullPath(Path.Combine(gameFsgame, appDataRelative));
-                            if (Directory.Exists(resolved))
-                            {
-                                searchPaths.Add(resolved);
-                            }
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-
-        searchPaths.Add(Path.Combine(gamePath, "appdata"));
-        searchPaths.Add(Path.Combine(gamePath, "userdata"));
-        searchPaths.Add(Path.Combine(gamePath, "bin", "_appdata_"));
-
-        foreach (var dir in searchPaths)
-        {
-            if (!Directory.Exists(dir))
-            {
-                continue;
-            }
-
-            var userLtx = Path.Combine(dir, "user.ltx");
-            if (!File.Exists(userLtx))
-            {
-                continue;
-            }
-
-            try
-            {
-                var dest = Path.Combine(profileDataPath, "user.ltx");
-                if (File.Exists(dest))
-                {
-                    progress.Report("Keeping existing profile-local user.ltx.");
-                    return;
-                }
-
-                File.Copy(userLtx, dest, overwrite: false);
-                progress.Report($"Copied user.ltx from {userLtx}");
-                return;
-            }
-            catch (Exception ex)
-            {
-                progress.Report($"Warning: could not copy user.ltx from {userLtx}: {ex.Message}");
-            }
-        }
-    }
-
-    private static string? FindFileDirectory(string searchRoot, string fileName)
-    {
-        var rootFile = Path.Combine(searchRoot, fileName);
-        if (File.Exists(rootFile))
-        {
-            return searchRoot;
-        }
-
-        foreach (var dir in Directory.EnumerateDirectories(searchRoot, "*", SearchOption.TopDirectoryOnly))
-        {
-            var candidate = Path.Combine(dir, fileName);
-            if (File.Exists(candidate))
-            {
-                return dir;
-            }
-        }
-
-        foreach (var dir in Directory.EnumerateDirectories(searchRoot, "*", SearchOption.TopDirectoryOnly))
-        {
-            foreach (var subDir in Directory.EnumerateDirectories(dir, "*", SearchOption.TopDirectoryOnly))
-            {
-                var candidate = Path.Combine(subDir, fileName);
-                if (File.Exists(candidate))
-                {
-                    return subDir;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private static void LinkOrCopyFile(string sourceFile, string targetFile, string relativePath, WorkspaceBuildStats stats)
-    {
-        if (WorkspaceFileStrategy.MustCopy(relativePath))
-        {
-            File.Copy(sourceFile, targetFile, overwrite: false);
-            stats.ProtectedCopies++;
-            return;
-        }
-
-        if (TryCreateHardLink(targetFile, sourceFile))
-        {
-            stats.LinkedFiles++;
-            return;
-        }
-
-        if (TryCreateSymbolicFileLink(targetFile, sourceFile) && File.Exists(targetFile))
-        {
-            stats.SymbolicLinkedFiles++;
-            return;
-        }
-
-        // File.Delete removes a dangling symbolic link and does not touch its source.
-        File.Delete(targetFile);
-        throw CreateLinkFailureException(sourceFile, targetFile);
-    }
-
-    private static void ValidateCrossVolumeSymbolicLinkSupport(
-        WorkspaceSourceSnapshot sourceSnapshot,
-        string workspaceRoot,
-        IProgress<string> progress)
-    {
-        var workspaceVolume = Path.GetPathRoot(Path.GetFullPath(workspaceRoot));
-        var sources = new[] { sourceSnapshot.Game }.Concat(sourceSnapshot.Mods.Values);
-        var crossVolumeFiles = sources
-            .Select(snapshot => snapshot.Files.FirstOrDefault(file => !WorkspaceFileStrategy.MustCopy(file.RelativePath)))
-            .Where(file => file is not null)
-            .Cast<SourceFileSnapshot>()
-            .Where(file => !string.Equals(
-                Path.GetPathRoot(Path.GetFullPath(file.FullPath)),
-                workspaceVolume,
-                StringComparison.OrdinalIgnoreCase))
-            .GroupBy(file => Path.GetPathRoot(Path.GetFullPath(file.FullPath)), StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .ToArray();
-
-        if (crossVolumeFiles.Length == 0)
-        {
-            return;
-        }
-
-        progress.Report("Checking symbolic link support for files stored on other drives...");
-        foreach (var sourceFile in crossVolumeFiles)
-        {
-            var testLink = Path.Combine(workspaceRoot, $".stalker-launcher-link-test-{Guid.NewGuid():N}");
-            try
-            {
-                if (!TryCreateSymbolicFileLink(testLink, sourceFile.FullPath) || !File.Exists(testLink))
-                {
-                    throw CreateLinkFailureException(sourceFile.FullPath, testLink);
-                }
-            }
-            finally
-            {
-                File.Delete(testLink);
-            }
-        }
-    }
-
-    private static IOException CreateLinkFailureException(string sourceFile, string targetFile)
-    {
-        var sourceVolume = GetVolumeDisplayName(sourceFile);
-        var workspaceVolume = GetVolumeDisplayName(targetFile);
-        var differentVolumes = !string.Equals(sourceVolume, workspaceVolume, StringComparison.OrdinalIgnoreCase);
-        var reason = differentVolumes
-            ? $"Файлы мода находятся на диске {sourceVolume}, а workspace создаётся на диске {workspaceVolume}. Windows не разрешила создать символическую ссылку между ними."
-            : $"Windows не разрешила создать ссылку на диске {sourceVolume}. Возможно, диск не использует NTFS или у лаунчера недостаточно прав.";
-
-        return new IOException(
-            "Не удалось подключить файлы мода к профилю без копирования." + Environment.NewLine +
-            Environment.NewLine +
-            reason + Environment.NewLine +
-            Environment.NewLine +
-            "Чтобы исправить проблему:" + Environment.NewLine +
-            "1. Включите «Режим разработчика» в параметрах Windows: Система → Для разработчиков." + Environment.NewLine +
-            "2. Или запустите лаунчер от имени администратора." + Environment.NewLine +
-            $"3. Или перенесите мод на диск {workspaceVolume}." + Environment.NewLine +
-            Environment.NewLine +
-            "Сборка остановлена. Файлы игры и мода не изменены.");
-    }
-
-    private static string GetVolumeDisplayName(string path)
-    {
-        var root = Path.GetPathRoot(Path.GetFullPath(path));
-        return string.IsNullOrWhiteSpace(root)
-            ? "неизвестный"
-            : root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-    }
-
-    private static bool TryCreateHardLink(string targetFile, string existingFile)
-    {
-        try
-        {
-            return CreateHardLink(targetFile, existingFile, IntPtr.Zero);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static bool TryCreateSymbolicFileLink(string targetFile, string existingFile)
-    {
-        try
-        {
-            const int fileSymbolicLink = 0x0;
-            const int allowUnprivilegedCreate = 0x2;
-            return CreateSymbolicLink(targetFile, existingFile, fileSymbolicLink | allowUnprivilegedCreate);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern bool CreateHardLink(string lpFileName, string lpExistingFileName, IntPtr lpSecurityAttributes);
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.U1)]
-    private static extern bool CreateSymbolicLink(string lpSymlinkFileName, string lpTargetFileName, int dwFlags);
-
-    private static EnumerationOptions SafeEnumerationOptions { get; } = new()
-    {
-        RecurseSubdirectories = true,
-        IgnoreInaccessible = false,
-        AttributesToSkip = FileAttributes.ReparsePoint
-    };
-
     private WorkspaceBuildResult BuildStandalone(
         ModProfile profile,
         string gamePath,
@@ -809,15 +303,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         if (!File.Exists(exePath))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var found = Directory.EnumerateFiles(modRoot, "*.exe", SearchOption.AllDirectories)
-                .Select(p =>
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    return Path.GetRelativePath(modRoot, p);
-                })
-                .OrderBy(p => p.Equals(profile.ExecutableRelativePath, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                .ThenBy(p => p, StringComparer.OrdinalIgnoreCase)
-                .FirstOrDefault();
+            var found = _executableResolver.ResolveStandalone(modRoot, profile.ExecutableRelativePath, cancellationToken);
 
             if (found is null)
             {
@@ -830,7 +316,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         }
 
         var workingDirectoryRelative = profile.WorkingDirectoryRelative;
-        var fsgameDir = FindFileDirectory(modRoot, "fsgame.ltx");
+        var fsgameDir = _dataConfigurator.FindFileDirectory(modRoot, "fsgame.ltx");
         if (fsgameDir is not null)
         {
             var relativeDir = Path.GetRelativePath(modRoot, fsgameDir);
@@ -856,31 +342,3 @@ public sealed record WorkspaceBuildResult(
     string ProfileWorkspacePath,
     string ExecutableRelativePath,
     string WorkingDirectoryRelative);
-
-internal sealed class WorkspaceBuildStats
-{
-    public int LinkedFiles { get; set; }
-    public int SymbolicLinkedFiles { get; set; }
-    public int ProtectedCopies { get; set; }
-}
-
-internal sealed class WorkspaceBuildManifest
-{
-    public string Signature { get; set; } = string.Empty;
-    public DateTime BuiltAtUtc { get; set; }
-}
-
-internal sealed record WorkspaceSourceSnapshot(
-    DirectorySnapshot Game,
-    IReadOnlyDictionary<string, DirectorySnapshot> Mods);
-
-internal sealed record DirectorySnapshot(
-    string RootPath,
-    IReadOnlyList<string> Directories,
-    IReadOnlyList<SourceFileSnapshot> Files);
-
-internal sealed record SourceFileSnapshot(
-    string FullPath,
-    string RelativePath,
-    long Length,
-    long LastWriteTimeUtcTicks);

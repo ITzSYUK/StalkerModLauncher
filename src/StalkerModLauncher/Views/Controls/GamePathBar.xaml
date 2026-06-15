@@ -1,0 +1,48 @@
+<UserControl x:Class="StalkerModLauncher.Views.Controls.GamePathBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <Border Background="{StaticResource FieldBackgroundBrush}"
+            BorderBrush="{StaticResource StrokeBrush}"
+            BorderThickness="1"
+            CornerRadius="6"
+            Padding="10,8">
+        <Border.Style>
+            <Style TargetType="Border">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding SelectedProfile.IsStandalone}" Value="True">
+                        <Setter Property="Opacity" Value="0.35"/>
+                        <Setter Property="IsEnabled" Value="False"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Папка игры"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="11"/>
+                <TextBox Grid.Row="1"
+                         Text="{Binding SelectedProfile.GameInstallPath, UpdateSourceTrigger=PropertyChanged}"
+                         BorderThickness="0"
+                         Padding="0,2,0,0"
+                         Background="Transparent"
+                         VerticalContentAlignment="Center"/>
+            </Grid>
+            <Button Grid.Column="1"
+                    Content="Выбрать игру"
+                    Command="{Binding ChooseGameFolderCommand}"
+                    Margin="12,0,0,0"
+                    MinWidth="120"
+                    VerticalAlignment="Center"/>
+        </Grid>
+    </Border>
+</UserControl>

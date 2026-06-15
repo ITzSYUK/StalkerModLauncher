@@ -1,0 +1,313 @@
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using StalkerModLauncher.Models;
+using StalkerModLauncher.ViewModels;
+
+namespace StalkerModLauncher.Views.Controls;
+
+public partial class ModPanelView : UserControl
+{
+    private Point _dragStartPoint;
+    private ModEntry? _draggedMod;
+    private ListViewItem? _dropTargetItem;
+    private bool _dropAfter;
+
+    public ModPanelView()
+    {
+        InitializeComponent();
+    }
+
+    private MainViewModel? ViewModel => DataContext as MainViewModel;
+
+    private void ModsList_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _draggedMod = null;
+        if (e.OriginalSource is not DependencyObject source || IsInteractiveDragSource(source))
+        {
+            return;
+        }
+
+        _draggedMod = FindAncestor<ListViewItem>(source)?.DataContext as ModEntry;
+        _dragStartPoint = e.GetPosition(ModsList);
+    }
+
+    private void ModsList_OnPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is not DependencyObject source)
+        {
+            return;
+        }
+
+        var item = FindAncestor<ListViewItem>(source);
+        if (item?.DataContext is not ModEntry mod)
+        {
+            return;
+        }
+
+        if (!ModsList.SelectedItems.Contains(mod))
+        {
+            ModsList.SelectedItem = mod;
+        }
+
+        var contextMenu = new ContextMenu();
+        var removeItem = new MenuItem
+        {
+            Header = "Убрать",
+            IsEnabled = ViewModel?.CanEditSelectedProfile == true
+        };
+        var removeArmed = false;
+        removeItem.PreviewMouseDown += (_, args) =>
+        {
+            removeArmed = args.ChangedButton == MouseButton.Left;
+            if (removeArmed)
+            {
+                removeItem.CaptureMouse();
+            }
+
+            args.Handled = true;
+        };
+        removeItem.PreviewMouseUp += (_, args) =>
+        {
+            var shouldRemove = args.ChangedButton == MouseButton.Left && removeArmed && removeItem.IsMouseOver;
+            removeArmed = false;
+            removeItem.ReleaseMouseCapture();
+            args.Handled = true;
+
+            if (shouldRemove)
+            {
+                ViewModel?.RemoveMods(ModsList.SelectedItems.Cast<ModEntry>().ToList());
+                contextMenu.IsOpen = false;
+            }
+        };
+        contextMenu.Items.Add(removeItem);
+        contextMenu.PlacementTarget = item;
+        contextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+        contextMenu.IsOpen = true;
+        e.Handled = true;
+    }
+
+    private void ModsList_OnMouseMove(object sender, MouseEventArgs e)
+    {
+        var currentPosition = e.GetPosition(ModsList);
+        if (ViewModel?.CanEditSelectedProfile != true ||
+            e.LeftButton != MouseButtonState.Pressed ||
+            _draggedMod is null ||
+            Math.Abs(currentPosition.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance ||
+            Math.Abs(currentPosition.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+
+        var draggedMod = _draggedMod;
+        try
+        {
+            ModsList.SelectedItem = draggedMod;
+            DragDrop.DoDragDrop(ModsList, draggedMod, DragDropEffects.Move);
+        }
+        finally
+        {
+            _draggedMod = null;
+            ClearDropHighlight();
+        }
+    }
+
+    private void ModsList_OnDragOver(object sender, DragEventArgs e)
+    {
+        if (ViewModel?.CanEditSelectedProfile != true)
+        {
+            ClearDropHighlight();
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            ClearDropHighlight();
+            e.Effects = DragDropEffects.Copy;
+            e.Handled = true;
+            AutoScroll(e.GetPosition(ModsList));
+            return;
+        }
+
+        if (!e.Data.GetDataPresent(typeof(ModEntry)))
+        {
+            e.Effects = DragDropEffects.None;
+            return;
+        }
+
+        e.Effects = DragDropEffects.Move;
+        e.Handled = true;
+        AutoScroll(e.GetPosition(ModsList));
+
+        if (e.OriginalSource is not DependencyObject source)
+        {
+            return;
+        }
+
+        var target = FindAncestor<ListViewItem>(source);
+        var dropAfter = target is not null && e.GetPosition(target).Y > target.ActualHeight / 2;
+        if (target == _dropTargetItem && dropAfter == _dropAfter)
+        {
+            return;
+        }
+
+        ClearDropHighlight();
+        _dropTargetItem = target;
+        _dropAfter = dropAfter;
+        SetDropHighlight(_dropTargetItem, dropAfter);
+    }
+
+    private void ModsList_OnDragLeave(object sender, DragEventArgs e)
+    {
+        ClearDropHighlight();
+    }
+
+    private void ModsList_OnDrop(object sender, DragEventArgs e)
+    {
+        if (ViewModel?.CanEditSelectedProfile != true)
+        {
+            ClearDropHighlight();
+            return;
+        }
+
+        if (e.Data.GetDataPresent(typeof(ModEntry)))
+        {
+            var source = (ModEntry)e.Data.GetData(typeof(ModEntry))!;
+            var target = e.OriginalSource is DependencyObject dependencyObject &&
+                         FindAncestor<ListViewItem>(dependencyObject) is { DataContext: ModEntry mod }
+                ? mod
+                : null;
+
+            if (target is not null)
+            {
+                var targetIndex = ViewModel.SelectedProfile?.Mods.IndexOf(target) ?? -1;
+                if (targetIndex >= 0)
+                {
+                    ViewModel.MoveModToInsertionIndex(source, targetIndex + (_dropAfter ? 1 : 0));
+                }
+            }
+            else
+            {
+                ViewModel.MoveModToInsertionIndex(source, ViewModel.SelectedProfile?.Mods.Count ?? 0);
+            }
+
+            ClearDropHighlight();
+            return;
+        }
+
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            ViewModel.AddDroppedMods((string[])e.Data.GetData(DataFormats.FileDrop)!);
+        }
+
+        ClearDropHighlight();
+    }
+
+    private void ClearDropHighlight()
+    {
+        var chrome = _dropTargetItem is null ? null : FindVisualChild<Border>(_dropTargetItem, "RowChrome");
+        if (chrome is not null)
+        {
+            chrome.BorderBrush = Brushes.Transparent;
+            chrome.BorderThickness = new Thickness(1);
+        }
+
+        _dropTargetItem = null;
+        _dropAfter = false;
+    }
+
+    private static void SetDropHighlight(FrameworkElement? item, bool after)
+    {
+        var chrome = item is null ? null : FindVisualChild<Border>(item, "RowChrome");
+        if (chrome is null)
+        {
+            return;
+        }
+
+        chrome.BorderBrush = new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0x00));
+        chrome.BorderThickness = after ? new Thickness(0, 0, 0, 2) : new Thickness(0, 2, 0, 0);
+    }
+
+    private void AutoScroll(Point position)
+    {
+        var scrollViewer = FindVisualChild<ScrollViewer>(ModsList);
+        if (scrollViewer is null)
+        {
+            return;
+        }
+
+        const double edge = 32;
+        if (position.Y < edge)
+        {
+            scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - 18);
+        }
+        else if (position.Y > ModsList.ActualHeight - edge)
+        {
+            scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset + 18);
+        }
+    }
+
+    private void ModsList_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (sender is not ListView listView || listView.View is not GridView gridView || gridView.Columns.Count < 4)
+        {
+            return;
+        }
+
+        var fixedWidth = gridView.Columns[0].Width +
+                         gridView.Columns[1].Width +
+                         gridView.Columns[2].Width +
+                         SystemParameters.VerticalScrollBarWidth;
+        var available = listView.ActualWidth - fixedWidth;
+        if (available > 80)
+        {
+            gridView.Columns[3].Width = available;
+        }
+    }
+
+    private static bool IsInteractiveDragSource(DependencyObject source)
+    {
+        return FindAncestor<System.Windows.Controls.Primitives.ButtonBase>(source) is not null ||
+               FindAncestor<TextBox>(source) is not null ||
+               FindAncestor<Grid>(source) is { Name: "ActionRail" };
+    }
+
+    private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject
+    {
+        while (current is not null)
+        {
+            if (current is T typed)
+            {
+                return typed;
+            }
+
+            current = VisualTreeHelper.GetParent(current);
+        }
+
+        return null;
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject parent, string? childName = null) where T : FrameworkElement
+    {
+        var count = VisualTreeHelper.GetChildrenCount(parent);
+        for (var index = 0; index < count; index++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+            if (child is T typed && (childName is null || typed.Name == childName))
+            {
+                return typed;
+            }
+
+            var found = FindVisualChild<T>(child, childName);
+            if (found is not null)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+}

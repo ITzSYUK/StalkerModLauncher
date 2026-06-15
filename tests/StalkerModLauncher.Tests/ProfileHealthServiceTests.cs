@@ -16,7 +16,11 @@ public sealed class ProfileHealthServiceTests : IDisposable
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var manager = new ProfileManager(paths, new FakeWorkspaceManager());
-        _service = new ProfileHealthService(new GameInstallationValidator(), manager, new ProfileDataPathResolver());
+        _service = new ProfileHealthService(
+            new GameInstallationValidator(),
+            manager,
+            new ProfileDataPathResolver(),
+            new WorkspaceManagementService(new WorkspaceBuilder(paths)));
     }
 
     [Fact]
@@ -224,6 +228,10 @@ public sealed class ProfileHealthServiceTests : IDisposable
     private sealed class FakeWorkspaceManager : IProfileWorkspaceManager
     {
         public void DeleteProfileWorkspace(ModProfile profile, string gamePath)
+        {
+        }
+
+        public void ClearProfileWorkspaceCache(ModProfile profile, string gamePath)
         {
         }
     }

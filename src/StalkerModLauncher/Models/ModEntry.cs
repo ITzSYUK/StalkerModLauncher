@@ -14,6 +14,8 @@ public sealed class ModEntry : ObservableObject
     private int _overwrittenFileCount;
     private int _overwrittenModCount;
     private bool _providesLaunchExecutable;
+    private int _overwrittenConfigurationCount;
+    private int _overwrittenBinaryCount;
     private string _overlayDetails = string.Empty;
     private int _order;
     private string _notes = string.Empty;
@@ -93,6 +95,32 @@ public sealed class ModEntry : ObservableObject
             {
                 OnPropertyChanged(nameof(OverlaySummary));
                 OnPropertyChanged(nameof(HasOverlayInfo));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public int OverwrittenConfigurationCount
+    {
+        get => _overwrittenConfigurationCount;
+        set
+        {
+            if (SetProperty(ref _overwrittenConfigurationCount, value))
+            {
+                OnPropertyChanged(nameof(OverlaySummary));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public int OverwrittenBinaryCount
+    {
+        get => _overwrittenBinaryCount;
+        set
+        {
+            if (SetProperty(ref _overwrittenBinaryCount, value))
+            {
+                OnPropertyChanged(nameof(OverlaySummary));
             }
         }
     }

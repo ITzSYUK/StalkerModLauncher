@@ -83,7 +83,9 @@ public sealed class ModConflictAnalyzer
                 overwrittenFiles.Count > 0,
                 overwrittenFiles.Count,
                 overwrittenModNames,
-                string.Equals(mods[index].Id, executableProviderId, StringComparison.OrdinalIgnoreCase));
+                string.Equals(mods[index].Id, executableProviderId, StringComparison.OrdinalIgnoreCase),
+                overwrittenFiles.Count(IsConfigurationFile),
+                overwrittenFiles.Count(IsBinaryFile));
         }
 
         return result;
@@ -92,6 +94,16 @@ public sealed class ModConflictAnalyzer
     private static bool HasOverlap(HashSet<string>? left, HashSet<string>? right)
     {
         return left is { Count: > 0 } && right is { Count: > 0 } && left.Overlaps(right);
+    }
+
+    private static bool IsConfigurationFile(string path)
+    {
+        return Path.GetExtension(path).ToLowerInvariant() is ".ltx" or ".xml" or ".ini" or ".cfg" or ".script";
+    }
+
+    private static bool IsBinaryFile(string path)
+    {
+        return Path.GetExtension(path).ToLowerInvariant() is ".exe" or ".dll";
     }
 
     private HashSet<string> GetModFileList(string modPath, CancellationToken cancellationToken)
@@ -177,4 +189,6 @@ public sealed record ModConflictState(
     bool HasOverlapsAbove,
     int OverwrittenFileCount,
     IReadOnlyList<string> OverwrittenModNames,
-    bool ProvidesLaunchExecutable);
+    bool ProvidesLaunchExecutable,
+    int OverwrittenConfigurationCount,
+    int OverwrittenBinaryCount);

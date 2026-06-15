@@ -14,6 +14,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -40,7 +41,61 @@
                        FontWeight="SemiBold"/>
         </Border>
 
-        <ListBox Grid.Row="2"
+        <Border Grid.Row="2"
+                Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource StrokeBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="12"
+                Margin="0,0,0,12">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding CanManageWorkspace}" Value="False">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="Workspace"
+                               FontSize="15"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                               Margin="0,3,0,0">
+                        <Run Text="Логический размер: "/>
+                        <Run Text="{Binding Workspace.LogicalSizeDisplay, Mode=OneWay}"/>
+                        <Run Text="  ·  Реально занимает около: "/>
+                        <Run Text="{Binding Workspace.PhysicalSizeDisplay, Mode=OneWay}"/>
+                    </TextBlock>
+                    <TextBlock Foreground="{StaticResource DisabledTextBrush}"
+                               FontSize="11"
+                               Margin="0,2,0,0">
+                        <Run Text="{Binding Workspace.LinkSummaryDisplay, Mode=OneWay}"/>
+                        <Run Text="  ·  Собран: "/>
+                        <Run Text="{Binding Workspace.BuiltAtDisplay, Mode=OneWay}"/>
+                    </TextBlock>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Пересобрать"
+                            Command="{Binding RebuildWorkspaceCommand}"
+                            Margin="12,0,8,0"/>
+                    <Button Content="Перенести..."
+                            Command="{Binding MoveWorkspaceCommand}"
+                            Margin="0,0,8,0"/>
+                    <Button Content="Очистить кэш"
+                            Command="{Binding ClearWorkspaceCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <ListBox Grid.Row="3"
                  ItemsSource="{Binding Checks}"
                  BorderThickness="1"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -89,7 +144,7 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <WrapPanel Grid.Row="3"
+        <WrapPanel Grid.Row="4"
                    HorizontalAlignment="Right"
                    Margin="0,14,0,0">
             <Button Content="Обновить"

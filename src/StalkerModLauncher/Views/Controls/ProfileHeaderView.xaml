@@ -1,0 +1,202 @@
+<UserControl x:Class="StalkerModLauncher.Views.Controls.ProfileHeaderView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Focusable="False">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0"
+              ClipToBounds="True">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Margin" Value="0,0,160,0"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsChecked, ElementName=ProfileActionsToggle}"
+                                     Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ThicknessAnimation Storyboard.TargetProperty="Margin"
+                                                            To="0,0,728,0"
+                                                            Duration="0:0:0.46">
+                                            <ThicknessAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </ThicknessAnimation.EasingFunction>
+                                        </ThicknessAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ThicknessAnimation Storyboard.TargetProperty="Margin"
+                                                            To="0,0,160,0"
+                                                            Duration="0:0:0.42">
+                                            <ThicknessAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseInOut"/>
+                                            </ThicknessAnimation.EasingFunction>
+                                        </ThicknessAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.ExitActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border Width="12"
+                    Height="12"
+                    CornerRadius="6"
+                    VerticalAlignment="Top"
+                    Margin="0,8,10,0">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="{StaticResource DangerBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsGameValid}" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentGreenBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+            </Border>
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="{Binding SelectedProfile.Name, FallbackValue=Профиль}"
+                           FontSize="22"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap"
+                           TextTrimming="CharacterEllipsis"
+                           LineHeight="28"
+                           MaxHeight="56"/>
+                <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="11"
+                           Margin="0,1,0,0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Text" Value="Мод поверх базовой игры"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedProfile.IsStandalone}" Value="True">
+                                    <Setter Property="Text" Value="Автономный мод"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <TextBlock Text="{Binding ValidationSummary}"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           Margin="0,1,0,0"
+                           TextWrapping="Wrap"
+                           LineHeight="18"
+                           MaxHeight="54"/>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Column="0"
+              Grid.ColumnSpan="2"
+              HorizontalAlignment="Right"
+              VerticalAlignment="Top"
+              Panel.ZIndex="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0"
+                    Height="40"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    ClipToBounds="True"
+                    Margin="0,0,4,8"
+                    Width="0"
+                    Opacity="0">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="IsHitTestVisible" Value="False"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsChecked, ElementName=ProfileActionsToggle}" Value="True">
+                                <Setter Property="IsHitTestVisible" Value="True"/>
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="Width"
+                                                             To="564"
+                                                             Duration="0:0:0.46">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                             To="1"
+                                                             BeginTime="0:0:0.08"
+                                                             Duration="0:0:0.30"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                                <DataTrigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="Width"
+                                                             To="0"
+                                                             Duration="0:0:0.42">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseInOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                             To="0"
+                                                             Duration="0:0:0.26"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.ExitActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel Width="564"
+                            Height="38"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top">
+                    <Button Content="Состояние"
+                            Click="ProfileHealthButton_OnClick"
+                            Margin="0,0,8,0"/>
+                    <Button Content="Настройки"
+                            Click="EditProfileButton_OnClick"
+                            Margin="0,0,8,0"/>
+                    <Button Content="Экспорт"
+                            Command="{Binding ExportProfileCommand}"
+                            Margin="0,0,8,0"/>
+                    <Button Content="Папка профиля"
+                            Command="{Binding OpenProfileFolderCommand}"
+                            Margin="0,0,8,0"/>
+                    <Button Content="Скриншоты"
+                            Click="ScreenshotsButton_OnClick"
+                            Margin="0,0,8,0"/>
+                    <Button Content="Заметки"
+                            Click="NotesButton_OnClick"
+                            Margin="0,0,12,0"/>
+                </StackPanel>
+            </Border>
+
+            <ToggleButton x:Name="ProfileActionsToggle"
+                          Grid.Column="1"
+                          Style="{DynamicResource ProfileActionsToggleButtonStyle}"
+                          ToolTip="Показать или скрыть действия профиля"
+                          Margin="0,0,6,8"/>
+
+            <Button Grid.Column="2"
+                    Content="Запустить"
+                    Command="{Binding LaunchCommand}"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Margin="0,0,0,8"
+                    MinWidth="112"/>
+        </Grid>
+    </Grid>
+</UserControl>

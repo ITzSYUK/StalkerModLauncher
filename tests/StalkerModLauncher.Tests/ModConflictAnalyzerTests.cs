@@ -87,6 +87,24 @@ public sealed class ModConflictAnalyzerTests : IDisposable
         Assert.False(result["disabled"].ProvidesLaunchExecutable);
     }
 
+    [Fact]
+    public async Task AnalyzeAsync_ClassifiesConfigurationAndBinaryOverlays()
+    {
+        var main = CreateMod("main", "gamedata/config/system.ltx", "bin/xrCore.dll", "textures/test.dds");
+        var patch = CreateMod("patch", "gamedata/config/system.ltx", "bin/xrCore.dll", "textures/test.dds");
+        var analyzer = new ModConflictAnalyzer();
+
+        var result = await analyzer.AnalyzeAsync(
+        [
+            new ModConflictInput("main", "Main", main, true),
+            new ModConflictInput("patch", "Patch", patch, true)
+        ]);
+
+        Assert.Equal(1, result["patch"].OverwrittenConfigurationCount);
+        Assert.Equal(1, result["patch"].OverwrittenBinaryCount);
+        Assert.Equal(3, result["patch"].OverwrittenFileCount);
+    }
+
     private string CreateMod(string name, params string[] relativeFiles)
     {
         var modPath = Path.Combine(_root, name);

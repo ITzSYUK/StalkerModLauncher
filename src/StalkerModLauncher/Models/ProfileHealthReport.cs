@@ -17,7 +17,8 @@ public sealed record ProfileHealthReport(
     string ProfileFolderPath,
     string SavedGamesPath,
     string? LatestLogPath,
-    string? LatestCrashDumpPath)
+    string? LatestCrashDumpPath,
+    WorkspaceStatus? Workspace = null)
 {
     public int ErrorCount => Checks.Count(check => check.Status == ProfileHealthStatus.Error);
     public int WarningCount => Checks.Count(check => check.Status == ProfileHealthStatus.Warning);
@@ -37,6 +38,13 @@ public sealed record ProfileHealthReport(
         };
 
         lines.AddRange(Checks.Select(check => $"[{check.Status}] {check.Title}: {check.Details}"));
+        if (Workspace is { Exists: true } workspace)
+        {
+            lines.Add(string.Empty);
+            lines.Add($"Workspace: логический размер {workspace.LogicalSizeDisplay}, реально занимает около {workspace.PhysicalSizeDisplay}.");
+            lines.Add($"Файлы: {workspace.FileCount:N0}; hardlink: {workspace.HardLinkCount:N0}; symlink: {workspace.SymbolicLinkCount:N0}; локальные: {workspace.LocalFileCount:N0}.");
+        }
+
         return string.Join(Environment.NewLine, lines);
     }
 }

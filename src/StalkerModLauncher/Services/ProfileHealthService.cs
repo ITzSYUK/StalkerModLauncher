@@ -7,22 +7,32 @@ public sealed class ProfileHealthService
     private readonly GameInstallationValidator _gameValidator;
     private readonly ProfileManager _profileManager;
     private readonly ProfileDataPathResolver _dataPathResolver;
+    private readonly WorkspaceManagementService _workspaceManagementService;
 
     public ProfileHealthService(
         GameInstallationValidator gameValidator,
         ProfileManager profileManager,
-        ProfileDataPathResolver dataPathResolver)
+        ProfileDataPathResolver dataPathResolver,
+        WorkspaceManagementService workspaceManagementService)
     {
         _gameValidator = gameValidator;
         _profileManager = profileManager;
         _dataPathResolver = dataPathResolver;
+        _workspaceManagementService = workspaceManagementService;
     }
 
-    public Task<ProfileHealthReport> AnalyzeAsync(
+    public async Task<ProfileHealthReport> AnalyzeAsync(
         ModProfile profile,
         CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => Analyze(profile, cancellationToken), cancellationToken);
+        var report = await Task.Run(() => Analyze(profile, cancellationToken), cancellationToken);
+        if (profile.IsStandalone)
+        {
+            return report;
+        }
+
+        var workspace = await _workspaceManagementService.InspectAsync(profile, cancellationToken);
+        return report with { Workspace = workspace };
     }
 
     private ProfileHealthReport Analyze(ModProfile profile, CancellationToken cancellationToken)

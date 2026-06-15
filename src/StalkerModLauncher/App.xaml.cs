@@ -109,34 +109,12 @@ public partial class App : Application
     {
         return new Views.MainWindow(
             _services.CreateMainViewModel(),
-            _services.Paths,
-            _services.DialogService,
-            _services.SettingsStore,
-            _services.ProfileHealthService,
-            _services.ScreenshotScannerService,
-            _services.ScreenshotClipboardService);
+            _services.WindowNavigationService,
+            _services.WindowSystemIntegrationService);
     }
 
     private async Task ShowAboutIfNeededAsync()
     {
-        var settings = await _services.SettingsStore.LoadAsync();
-
-        if (!settings.DontShowAboutOnStartup)
-        {
-            var about = new Views.AboutWindow
-            {
-                DontShowAgain = false
-            };
-            about.ShowDialog();
-
-            if (about.DontShowAgain)
-            {
-                await _services.SettingsStore.UpdateAsync(current =>
-                {
-                    current.DontShowAboutOnStartup = true;
-                    return current;
-                });
-            }
-        }
+        await _services.WindowNavigationService.ShowAboutAsync(onlyIfNeeded: true);
     }
 }

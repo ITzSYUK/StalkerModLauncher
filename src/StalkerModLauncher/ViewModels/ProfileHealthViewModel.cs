@@ -11,19 +11,23 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
     private readonly ModProfile _profile;
     private readonly ProfileHealthService _healthService;
     private readonly DialogService _dialogService;
+    private readonly WorkspaceManagementService _workspaceManagementService;
     private ProfileHealthReport? _report;
     private string _summary = "Проверка состояния профиля...";
     private bool _isChecking;
+    private WorkspaceStatus? _workspace;
     private CancellationTokenSource? _refreshCancellation;
 
     public ProfileHealthViewModel(
         ModProfile profile,
         ProfileHealthService healthService,
-        DialogService dialogService)
+        DialogService dialogService,
+        WorkspaceManagementService workspaceManagementService)
     {
         _profile = profile;
         _healthService = healthService;
         _dialogService = dialogService;
+        _workspaceManagementService = workspaceManagementService;
 
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => !IsChecking);
         OpenProfileCommand = new RelayCommand(OpenProfile, () => Directory.Exists(_report?.ProfileFolderPath));
@@ -31,12 +35,29 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         OpenLatestLogCommand = new RelayCommand(OpenLatestLog, () => File.Exists(_report?.LatestLogPath));
         OpenCrashDumpCommand = new RelayCommand(OpenCrashDump, () => File.Exists(_report?.LatestCrashDumpPath));
         CopyReportCommand = new RelayCommand(CopyReport, () => _report is not null);
+        ClearWorkspaceCommand = new RelayCommand(ClearWorkspace, () => CanManageWorkspace);
+        RebuildWorkspaceCommand = new AsyncRelayCommand(RebuildWorkspaceAsync, () => CanManageWorkspace && !IsChecking);
+        MoveWorkspaceCommand = new AsyncRelayCommand(MoveWorkspaceAsync, () => CanManageWorkspace && !IsChecking);
 
         _ = RefreshAsync();
     }
 
     public string ProfileName => _profile.Name;
     public ObservableCollection<ProfileHealthCheck> Checks { get; } = new();
+
+    public WorkspaceStatus? Workspace
+    {
+        get => _workspace;
+        private set
+        {
+            if (SetProperty(ref _workspace, value))
+            {
+                OnPropertyChanged(nameof(CanManageWorkspace));
+            }
+        }
+    }
+
+    public bool CanManageWorkspace => !_profile.IsStandalone && !string.IsNullOrWhiteSpace(_profile.WorkspacePath);
 
     public string Summary
     {
@@ -52,6 +73,8 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
             if (SetProperty(ref _isChecking, value))
             {
                 ((AsyncRelayCommand)RefreshCommand).RaiseCanExecuteChanged();
+                ((AsyncRelayCommand)RebuildWorkspaceCommand).RaiseCanExecuteChanged();
+                ((AsyncRelayCommand)MoveWorkspaceCommand).RaiseCanExecuteChanged();
             }
         }
     }
@@ -62,6 +85,9 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
     public ICommand OpenLatestLogCommand { get; }
     public ICommand OpenCrashDumpCommand { get; }
     public ICommand CopyReportCommand { get; }
+    public ICommand ClearWorkspaceCommand { get; }
+    public ICommand RebuildWorkspaceCommand { get; }
+    public ICommand MoveWorkspaceCommand { get; }
 
     private async Task RefreshAsync()
     {
@@ -75,6 +101,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
             Summary = "Проверка состояния профиля...";
             var report = await _healthService.AnalyzeAsync(_profile, _refreshCancellation.Token);
             _report = report;
+            Workspace = report.Workspace;
             Checks.Clear();
             foreach (var check in report.Checks)
             {
@@ -129,6 +156,71 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         RunAction(() => _dialogService.CopyText(_report!.ToText(_profile.Name)));
     }
 
+    private void ClearWorkspace()
+    {
+        if (!_dialogService.Confirm(
+                "Очистить кэш workspace",
+                "Удалить только подготовленную папку current? Сохранения, настройки и логи в userdata останутся на месте."))
+        {
+            return;
+        }
+
+        RunAction(() => _workspaceManagementService.ClearCache(_profile));
+        _ = RefreshAsync();
+    }
+
+    private async Task RebuildWorkspaceAsync()
+    {
+        try
+        {
+            IsChecking = true;
+            Summary = "Пересборка workspace...";
+            var progress = new Progress<string>(message => Summary = message);
+            await _workspaceManagementService.RebuildAsync(_profile, progress);
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowError("Не удалось пересобрать workspace", ex.Message);
+        }
+        finally
+        {
+            IsChecking = false;
+        }
+    }
+
+    private async Task MoveWorkspaceAsync()
+    {
+        var destination = _dialogService.PickFolder("Выберите папку, в которой будет храниться workspace");
+        if (destination is null)
+        {
+            return;
+        }
+
+        if (!_dialogService.Confirm(
+                "Перенести workspace",
+                $"Перенести userdata профиля в выбранную папку?{Environment.NewLine}{Environment.NewLine}Папка current не копируется и будет пересобрана при следующем запуске."))
+        {
+            return;
+        }
+
+        try
+        {
+            IsChecking = true;
+            var progress = new Progress<string>(message => Summary = message);
+            await _workspaceManagementService.MoveAsync(_profile, destination, progress);
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowError("Не удалось перенести workspace", ex.Message);
+        }
+        finally
+        {
+            IsChecking = false;
+        }
+    }
+
     private void RunAction(Action action)
     {
         try
@@ -148,5 +240,8 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         ((RelayCommand)OpenLatestLogCommand).RaiseCanExecuteChanged();
         ((RelayCommand)OpenCrashDumpCommand).RaiseCanExecuteChanged();
         ((RelayCommand)CopyReportCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)ClearWorkspaceCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)RebuildWorkspaceCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)MoveWorkspaceCommand).RaiseCanExecuteChanged();
     }
 }

@@ -1,0 +1,24 @@
+<UserControl x:Class="StalkerModLauncher.Views.Controls.LauncherBrand"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <Border Background="{StaticResource PanelBrush}"
+            BorderBrush="{StaticResource StrokeBrush}"
+            BorderThickness="1"
+            CornerRadius="6"
+            Padding="14">
+        <StackPanel Cursor="Hand"
+                    HorizontalAlignment="Center">
+            <TextBlock Text="S.T.A.L.K.E.R."
+                       FontSize="25"
+                       FontWeight="Black"
+                       Foreground="{StaticResource AccentBrush}"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="MOD LAUNCHER"
+                       Foreground="{StaticResource MutedTextBrush}"
+                       FontSize="13"
+                       Margin="0,1,0,0"
+                       HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Border>
+</UserControl>
