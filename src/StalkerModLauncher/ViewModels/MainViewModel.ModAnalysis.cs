@@ -31,7 +31,7 @@ public sealed partial class MainViewModel
         try
         {
             var result = await _modConflictAnalyzer.AnalyzeAsync(inputs, profile.ExecutableRelativePath, cancellationToken);
-            await App.Current.Dispatcher.InvokeAsync(() =>
+            await InvokeOnUiAsync(() =>
             {
                 if (cancellationToken.IsCancellationRequested || SelectedProfile != profile)
                 {

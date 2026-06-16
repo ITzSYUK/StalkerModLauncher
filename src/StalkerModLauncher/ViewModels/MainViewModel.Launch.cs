@@ -73,7 +73,7 @@ public sealed partial class MainViewModel
         try
         {
             var result = await sessionTask;
-            await App.Current.Dispatcher.InvokeAsync(() =>
+            await InvokeOnUiAsync(() =>
             {
                 profile.IsRunning = false;
                 RaiseCommandStates();
@@ -85,7 +85,7 @@ public sealed partial class MainViewModel
                 return;
             }
 
-            await App.Current.Dispatcher.InvokeAsync(() =>
+            await InvokeOnUiAsync(() =>
             {
                 profile.TotalPlaytimeSeconds += result.Duration.TotalSeconds;
                 profile.LastPlayedAt = DateTime.Now;
@@ -96,7 +96,7 @@ public sealed partial class MainViewModel
         catch (Exception ex)
         {
             Log($"Playtime tracking failed: {ex.Message}");
-            await App.Current.Dispatcher.InvokeAsync(() =>
+            await InvokeOnUiAsync(() =>
             {
                 profile.IsRunning = false;
                 RaiseCommandStates();

@@ -277,6 +277,25 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void Log(string message)
     {
-        App.Current.Dispatcher.Invoke(() => ActivityLog.Append(message));
+        var app = App.Current;
+        if (app is null)
+        {
+            ActivityLog.Append(message);
+            return;
+        }
+
+        app.Dispatcher.Invoke(() => ActivityLog.Append(message));
+    }
+
+    private static Task InvokeOnUiAsync(Action action)
+    {
+        var app = App.Current;
+        if (app is null)
+        {
+            action();
+            return Task.CompletedTask;
+        }
+
+        return app.Dispatcher.InvokeAsync(action).Task;
     }
 }
