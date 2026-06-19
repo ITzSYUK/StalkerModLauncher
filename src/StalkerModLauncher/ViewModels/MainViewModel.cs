@@ -177,7 +177,8 @@ public sealed partial class MainViewModel : ObservableObject
             _autoSave.Schedule();
         }
 
-        if (e.PropertyName == nameof(ModProfile.ExecutableRelativePath))
+        if (e.PropertyName == nameof(ModProfile.ExecutableRelativePath) ||
+            e.PropertyName == nameof(ModProfile.ExecutableSourcePath))
         {
             RecalculateLockedMods();
         }

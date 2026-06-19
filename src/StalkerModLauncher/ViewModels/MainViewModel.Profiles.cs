@@ -182,40 +182,20 @@ public sealed partial class MainViewModel
 
     private string? TryGetWorkspaceRelativePath(string selectedPath)
     {
+        return TryGetExecutableSelection(selectedPath)?.RelativePath;
+    }
+
+    private ProfileExecutableSelection? TryGetExecutableSelection(string selectedPath)
+    {
         if (SelectedProfile is null)
         {
             return null;
         }
 
-        var roots = new List<string>();
-        var gamePath = SelectedProfile.GameInstallPath;
-
-        if (Directory.Exists(gamePath))
-        {
-            roots.Add(gamePath);
-        }
-
-        roots.AddRange(SelectedProfile.Mods.Where(mod => Directory.Exists(mod.SourcePath)).Select(mod => mod.SourcePath));
-
-        if (!string.IsNullOrWhiteSpace(SelectedProfile.WorkspacePath))
-        {
-            var currentWorkspace = Path.Combine(SelectedProfile.WorkspacePath, "current");
-            if (Directory.Exists(currentWorkspace))
-            {
-                roots.Add(currentWorkspace);
-            }
-        }
-
-        foreach (var root in roots.Distinct(StringComparer.OrdinalIgnoreCase).OrderByDescending(root => root.Length))
-        {
-            var relative = Path.GetRelativePath(root, selectedPath);
-            if (!relative.StartsWith("..", StringComparison.Ordinal) && !Path.IsPathRooted(relative))
-            {
-                return relative;
-            }
-        }
-
-        return null;
+        return ProfileExecutableSourceResolver.TryCreateSelection(
+            SelectedProfile,
+            selectedPath,
+            includeWorkspace: true);
     }
 
     public ProfileSettingsViewModel? CreateProfileSettingsViewModel()
@@ -225,11 +205,18 @@ public sealed partial class MainViewModel
             return null;
         }
 
+        var profile = SelectedProfile;
         return new ProfileSettingsViewModel(
-            SelectedProfile,
+            profile,
             _dialogService,
             () => SaveAsync(),
-            TryGetWorkspaceRelativePath,
-            name => Profiles.Any(p => p != SelectedProfile && p.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase)));
+            selectedPath => ProfileExecutableSourceResolver.TryCreateSelection(
+                profile,
+                selectedPath,
+                includeWorkspace: true),
+            () => ProfileExecutableSourceResolver.DetectAutomaticSelection(
+                profile,
+                includeWorkspace: false),
+            name => Profiles.Any(p => p != profile && p.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase)));
     }
 }

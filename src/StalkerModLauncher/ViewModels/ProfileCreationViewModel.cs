@@ -14,8 +14,10 @@ public sealed class ProfileCreationViewModel : ObservableObject
     private bool _isStandalone;
     private string _gamePath = string.Empty;
     private string _executableRelativePath = @"bin\xr_3da.exe";
+    private string _executableSourcePath = string.Empty;
     private string _launchArguments = "-nointro";
     private string _message = "Выберите тип профиля и задайте понятное название.";
+    private string _executableDetectionMessage = string.Empty;
 
     public ProfileCreationViewModel(DialogService dialogService)
     {
@@ -45,6 +47,8 @@ public sealed class ProfileCreationViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsStepOne));
                 OnPropertyChanged(nameof(IsStepTwo));
                 OnPropertyChanged(nameof(IsStepThree));
+                OnPropertyChanged(nameof(IsNextVisible));
+                OnPropertyChanged(nameof(IsFinishVisible));
                 RaiseCommandStates();
             }
         }
@@ -52,14 +56,16 @@ public sealed class ProfileCreationViewModel : ObservableObject
 
     public string StepTitle => Step switch
     {
-        1 => "1. Тип профиля",
-        2 => "2. Источники файлов",
-        _ => "3. Запуск"
+        1 => "1. Выберите тип профиля",
+        2 => "2. Укажите источники файлов",
+        _ => "3. Проверьте запуск"
     };
 
     public bool IsStepOne => Step == 1;
     public bool IsStepTwo => Step == 2;
     public bool IsStepThree => Step == 3;
+    public bool IsNextVisible => Step < 3;
+    public bool IsFinishVisible => Step == 3;
 
     public string Name
     {
@@ -74,7 +80,10 @@ public sealed class ProfileCreationViewModel : ObservableObject
         {
             if (SetProperty(ref _isStandalone, value))
             {
+                OnPropertyChanged(nameof(ProfileTypeLabel));
                 OnPropertyChanged(nameof(ProfileTypeDescription));
+                OnPropertyChanged(nameof(SourceStepDescription));
+                OnPropertyChanged(nameof(SourceSummary));
                 OnPropertyChanged(nameof(IsOverlay));
                 OnPropertyChanged(nameof(StandalonePath));
                 ((RelayCommand)AddModCommand).RaiseCanExecuteChanged();
@@ -84,6 +93,8 @@ public sealed class ProfileCreationViewModel : ObservableObject
                     {
                         Mods.RemoveAt(Mods.Count - 1);
                     }
+
+                    OnPropertyChanged(nameof(SourceSummary));
                 }
             }
         }
@@ -107,16 +118,52 @@ public sealed class ProfileCreationViewModel : ObservableObject
         ? "Автономный мод уже содержит движок и запускается прямо из своей папки."
         : "Обычный профиль объединяет базовую игру и включённые модификации в изолированном workspace.";
 
+    public string ProfileTypeLabel => IsStandalone
+        ? "Автономная игра или мод"
+        : "Мод поверх базовой игры";
+
+    public string SourceStepDescription => IsStandalone
+        ? "Выберите одну корневую папку готовой сборки. Базовая игра для такого профиля не нужна."
+        : "Выберите папку базовой игры и добавьте моды в нужном порядке. Моды ниже в списке перезаписывают моды выше.";
+
+    public string SourceSummary
+    {
+        get
+        {
+            if (IsStandalone)
+            {
+                return string.IsNullOrWhiteSpace(StandalonePath)
+                    ? "Автономная папка ещё не выбрана."
+                    : $"Автономная папка: {StandalonePath}";
+            }
+
+            var game = string.IsNullOrWhiteSpace(GamePath) ? "не выбрана" : GamePath;
+            return $"Базовая игра: {game}. Модов в профиле: {Mods.Count}.";
+        }
+    }
+
     public string GamePath
     {
         get => _gamePath;
-        set => SetProperty(ref _gamePath, value);
+        set
+        {
+            if (SetProperty(ref _gamePath, value))
+            {
+                OnPropertyChanged(nameof(SourceSummary));
+            }
+        }
     }
 
     public string ExecutableRelativePath
     {
         get => _executableRelativePath;
-        set => SetProperty(ref _executableRelativePath, value);
+        set
+        {
+            if (SetProperty(ref _executableRelativePath, value))
+            {
+                _executableSourcePath = string.Empty;
+            }
+        }
     }
 
     public string LaunchArguments
@@ -129,6 +176,12 @@ public sealed class ProfileCreationViewModel : ObservableObject
     {
         get => _message;
         private set => SetProperty(ref _message, value);
+    }
+
+    public string ExecutableDetectionMessage
+    {
+        get => _executableDetectionMessage;
+        private set => SetProperty(ref _executableDetectionMessage, value);
     }
 
     public ICommand NextCommand { get; }
@@ -149,8 +202,8 @@ public sealed class ProfileCreationViewModel : ObservableObject
 
         Step++;
         Message = Step == 2
-            ? "Укажите папки, из которых лаунчер возьмёт файлы."
-            : "Проверьте бинарник. Моды ниже в списке имеют более высокий приоритет.";
+            ? SourceStepDescription
+            : "Проверьте, какой EXE будет запускаться. При необходимости выберите другой файл вручную.";
 
         if (Step == 3)
         {
@@ -163,7 +216,7 @@ public sealed class ProfileCreationViewModel : ObservableObject
         Step--;
         Message = Step == 1
             ? "Выберите тип профиля и задайте понятное название."
-            : "Укажите папки, из которых лаунчер возьмёт файлы.";
+            : SourceStepDescription;
     }
 
     private void Finish()
@@ -180,6 +233,7 @@ public sealed class ProfileCreationViewModel : ObservableObject
             IsStandalone = IsStandalone,
             GameInstallPath = IsStandalone ? string.Empty : GamePath.Trim(),
             ExecutableRelativePath = ExecutableRelativePath.Trim(),
+            ExecutableSourcePath = IsStandalone ? string.Empty : _executableSourcePath,
             LaunchArguments = LaunchArguments.Trim()
         };
 
@@ -242,6 +296,7 @@ public sealed class ProfileCreationViewModel : ObservableObject
         if (selected is not null)
         {
             GamePath = selected;
+            ExecutableDetectionMessage = string.Empty;
         }
     }
 
@@ -260,7 +315,9 @@ public sealed class ProfileCreationViewModel : ObservableObject
             SourcePath = selected,
             Order = 1
         });
+        ExecutableDetectionMessage = string.Empty;
         OnPropertyChanged(nameof(StandalonePath));
+        OnPropertyChanged(nameof(SourceSummary));
         ((RelayCommand)AddModCommand).RaiseCanExecuteChanged();
     }
 
@@ -278,7 +335,9 @@ public sealed class ProfileCreationViewModel : ObservableObject
             SourcePath = selected,
             Order = Mods.Count + 1
         });
+        ExecutableDetectionMessage = string.Empty;
         OnPropertyChanged(nameof(StandalonePath));
+        OnPropertyChanged(nameof(SourceSummary));
         ((RelayCommand)AddModCommand).RaiseCanExecuteChanged();
     }
 
@@ -295,6 +354,8 @@ public sealed class ProfileCreationViewModel : ObservableObject
             Mods[index].Order = index + 1;
         }
         OnPropertyChanged(nameof(StandalonePath));
+        OnPropertyChanged(nameof(SourceSummary));
+        ExecutableDetectionMessage = string.Empty;
         ((RelayCommand)AddModCommand).RaiseCanExecuteChanged();
     }
 
@@ -312,15 +373,12 @@ public sealed class ProfileCreationViewModel : ObservableObject
             return;
         }
 
-        var roots = (IsStandalone ? Enumerable.Empty<string>() : [GamePath])
-            .Concat(Mods.Select(mod => mod.SourcePath))
-            .Where(Directory.Exists);
-        foreach (var root in roots)
+        foreach (var root in CreateExecutableSearchRoots().Where(root => Directory.Exists(root.RootPath)))
         {
-            var relative = Path.GetRelativePath(root, selected);
+            var relative = Path.GetRelativePath(root.RootPath, selected);
             if (!relative.StartsWith("..", StringComparison.Ordinal) && !Path.IsPathRooted(relative))
             {
-                ExecutableRelativePath = relative;
+                SetExecutableSelection(relative, root.RootPath, root.DisplayName);
                 return;
             }
         }
@@ -330,21 +388,76 @@ public sealed class ProfileCreationViewModel : ObservableObject
 
     private void AutoDetectExecutable()
     {
-        var roots = (IsStandalone ? Enumerable.Empty<string>() : [GamePath])
-            .Concat(Mods.Select(mod => mod.SourcePath))
-            .Where(Directory.Exists)
-            .ToArray();
-        var found = roots
-            .SelectMany(root => Directory.EnumerateFiles(root, "*.exe", SearchOption.AllDirectories)
-                .Select(path => new { Root = root, Path = path }))
-            .OrderBy(candidate => Path.GetFileName(candidate.Path).Contains("xrEngine", StringComparison.OrdinalIgnoreCase) ? 0
-                : Path.GetFileName(candidate.Path).Contains("xr_3da", StringComparison.OrdinalIgnoreCase) ? 1
-                : 2)
-            .FirstOrDefault();
-        if (found is not null)
+        var roots = CreateExecutableSearchRoots().ToArray();
+        var currentExact = FindExactExecutableSource(roots, ExecutableRelativePath);
+        if (!ExecutableRelativePath.Equals(@"bin\xr_3da.exe", StringComparison.OrdinalIgnoreCase) &&
+            currentExact is not null)
         {
-            ExecutableRelativePath = Path.GetRelativePath(found.Root, found.Path);
+            ExecutableDetectionMessage =
+                $"Используется выбранный путь: {ExecutableRelativePath}. Источник: {currentExact.Value.SourceName}.";
+            return;
         }
+
+        var detected = LaunchExecutableDetector.DetectBest(roots, requestedRelativePath: null);
+        if (detected is null)
+        {
+            ExecutableDetectionMessage = "EXE не найден автоматически. Выберите запускаемый файл вручную.";
+            return;
+        }
+
+        ExecutableRelativePath = detected.RelativePath;
+        _executableSourcePath = string.Empty;
+        ExecutableDetectionMessage = $"Автоматически выбран: {detected.Summary}";
+    }
+
+    private void SetExecutableSelection(string relativePath, string sourceRootPath, string sourceName)
+    {
+        _executableRelativePath = relativePath;
+        _executableSourcePath = IsStandalone ? string.Empty : Path.GetFullPath(sourceRootPath);
+        OnPropertyChanged(nameof(ExecutableRelativePath));
+        ExecutableDetectionMessage = IsStandalone
+            ? $"Выбран вручную: {relativePath}."
+            : $"Выбран вручную: {relativePath}. Источник: {sourceName}.";
+    }
+
+    private IEnumerable<LaunchExecutableSearchRoot> CreateExecutableSearchRoots()
+    {
+        if (!IsStandalone && Directory.Exists(GamePath))
+        {
+            yield return new LaunchExecutableSearchRoot(GamePath, "базовая игра", 0);
+        }
+
+        foreach (var mod in Mods.OrderBy(mod => mod.Order).Where(mod => Directory.Exists(mod.SourcePath)))
+        {
+            yield return new LaunchExecutableSearchRoot(mod.SourcePath, $"мод: {mod.Name}", mod.Order);
+        }
+    }
+
+    private static (string FullPath, string SourceName)? FindExactExecutableSource(
+        IReadOnlyList<LaunchExecutableSearchRoot> roots,
+        string relativePath)
+    {
+        try
+        {
+            FileSystemSafety.EnsureRelativePath(relativePath, "Бинарник запуска");
+        }
+        catch
+        {
+            return null;
+        }
+
+        return roots
+            .Where(root => Directory.Exists(root.RootPath))
+            .Select(root => new
+            {
+                FullPath = Path.Combine(root.RootPath, relativePath),
+                root.DisplayName,
+                root.Order
+            })
+            .Where(candidate => File.Exists(candidate.FullPath))
+            .OrderByDescending(candidate => candidate.Order)
+            .Select(candidate => ((string FullPath, string SourceName)?)(candidate.FullPath, candidate.DisplayName))
+            .FirstOrDefault();
     }
 
     private void RaiseCommandStates()

@@ -30,6 +30,7 @@ public static class AppSettingsNormalizer
             profile.ExecutableRelativePath = string.IsNullOrWhiteSpace(profile.ExecutableRelativePath)
                 ? @"bin\xr_3da.exe"
                 : profile.ExecutableRelativePath;
+            profile.ExecutableSourcePath ??= string.Empty;
             profile.WorkspacePath ??= string.Empty;
             profile.WorkingDirectoryRelative ??= string.Empty;
             profile.ConfigNotes ??= string.Empty;

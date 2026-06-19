@@ -33,6 +33,7 @@ public sealed class ProfileManager
             IsStandalone = source.IsStandalone,
             LaunchArguments = source.LaunchArguments,
             ExecutableRelativePath = source.ExecutableRelativePath,
+            ExecutableSourcePath = source.ExecutableSourcePath,
             WorkingDirectoryRelative = source.WorkingDirectoryRelative,
             ConfigNotes = source.ConfigNotes,
             GameInstallPath = source.GameInstallPath

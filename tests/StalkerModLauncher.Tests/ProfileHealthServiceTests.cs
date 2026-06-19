@@ -73,7 +73,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
 
         Assert.False(report.IsReady);
         Assert.Contains(report.Checks, check => check.Title.Contains("Missing") && check.Status == ProfileHealthStatus.Error);
-        Assert.Contains(report.Checks, check => check.Title == "Бинарник запуска" && check.Status == ProfileHealthStatus.Error);
+        Assert.Contains(report.Checks, check => check.Title == "Бинарник запуска" && check.Status == ProfileHealthStatus.Warning);
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
         Assert.Equal(dump, report.LatestCrashDumpPath);
         Assert.Equal(modRoot, report.ProfileFolderPath);
         Assert.Equal(2, report.WarningCount);
-        Assert.Contains("crash dump", report.ToText("Standalone"));
+        Assert.Contains("Crash dump", report.ToText("Standalone"));
     }
 
     [Fact]
@@ -171,8 +171,9 @@ public sealed class ProfileHealthServiceTests : IDisposable
         var report = await _service.AnalyzeAsync(profile);
 
         var executableCheck = Assert.Single(report.Checks, check => check.Title == "Бинарник запуска");
-        Assert.NotEqual(mainExecutable, executableCheck.Details);
-        Assert.Equal(patchExecutable, executableCheck.Details);
+        Assert.DoesNotContain(mainExecutable, executableCheck.Details);
+        Assert.Contains(patchExecutable, executableCheck.Details);
+        Assert.Contains("мод: Patch", executableCheck.Details);
     }
 
     [Fact]
@@ -194,7 +195,8 @@ public sealed class ProfileHealthServiceTests : IDisposable
         var report = await _service.AnalyzeAsync(profile);
 
         var executableCheck = Assert.Single(report.Checks, check => check.Title == "Бинарник запуска");
-        Assert.Equal(mainExecutable, executableCheck.Details);
+        Assert.Contains(mainExecutable, executableCheck.Details);
+        Assert.DoesNotContain(disabledPatch, executableCheck.Details);
     }
 
     private string CreateGame()

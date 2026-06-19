@@ -76,7 +76,29 @@ public sealed class ProfileReadinessService
         try
         {
             FileSystemSafety.EnsureRelativePath(profile.ExecutableRelativePath, "Launch executable");
-            return true;
+            if (profile.IsStandalone || string.IsNullOrWhiteSpace(profile.ExecutableSourcePath))
+            {
+                return true;
+            }
+
+            var pinnedSource = ProfileExecutableSourceResolver.FindPinnedSourceRoot(profile);
+            if (pinnedSource is null)
+            {
+                messages.Add("Ручной источник файла запуска недоступен или мод выключен.");
+                return false;
+            }
+
+            var executable = FileSystemSafety.ResolvePathInside(
+                pinnedSource.RootPath,
+                profile.ExecutableRelativePath,
+                "Launch executable");
+            if (File.Exists(executable))
+            {
+                return true;
+            }
+
+            messages.Add($"Ручной файл запуска не найден: {executable}");
+            return false;
         }
         catch (Exception ex)
         {

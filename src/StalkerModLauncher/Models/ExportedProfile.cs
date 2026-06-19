@@ -6,6 +6,7 @@ public sealed class ExportedProfile
     public bool IsEnabled { get; set; } = true;
     public bool IsStandalone { get; set; }
     public string ExecutableRelativePath { get; set; } = @"bin\xr_3da.exe";
+    public string ExecutableSourcePath { get; set; } = string.Empty;
     public string LaunchArguments { get; set; } = "-nointro";
     public string WorkingDirectoryRelative { get; set; } = string.Empty;
     public string GameInstallPath { get; set; } = string.Empty;

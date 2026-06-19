@@ -224,6 +224,23 @@ public sealed class WorkspaceBuilderTests : IDisposable
         Assert.False(Directory.Exists(profile.WorkspacePath));
     }
 
+    [Fact]
+    public async Task BuildAsync_UsesManuallyPinnedExecutableSourceOverHigherPriorityMod()
+    {
+        var mainMod = CreateMod("main", "main");
+        var patch = CreateMod("patch", "patch");
+        CreateFile(mainMod, "bin_x64/xrEngine.exe", "main executable");
+        CreateFile(patch, "bin_x64/xrEngine.exe", "patch executable");
+        var profile = CreateProfile(mainMod, patch);
+        profile.ExecutableRelativePath = @"bin_x64\xrEngine.exe";
+        profile.ExecutableSourcePath = mainMod;
+
+        var result = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+        Assert.Equal("main executable", File.ReadAllText(result.ExecutablePath));
+        Assert.Equal(Path.Combine(result.WorkspaceRoot, "bin_x64", "xrEngine.exe"), result.ExecutablePath);
+    }
+
     private ModProfile CreateProfile(params string[] modPaths)
     {
         var profile = new ModProfile

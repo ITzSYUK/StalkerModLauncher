@@ -10,28 +10,38 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     private readonly ModProfile _profile;
     private readonly DialogService _dialogService;
     private readonly Func<Task> _onSave;
-    private readonly Func<string, string?> _convertToRelativePath;
+    private readonly Func<string, ProfileExecutableSelection?> _createExecutableSelection;
+    private readonly Func<ProfileExecutableSelection?> _detectAutomaticExecutableSelection;
     private readonly Func<string, bool> _isNameTaken;
     private readonly ProfileSettingsValidator _validator;
     private string _profileName;
     private string _profileDescription;
     private string _executableRelativePath;
+    private string _executableSourcePath;
     private string _launchArguments;
     private string _workspacePath;
     private bool _isEnabled;
     private bool _isStandalone;
 
-    public ProfileSettingsViewModel(ModProfile profile, DialogService dialogService, Func<Task> onSave, Func<string, string?> convertToRelativePath, Func<string, bool> isNameTaken)
+    public ProfileSettingsViewModel(
+        ModProfile profile,
+        DialogService dialogService,
+        Func<Task> onSave,
+        Func<string, ProfileExecutableSelection?> createExecutableSelection,
+        Func<ProfileExecutableSelection?> detectAutomaticExecutableSelection,
+        Func<string, bool> isNameTaken)
     {
         _profile = profile;
         _dialogService = dialogService;
         _onSave = onSave;
-        _convertToRelativePath = convertToRelativePath;
+        _createExecutableSelection = createExecutableSelection;
+        _detectAutomaticExecutableSelection = detectAutomaticExecutableSelection;
         _isNameTaken = isNameTaken;
         _validator = new ProfileSettingsValidator();
         _profileName = profile.Name.Trim();
         _profileDescription = profile.Description;
         _executableRelativePath = profile.ExecutableRelativePath;
+        _executableSourcePath = profile.ExecutableSourcePath;
         _launchArguments = profile.LaunchArguments;
         _workspacePath = profile.WorkspacePath;
         _isEnabled = profile.IsEnabled;
@@ -39,6 +49,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
 
         SaveCommand = new AsyncRelayCommand(async () => await TrySaveAsync());
         BrowseExecutableCommand = new RelayCommand(BrowseExecutable);
+        ClearExecutableSourceCommand = new RelayCommand(ClearExecutableSource, () => !string.IsNullOrWhiteSpace(ExecutableSourcePath));
         OpenProfileFolderCommand = new RelayCommand(OpenProfileFolder);
     }
 
@@ -57,7 +68,46 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     public string ExecutableRelativePath
     {
         get => _executableRelativePath;
-        set => SetProperty(ref _executableRelativePath, value);
+        set
+        {
+            if (SetProperty(ref _executableRelativePath, value))
+            {
+                ExecutableSourcePath = string.Empty;
+            }
+        }
+    }
+
+    public string ExecutableSourcePath
+    {
+        get => _executableSourcePath;
+        private set
+        {
+            if (SetProperty(ref _executableSourcePath, value))
+            {
+                OnPropertyChanged(nameof(ExecutableSourceDisplay));
+                OnPropertyChanged(nameof(HasManualExecutableSource));
+                ((RelayCommand)ClearExecutableSourceCommand).RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public bool HasManualExecutableSource => !string.IsNullOrWhiteSpace(ExecutableSourcePath);
+
+    public string ExecutableSourceDisplay
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(ExecutableSourcePath))
+            {
+                return "Источник EXE: автоматически по порядку модов. Нижний мод в списке имеет больший приоритет.";
+            }
+
+            var source = ProfileExecutableSourceResolver.GetSourceRoots(_profile, includeWorkspace: false)
+                .FirstOrDefault(root => FileSystemSafety.IsSameDirectory(root.RootPath, ExecutableSourcePath));
+            return source is null
+                ? $"Источник EXE: выбран вручную, но папка сейчас недоступна: {ExecutableSourcePath}"
+                : $"Источник EXE: вручную закреплен за модом: {source.DisplayName}.";
+        }
     }
 
     public string LaunchArguments
@@ -86,6 +136,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
 
     public ICommand SaveCommand { get; }
     public ICommand BrowseExecutableCommand { get; }
+    public ICommand ClearExecutableSourceCommand { get; }
     public ICommand OpenProfileFolderCommand { get; }
 
     public async Task<bool> TrySaveAsync()
@@ -107,6 +158,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         _profile.Name = ProfileName.Trim();
         _profile.Description = ProfileDescription;
         _profile.ExecutableRelativePath = ExecutableRelativePath;
+        _profile.ExecutableSourcePath = IsStandalone ? string.Empty : ExecutableSourcePath;
         _profile.LaunchArguments = LaunchArguments;
         _profile.WorkspacePath = WorkspacePath;
         _profile.IsEnabled = IsEnabled;
@@ -128,8 +180,8 @@ public sealed class ProfileSettingsViewModel : ObservableObject
             return;
         }
 
-        var relativePath = _convertToRelativePath(selected);
-        if (relativePath is null)
+        var selection = _createExecutableSelection(selected);
+        if (selection is null)
         {
             _dialogService.ShowError(
                 "Invalid executable",
@@ -137,7 +189,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
             return;
         }
 
-        ExecutableRelativePath = relativePath;
+        SetExecutableSelection(selection);
     }
 
     private void BrowseStandaloneExecutable()
@@ -169,7 +221,28 @@ public sealed class ProfileSettingsViewModel : ObservableObject
             return;
         }
 
-        ExecutableRelativePath = relative;
+        SetExecutableSelection(new ProfileExecutableSelection(relative, modRoot, "автономный мод", true));
+    }
+
+    private void SetExecutableSelection(ProfileExecutableSelection selection)
+    {
+        _executableRelativePath = selection.RelativePath;
+        OnPropertyChanged(nameof(ExecutableRelativePath));
+        ExecutableSourcePath = !IsStandalone && selection.PinsSource ? selection.SourceRootPath : string.Empty;
+    }
+
+    private void ClearExecutableSource()
+    {
+        var selection = _detectAutomaticExecutableSelection();
+        if (selection is null)
+        {
+            _dialogService.ShowError(
+                "Не удалось выбрать EXE автоматически",
+                "Лаунчер не нашел подходящий .exe в папке базовой игры или во включенных модах. Выберите файл запуска вручную.");
+            return;
+        }
+
+        SetExecutableSelection(selection);
     }
 
     private void OpenProfileFolder()

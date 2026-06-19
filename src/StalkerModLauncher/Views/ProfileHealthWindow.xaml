@@ -23,10 +23,17 @@
             <TextBlock Text="Состояние профиля"
                        FontSize="24"
                        FontWeight="SemiBold"/>
-            <TextBlock Text="{Binding ProfileName}"
-                       Foreground="{StaticResource AccentBrush}"
-                       FontSize="15"
-                       Margin="0,2,0,0"/>
+            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                <TextBlock Text="{Binding ProfileName}"
+                           Foreground="{StaticResource AccentBrush}"
+                           FontSize="15"/>
+                <TextBlock Text="  ·  "
+                           Foreground="{StaticResource DisabledTextBrush}"
+                           FontSize="15"/>
+                <TextBlock Text="{Binding ProfileKind}"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="15"/>
+            </StackPanel>
         </StackPanel>
 
         <Border Grid.Row="1"
@@ -46,8 +53,8 @@
                 BorderBrush="{StaticResource StrokeBrush}"
                 BorderThickness="1"
                 CornerRadius="6"
-                Padding="12"
-                Margin="0,0,0,12">
+                Padding="10,8"
+                Margin="0,0,0,10">
             <Border.Style>
                 <Style TargetType="Border">
                     <Setter Property="Visibility" Value="Visible"/>
@@ -58,34 +65,66 @@
                     </Style.Triggers>
                 </Style>
             </Border.Style>
-            <Grid>
+            <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="1.15*"/>
+                    <ColumnDefinition Width="1.35*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel>
+
+                <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="Workspace"
-                               FontSize="15"
+                               FontSize="14"
                                FontWeight="SemiBold"/>
-                    <TextBlock Foreground="{StaticResource MutedTextBrush}"
-                               Margin="0,3,0,0">
-                        <Run Text="Логический размер: "/>
-                        <Run Text="{Binding Workspace.LogicalSizeDisplay, Mode=OneWay}"/>
-                        <Run Text="  ·  Реально занимает около: "/>
-                        <Run Text="{Binding Workspace.PhysicalSizeDisplay, Mode=OneWay}"/>
-                    </TextBlock>
-                    <TextBlock Foreground="{StaticResource DisabledTextBrush}"
+                    <TextBlock Text="{Binding Workspace.StateDisplay, Mode=OneWay}"
+                               Foreground="{StaticResource MutedTextBrush}"
                                FontSize="11"
-                               Margin="0,2,0,0">
-                        <Run Text="{Binding Workspace.LinkSummaryDisplay, Mode=OneWay}"/>
-                        <Run Text="  ·  Собран: "/>
-                        <Run Text="{Binding Workspace.BuiltAtDisplay, Mode=OneWay}"/>
-                    </TextBlock>
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding Workspace.StateDisplay, Mode=OneWay}"
+                               Margin="0,1,0,0"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+
+                <UniformGrid Grid.Column="1"
+                             Columns="3"
+                             VerticalAlignment="Center"
+                             Margin="18,0">
+                    <StackPanel Margin="0,0,12,0">
+                        <TextBlock Text="Видимый размер"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   FontSize="11"
+                                   ToolTip="Сколько данных видит игра внутри рабочей папки. Из-за ссылок это не равно расходу места на диске."/>
+                        <TextBlock Text="{Binding Workspace.LogicalSizeDisplay, Mode=OneWay}"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Margin="0,1,0,0"/>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,12,0">
+                        <TextBlock Text="Реально занято"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   FontSize="11"
+                                   ToolTip="Сколько места примерно занимает workspace с учетом hardlink и symlink."/>
+                        <TextBlock Text="{Binding Workspace.PhysicalSizeDisplay, Mode=OneWay}"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Margin="0,1,0,0"/>
+                    </StackPanel>
+                    <StackPanel ToolTip="{Binding Workspace.LinkSummaryDisplay, Mode=OneWay}">
+                        <TextBlock Text="Файлы"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   FontSize="11"/>
+                        <TextBlock Text="{Binding Workspace.FileCountDisplay, Mode=OneWay}"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Margin="0,1,0,0"/>
+                    </StackPanel>
+                </UniformGrid>
+
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
                     <Button Content="Пересобрать"
                             Command="{Binding RebuildWorkspaceCommand}"
-                            Margin="12,0,8,0"/>
+                            Margin="0,0,8,0"/>
                     <Button Content="Перенести..."
                             Command="{Binding MoveWorkspaceCommand}"
                             Margin="0,0,8,0"/>
@@ -95,54 +134,76 @@
             </Grid>
         </Border>
 
-        <ListBox Grid.Row="3"
-                 ItemsSource="{Binding Checks}"
-                 BorderThickness="1"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-            <ListBox.ItemContainerStyle>
-                <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
-                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                </Style>
-            </ListBox.ItemContainerStyle>
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <Grid Margin="2,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="12"/>
-                            <ColumnDefinition Width="160"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Border Width="8"
-                                Height="8"
-                                CornerRadius="4"
-                                VerticalAlignment="Top"
-                                Margin="0,7,0,0">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Background" Value="{StaticResource AccentGreenBrush}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Status}" Value="Warning">
-                                            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding Status}" Value="Error">
-                                            <Setter Property="Background" Value="{StaticResource DangerBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                        </Border>
-                        <TextBlock Grid.Column="1"
-                                   Text="{Binding Title}"
-                                   FontWeight="SemiBold"
-                                   Margin="8,0,12,0"/>
-                        <TextBlock Grid.Column="2"
-                                   Text="{Binding Details}"
-                                   Foreground="{StaticResource MutedTextBrush}"
-                                   TextWrapping="Wrap"/>
-                    </Grid>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+        <Border Grid.Row="3"
+                Background="{StaticResource FieldBackgroundBrush}"
+                BorderBrush="{StaticResource StrokeBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <StackPanel Margin="0,0,0,8">
+                    <TextBlock Text="Готовность"
+                               FontSize="15"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding PreflightExplanation}"
+                               Foreground="{StaticResource MutedTextBrush}"
+                               FontSize="12"
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+                <ListBox Grid.Row="1"
+                         ItemsSource="{Binding Checks}"
+                         BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="2,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="170"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Width="8"
+                                        Height="8"
+                                        CornerRadius="4"
+                                        VerticalAlignment="Top"
+                                        Margin="0,7,0,0">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{StaticResource AccentGreenBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Status}" Value="Warning">
+                                                    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="Error">
+                                                    <Setter Property="Background" Value="{StaticResource DangerBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                </Border>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Title}"
+                                           FontWeight="SemiBold"
+                                           Margin="8,0,12,0"/>
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding Details}"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           TextWrapping="Wrap"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
 
         <WrapPanel Grid.Row="4"
                    HorizontalAlignment="Right"

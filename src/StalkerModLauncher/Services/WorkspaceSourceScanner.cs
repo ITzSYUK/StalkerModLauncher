@@ -30,6 +30,7 @@ internal sealed class WorkspaceSourceScanner
         builder.AppendLine(formatVersion);
         AppendDirectoryFingerprint(builder, snapshot.Game);
         builder.AppendLine(profile.ExecutableRelativePath);
+        builder.AppendLine(profile.ExecutableSourcePath);
         builder.AppendLine(profile.IsStandalone ? "standalone" : "overlay");
 
         foreach (var mod in profile.Mods.OrderBy(mod => mod.Order))

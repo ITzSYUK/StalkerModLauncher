@@ -101,6 +101,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         }
 
         var workingDirectoryRelative = _dataConfigurator.Configure(gamePath, currentWorkspace, workspaceRoot, progress);
+        ApplyPinnedExecutableSource(profile, currentWorkspace, progress, stats);
 
         var executablePath = Path.Combine(currentWorkspace, profile.ExecutableRelativePath);
         var executableRelativePath = profile.ExecutableRelativePath;
@@ -123,8 +124,8 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
                     executablePath);
             }
 
-            executablePath = detectedExecutable;
-            executableRelativePath = Path.GetRelativePath(currentWorkspace, detectedExecutable);
+            executablePath = detectedExecutable.FullPath;
+            executableRelativePath = detectedExecutable.RelativePath;
         }
 
         progress.Report($"Workspace is ready. Hard links: {stats.LinkedFiles:N0}, symbolic links: {stats.SymbolicLinkedFiles:N0}, profile-local copies: {stats.ProtectedCopies:N0}.");
@@ -135,6 +136,39 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             workspaceRoot,
             executableRelativePath,
             workingDirectoryRelative);
+    }
+
+    private void ApplyPinnedExecutableSource(
+        ModProfile profile,
+        string currentWorkspace,
+        IProgress<string> progress,
+        WorkspaceBuildStats stats)
+    {
+        var sourceRoot = ProfileExecutableSourceResolver.FindPinnedSourceRoot(profile);
+        if (sourceRoot is null)
+        {
+            if (!string.IsNullOrWhiteSpace(profile.ExecutableSourcePath))
+            {
+                throw new InvalidOperationException(
+                    "Ручной источник бинарника больше недоступен. Выберите файл запуска заново или сбросьте источник на автоматический.");
+            }
+
+            return;
+        }
+
+        var sourceFile = FileSystemSafety.ResolvePathInside(
+            sourceRoot.RootPath,
+            profile.ExecutableRelativePath,
+            "Pinned launch executable");
+        if (!File.Exists(sourceFile))
+        {
+            throw new FileNotFoundException(
+                $"Ручной источник бинарника найден, но файл отсутствует: {sourceFile}",
+                sourceFile);
+        }
+
+        _materializer.ReplaceFile(sourceFile, currentWorkspace, profile.ExecutableRelativePath, stats);
+        progress.Report($"Используется вручную выбранный бинарник: {profile.ExecutableRelativePath}. Источник: {sourceRoot.DisplayName}.");
     }
 
     public string GetSavedGamesPath(ModProfile profile)
@@ -311,8 +345,9 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
                     $"No executable found in standalone mod folder: {modRoot}", exePath);
             }
 
-            executableRelativePath = found;
-            exePath = Path.Combine(modRoot, found);
+            executableRelativePath = found.RelativePath;
+            exePath = found.FullPath;
+            progress.Report($"Бинарник профиля не найден. Автоматически выбран '{found.RelativePath}': {found.Reason}.");
         }
 
         var workingDirectoryRelative = profile.WorkingDirectoryRelative;

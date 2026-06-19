@@ -54,15 +54,19 @@ public sealed class LaunchPreflightService
         try
         {
             FileSystemSafety.EnsureRelativePath(profile.ExecutableRelativePath, "Бинарник запуска");
-            var executableSource = FindFinalSource(profile, profile.ExecutableRelativePath);
+            var executableSource = FindFinalExecutableSource(profile, profile.ExecutableRelativePath);
             checks.Add(new ProfileHealthCheck(
-                executableSource is null ? ProfileHealthStatus.Error : ProfileHealthStatus.Healthy,
+                executableSource is null || !executableSource.IsAvailable
+                    ? ProfileHealthStatus.Error
+                    : executableSource.UsedRequestedRelativePath ? ProfileHealthStatus.Healthy : ProfileHealthStatus.Warning,
                 "Итоговый бинарник",
-                executableSource ?? $"Не найден файл {profile.ExecutableRelativePath} ни в игре, ни во включённых модах."));
+                executableSource is null
+                    ? $"Не найден файл {profile.ExecutableRelativePath} ни в игре, ни во включённых модах."
+                    : FormatExecutableSource(executableSource, profile.ExecutableRelativePath)));
 
-            if (executableSource is not null)
+            if (executableSource is { IsAvailable: true })
             {
-                AddCompanionDllCheck(checks, profile, executableSource);
+                AddCompanionDllCheck(checks, profile, executableSource.FullPath, executableSource.RelativePath);
             }
         }
         catch (Exception ex)
@@ -159,7 +163,11 @@ public sealed class LaunchPreflightService
         }
     }
 
-    private static void AddCompanionDllCheck(List<ProfileHealthCheck> checks, ModProfile profile, string executableSource)
+    private static void AddCompanionDllCheck(
+        List<ProfileHealthCheck> checks,
+        ModProfile profile,
+        string executableSource,
+        string executableRelativePath)
     {
         var executableName = Path.GetFileName(executableSource);
         if (!executableName.Contains("xr", StringComparison.OrdinalIgnoreCase) &&
@@ -168,7 +176,7 @@ public sealed class LaunchPreflightService
             return;
         }
 
-        var relativeDirectory = Path.GetDirectoryName(profile.ExecutableRelativePath) ?? string.Empty;
+        var relativeDirectory = Path.GetDirectoryName(executableRelativePath) ?? string.Empty;
         var hasEngineDll = new[] { "xrCore.dll", "xrGame.dll", "xrEngine.dll" }
             .Any(name => FindFinalSource(profile, Path.Combine(relativeDirectory, name)) is not null);
         checks.Add(new ProfileHealthCheck(
@@ -198,6 +206,133 @@ public sealed class LaunchPreflightService
             .LastOrDefault(File.Exists);
     }
 
+    private static ExecutableSourceInfo? FindFinalExecutableSource(ModProfile profile, string requestedRelativePath)
+    {
+        var roots = CreateExecutableRoots(profile).ToArray();
+        if (!profile.IsStandalone && !string.IsNullOrWhiteSpace(profile.ExecutableSourcePath))
+        {
+            var pinnedSource = ProfileExecutableSourceResolver.FindPinnedSourceRoot(profile);
+            if (pinnedSource is null)
+            {
+                return new ExecutableSourceInfo(
+                    profile.ExecutableSourcePath,
+                    requestedRelativePath,
+                    "ручной источник",
+                    "папка ручного источника недоступна или мод выключен",
+                    true,
+                    true,
+                    false);
+            }
+
+            var pinnedExecutable = FileSystemSafety.ResolvePathInside(
+                pinnedSource.RootPath,
+                requestedRelativePath,
+                "Бинарник запуска");
+            return File.Exists(pinnedExecutable)
+                ? new ExecutableSourceInfo(
+                    pinnedExecutable,
+                    requestedRelativePath,
+                    pinnedSource.DisplayName,
+                    "выбран пользователем вручную",
+                    true,
+                    true)
+                : new ExecutableSourceInfo(
+                    pinnedExecutable,
+                    requestedRelativePath,
+                    pinnedSource.DisplayName,
+                    "ручной источник найден, но файл отсутствует",
+                    true,
+                    true,
+                    false);
+        }
+
+        var exact = roots
+            .Where(root => Directory.Exists(root.RootPath))
+            .Select(root => new
+            {
+                FullPath = Path.Combine(root.RootPath, requestedRelativePath),
+                root.DisplayName,
+                root.Order
+            })
+            .Where(candidate => File.Exists(candidate.FullPath))
+            .OrderByDescending(candidate => candidate.Order)
+            .FirstOrDefault();
+        if (exact is not null)
+        {
+            return new ExecutableSourceInfo(
+                exact.FullPath,
+                requestedRelativePath,
+                exact.DisplayName,
+                "найден выбранный путь",
+                true,
+                false);
+        }
+
+        var detected = LaunchExecutableDetector.DetectBest(
+            roots,
+            requestedRelativePath,
+            allowDedicated: LaunchExecutableDetector.IsDedicatedExecutable(requestedRelativePath));
+        if (detected is null || detected.Score > 50 && detected.CandidateCount != 1)
+        {
+            return null;
+        }
+
+        return new ExecutableSourceInfo(
+            detected.FullPath,
+            detected.RelativePath,
+            detected.SourceName,
+            detected.Reason,
+            false,
+            false);
+    }
+
+    private static IEnumerable<LaunchExecutableSearchRoot> CreateExecutableRoots(ModProfile profile)
+    {
+        if (!profile.IsStandalone)
+        {
+            yield return new LaunchExecutableSearchRoot(profile.GameInstallPath, "базовая игра", 0);
+        }
+
+        foreach (var mod in profile.Mods
+                     .Where(mod => mod.IsEnabled)
+                     .OrderBy(mod => mod.Order))
+        {
+            yield return new LaunchExecutableSearchRoot(mod.SourcePath, $"мод: {mod.Name}", mod.Order);
+        }
+    }
+
+    private static string FormatExecutableSource(ExecutableSourceInfo source, string requestedRelativePath)
+    {
+        if (!source.IsAvailable)
+        {
+            return $"Не найден ручной источник бинарника: {source.FullPath}. {source.Reason}.";
+        }
+
+        if (source.IsPinned)
+        {
+            return $"Итоговый файл: {source.FullPath}. Источник: {source.SourceName}. Выбран вручную; приоритет модов не заменит этот EXE.";
+        }
+
+        if (source.UsedRequestedRelativePath)
+        {
+            return $"Итоговый файл: {source.FullPath}. Источник: {source.SourceName}.";
+        }
+
+        return
+            $"Выбранный путь не найден: {requestedRelativePath}. " +
+            $"Будет использован: {source.FullPath}. " +
+            $"Причина: {source.Reason}. Источник: {source.SourceName}.";
+    }
+
     private static ProfileHealthCheck Error(string title, string details) =>
         new(ProfileHealthStatus.Error, title, details);
+
+    private sealed record ExecutableSourceInfo(
+        string FullPath,
+        string RelativePath,
+        string SourceName,
+        string Reason,
+        bool UsedRequestedRelativePath,
+        bool IsPinned,
+        bool IsAvailable = true);
 }

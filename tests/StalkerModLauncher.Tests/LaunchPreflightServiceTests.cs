@@ -29,11 +29,47 @@ public sealed class LaunchPreflightServiceTests : IDisposable
         var report = await service.AnalyzeAsync(profile);
 
         Assert.True(report.CanLaunch);
-        Assert.Contains(report.Checks, check => check.Title == "Итоговый бинарник" && check.Details == patchExecutable);
+        Assert.Contains(
+            report.Checks,
+            check => check.Title == "Итоговый бинарник" &&
+                     check.Status == ProfileHealthStatus.Healthy &&
+                     check.Details.Contains(patchExecutable));
     }
 
     [Fact]
-    public async Task AnalyzeAsync_BlocksMissingExecutable()
+    public async Task AnalyzeAsync_UsesPinnedExecutableSource()
+    {
+        var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
+        var builder = new WorkspaceBuilder(paths);
+        var service = new LaunchPreflightService(
+            new GameInstallationValidator(),
+            new ProfileManager(paths, builder));
+        var game = CreateFile("game-pinned/fsgame.ltx");
+        CreateFile("game-pinned/bin/xr_3da.exe");
+        var mainExecutable = CreateFile("main/bin_x64/xrEngine.exe");
+        CreateFile("patch/bin_x64/xrEngine.exe");
+        var profile = new ModProfile
+        {
+            GameInstallPath = Path.GetDirectoryName(game)!,
+            ExecutableRelativePath = @"bin_x64\xrEngine.exe",
+            ExecutableSourcePath = Path.Combine(_root, "main")
+        };
+        profile.Mods.Add(new ModEntry { Name = "Main", SourcePath = Path.Combine(_root, "main"), Order = 1 });
+        profile.Mods.Add(new ModEntry { Name = "Patch", SourcePath = Path.Combine(_root, "patch"), Order = 2 });
+
+        var report = await service.AnalyzeAsync(profile);
+
+        Assert.True(report.CanLaunch);
+        Assert.Contains(
+            report.Checks,
+            check => check.Title == "Итоговый бинарник" &&
+                     check.Status == ProfileHealthStatus.Healthy &&
+                     check.Details.Contains(mainExecutable) &&
+                     check.Details.Contains("Выбран вручную"));
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_WarnsAndFallsBackWhenRequestedExecutableIsMissing()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var builder = new WorkspaceBuilder(paths);
@@ -50,8 +86,36 @@ public sealed class LaunchPreflightServiceTests : IDisposable
 
         var report = await service.AnalyzeAsync(profile);
 
+        Assert.True(report.CanLaunch);
+        Assert.Contains(
+            report.Checks,
+            check => check.Title == "Итоговый бинарник" &&
+                     check.Status == ProfileHealthStatus.Warning &&
+                     check.Details.Contains(@"bin\missing.exe") &&
+                     check.Details.Contains(@"bin\xr_3da.exe"));
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_BlocksWhenNoExecutableCanBeDetected()
+    {
+        var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
+        var builder = new WorkspaceBuilder(paths);
+        var service = new LaunchPreflightService(
+            new GameInstallationValidator(),
+            new ProfileManager(paths, builder));
+        var game = CreateFile("broken-game/fsgame.ltx");
+        var profile = new ModProfile
+        {
+            GameInstallPath = Path.GetDirectoryName(game)!,
+            ExecutableRelativePath = @"bin\missing.exe"
+        };
+
+        var report = await service.AnalyzeAsync(profile);
+
         Assert.False(report.CanLaunch);
-        Assert.Contains(report.Checks, check => check.Title == "Итоговый бинарник" && check.Status == ProfileHealthStatus.Error);
+        Assert.Contains(
+            report.Checks,
+            check => check.Title == "Итоговый бинарник" && check.Status == ProfileHealthStatus.Error);
     }
 
     private string CreateFile(string relativePath)

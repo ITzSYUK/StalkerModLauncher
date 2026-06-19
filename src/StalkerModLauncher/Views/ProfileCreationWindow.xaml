@@ -6,6 +6,7 @@
         Height="590"
         MinWidth="650"
         MinHeight="500"
+        ResizeMode="NoResize"
         Background="{StaticResource WindowBackgroundBrush}"
         Foreground="{StaticResource TextBrush}"
         WindowStartupLocation="CenterOwner"
@@ -135,6 +136,9 @@
                                Foreground="{StaticResource MutedTextBrush}"
                                Margin="0,22,0,0"/>
                     <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,0,0"/>
+                    <TextBlock Text="{Binding ProfileTypeDescription}"
+                               Foreground="{StaticResource MutedTextBrush}"
+                               Margin="0,12,0,0"/>
                 </StackPanel>
 
                 <Grid>
@@ -152,13 +156,16 @@
                                 <Style.Triggers><DataTrigger Binding="{Binding IsStandalone}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers>
                             </Style>
                         </StackPanel.Style>
+                        <TextBlock Text="{Binding SourceStepDescription}"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   Margin="0,0,0,14"/>
                         <TextBlock Text="Папка базовой игры" Foreground="{StaticResource MutedTextBrush}"/>
                         <Grid Margin="0,5,0,14">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBox Text="{Binding GamePath}" IsReadOnly="True"/>
                             <Button Grid.Column="1" Content="Выбрать" Command="{Binding BrowseGameCommand}" Margin="8,0,0,0"/>
                         </Grid>
-                        <TextBlock Text="Моды — нижний мод имеет более высокий приоритет" Foreground="{StaticResource MutedTextBrush}"/>
+                        <TextBlock Text="Моды" Foreground="{StaticResource MutedTextBrush}"/>
                         <ListBox ItemsSource="{Binding Mods}" Height="230" Margin="0,5,0,8">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
@@ -183,6 +190,9 @@
                                 <Style.Triggers><DataTrigger Binding="{Binding IsStandalone}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
                             </Style>
                         </StackPanel.Style>
+                        <TextBlock Text="{Binding SourceStepDescription}"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   Margin="0,0,0,14"/>
                         <TextBlock Text="Папка автономной игры или мода"
                                    FontSize="15"
                                    FontWeight="SemiBold"/>
@@ -210,15 +220,33 @@
                             <Style.Triggers><DataTrigger Binding="{Binding IsStepThree}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
                         </Style>
                     </StackPanel.Style>
+                    <Border Background="{StaticResource CommandPanelBrush}"
+                            BorderBrush="{StaticResource StrokeBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="12"
+                            Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Text="{Binding ProfileTypeLabel}"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding SourceSummary}"
+                                       Foreground="{StaticResource MutedTextBrush}"
+                                       Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Border>
                     <TextBlock Text="Запускаемый файл" Foreground="{StaticResource MutedTextBrush}"/>
                     <Grid Margin="0,5,0,14">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBox Text="{Binding ExecutableRelativePath, UpdateSourceTrigger=PropertyChanged}"/>
                         <Button Grid.Column="1" Content="Обзор..." Command="{Binding BrowseExecutableCommand}" Margin="8,0,0,0"/>
                     </Grid>
+                    <TextBlock Text="{Binding ExecutableDetectionMessage}"
+                               Foreground="{StaticResource AccentBrush}"
+                               Margin="0,-8,0,14"/>
                     <TextBlock Text="Параметры запуска" Foreground="{StaticResource MutedTextBrush}"/>
                     <TextBox Text="{Binding LaunchArguments, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,0,14"/>
-                    <TextBlock Text="Перед первым запуском лаунчер проверит итоговый бинарник, источники файлов и workspace."
+                    <TextBlock Text="Перед запуском лаунчер ещё раз проверит итоговый бинарник, источники файлов и workspace."
                                Foreground="{StaticResource MutedTextBrush}"/>
                 </StackPanel>
             </Grid>
@@ -229,8 +257,30 @@
             <TextBlock Text="{Binding Message}" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,16,0"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button Content="Назад" Command="{Binding BackCommand}" Margin="0,0,8,0"/>
-                <Button Content="Далее" Command="{Binding NextCommand}" Margin="0,0,8,0"/>
-                <Button Content="Создать" Command="{Binding FinishCommand}" Style="{StaticResource PrimaryButtonStyle}"/>
+                <Button Content="Далее" Command="{Binding NextCommand}" Margin="0,0,8,0">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsNextVisible}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button Content="Создать" Command="{Binding FinishCommand}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsFinishVisible}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
             </StackPanel>
         </Grid>
     </Grid>

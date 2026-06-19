@@ -104,6 +104,23 @@ internal sealed class WorkspaceMaterializer
         }
     }
 
+    public void ReplaceFile(
+        string sourceFile,
+        string workspaceRoot,
+        string relativePath,
+        WorkspaceBuildStats stats)
+    {
+        FileSystemSafety.EnsureRelativePath(relativePath, "Workspace file");
+        var targetFile = Path.Combine(workspaceRoot, relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
+        if (File.Exists(targetFile))
+        {
+            File.Delete(targetFile);
+        }
+
+        LinkFile(sourceFile, targetFile, relativePath, stats);
+    }
+
     private static void LinkFile(string sourceFile, string targetFile, string relativePath, WorkspaceBuildStats stats)
     {
         var length = new FileInfo(sourceFile).Length;

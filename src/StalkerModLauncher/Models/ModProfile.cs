@@ -13,6 +13,7 @@ public sealed class ModProfile : ObservableObject
     private bool _isStandalone;
     private string _launchArguments = "-nointro";
     private string _executableRelativePath = @"bin\xr_3da.exe";
+    private string _executableSourcePath = string.Empty;
     private double _totalPlaytimeSeconds;
     private DateTime? _lastPlayedAt;
     private string _workspacePath = string.Empty;
@@ -62,6 +63,12 @@ public sealed class ModProfile : ObservableObject
     {
         get => _executableRelativePath;
         set => SetProperty(ref _executableRelativePath, value);
+    }
+
+    public string ExecutableSourcePath
+    {
+        get => _executableSourcePath;
+        set => SetProperty(ref _executableSourcePath, value);
     }
 
     public double TotalPlaytimeSeconds

@@ -45,6 +45,13 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
     public string ProfileName => _profile.Name;
     public ObservableCollection<ProfileHealthCheck> Checks { get; } = new();
 
+    public string ProfileKind => _profile.IsStandalone
+        ? "Автономная игра или мод"
+        : "Мод поверх базовой игры";
+
+    public string PreflightExplanation =>
+        "Ошибки остановят запуск. Предупреждения подскажут, что стоит проверить.";
+
     public WorkspaceStatus? Workspace
     {
         get => _workspace;

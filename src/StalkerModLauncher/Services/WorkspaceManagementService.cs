@@ -134,7 +134,10 @@ public sealed class WorkspaceManagementService
     {
         var workspace = profile.WorkspacePath;
         var current = string.IsNullOrWhiteSpace(workspace) ? string.Empty : Path.Combine(workspace, "current");
-        if (string.IsNullOrWhiteSpace(current) || !Directory.Exists(current))
+        var rootExists = !string.IsNullOrWhiteSpace(workspace) && Directory.Exists(workspace);
+        var currentExists = !string.IsNullOrWhiteSpace(current) && Directory.Exists(current);
+        var manifestExists = rootExists && File.Exists(Path.Combine(workspace, "build-manifest.json"));
+        if (string.IsNullOrWhiteSpace(current) || !currentExists)
         {
             return WorkspaceStatus.Missing(workspace);
         }
@@ -142,7 +145,7 @@ public sealed class WorkspaceManagementService
         cancellationToken.ThrowIfCancellationRequested();
         var manifest = ReadManifest(workspace);
         return manifest is null
-            ? new WorkspaceStatus(workspace, true, 0, 0, 0, 0, 0, 0, null, false)
+            ? new WorkspaceStatus(workspace, true, 0, 0, 0, 0, 0, 0, null, false, rootExists, currentExists, manifestExists)
             : new WorkspaceStatus(
                 workspace,
                 true,
@@ -153,7 +156,10 @@ public sealed class WorkspaceManagementService
                 manifest.HardLinkCount,
                 manifest.LocalFileCount,
                 manifest.BuiltAtUtc,
-                manifest.HasStatistics);
+                manifest.HasStatistics,
+                rootExists,
+                currentExists,
+                manifestExists);
     }
 
     private static WorkspaceBuildManifest? ReadManifest(string workspace)

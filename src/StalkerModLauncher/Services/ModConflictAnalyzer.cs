@@ -21,12 +21,22 @@ public sealed class ModConflictAnalyzer
         string? launchExecutableRelativePath,
         CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => Analyze(mods, launchExecutableRelativePath, cancellationToken), cancellationToken);
+        return AnalyzeAsync(mods, launchExecutableRelativePath, launchExecutableSourcePath: null, cancellationToken);
+    }
+
+    public Task<IReadOnlyDictionary<string, ModConflictState>> AnalyzeAsync(
+        IReadOnlyList<ModConflictInput> mods,
+        string? launchExecutableRelativePath,
+        string? launchExecutableSourcePath,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() => Analyze(mods, launchExecutableRelativePath, launchExecutableSourcePath, cancellationToken), cancellationToken);
     }
 
     private IReadOnlyDictionary<string, ModConflictState> Analyze(
         IReadOnlyList<ModConflictInput> mods,
         string? launchExecutableRelativePath,
+        string? launchExecutableSourcePath,
         CancellationToken cancellationToken)
     {
         var fileCache = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
@@ -38,10 +48,11 @@ public sealed class ModConflictAnalyzer
         }
 
         var normalizedExecutable = NormalizeRelativePath(launchExecutableRelativePath);
-        var executableProviderId = mods
-            .Where(mod => mod.IsEnabled)
-            .LastOrDefault(mod => fileCache.GetValueOrDefault(mod.Id)?.Contains(normalizedExecutable) == true)
-            ?.Id;
+        var executableProviderId = FindPinnedExecutableProvider(mods, launchExecutableSourcePath, normalizedExecutable, fileCache)
+            ?? mods
+                .Where(mod => mod.IsEnabled)
+                .LastOrDefault(mod => fileCache.GetValueOrDefault(mod.Id)?.Contains(normalizedExecutable) == true)
+                ?.Id;
 
         var result = new Dictionary<string, ModConflictState>(StringComparer.OrdinalIgnoreCase);
         for (var index = 0; index < mods.Count; index++)
@@ -94,6 +105,26 @@ public sealed class ModConflictAnalyzer
     private static bool HasOverlap(HashSet<string>? left, HashSet<string>? right)
     {
         return left is { Count: > 0 } && right is { Count: > 0 } && left.Overlaps(right);
+    }
+
+    private static string? FindPinnedExecutableProvider(
+        IReadOnlyList<ModConflictInput> mods,
+        string? launchExecutableSourcePath,
+        string normalizedExecutable,
+        IReadOnlyDictionary<string, HashSet<string>> fileCache)
+    {
+        if (string.IsNullOrWhiteSpace(launchExecutableSourcePath))
+        {
+            return null;
+        }
+
+        var pinnedRoot = Path.GetFullPath(launchExecutableSourcePath);
+        return mods
+            .Where(mod => mod.IsEnabled && Directory.Exists(mod.SourcePath))
+            .FirstOrDefault(mod =>
+                FileSystemSafety.IsSameDirectory(mod.SourcePath, pinnedRoot) &&
+                fileCache.GetValueOrDefault(mod.Id)?.Contains(normalizedExecutable) == true)
+            ?.Id;
     }
 
     private static bool IsConfigurationFile(string path)

@@ -111,11 +111,41 @@
                         </Grid>
                     </Border>
 
-                    <TextBlock Grid.Row="6"
-                               Text="Путь до .exe относительно папки игры или мода"
-                               Foreground="{StaticResource DisabledTextBrush}"
-                               FontSize="11"
-                               Margin="0,2,0,0"/>
+                    <Grid Grid.Row="6" Margin="0,2,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Путь до .exe относительно папки игры или мода"
+                                       Foreground="{StaticResource DisabledTextBrush}"
+                                       FontSize="11"/>
+                            <TextBlock Text="{Binding ExecutableSourceDisplay}"
+                                       Foreground="{StaticResource MutedTextBrush}"
+                                       FontSize="11"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Content="Выбирать автоматически"
+                                Command="{Binding ClearExecutableSourceCommand}"
+                                ToolTip="Снять ручной выбор источника EXE. Лаунчер будет брать файл запуска из включенного мода с самым высоким приоритетом."
+                                ToolTipService.ShowOnDisabled="True"
+                                Margin="8,0,0,0"
+                                Padding="10,4"
+                                MinHeight="26"
+                                VerticalAlignment="Center">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasManualExecutableSource}" Value="False">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
 
                     <StackPanel Grid.Row="7" Margin="0,12,0,0">
                         <TextBlock Text="Параметры запуска"

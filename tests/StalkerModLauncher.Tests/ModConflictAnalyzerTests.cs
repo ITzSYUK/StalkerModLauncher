@@ -88,6 +88,23 @@ public sealed class ModConflictAnalyzerTests : IDisposable
     }
 
     [Fact]
+    public async Task AnalyzeAsync_MarksPinnedProviderOfLaunchExecutable()
+    {
+        var main = CreateMod("main", "bin_x64/xrEngine.exe");
+        var patch = CreateMod("patch", "bin_x64/xrEngine.exe");
+        var analyzer = new ModConflictAnalyzer();
+
+        var result = await analyzer.AnalyzeAsync(
+        [
+            new ModConflictInput("main", "Main mod", main, true),
+            new ModConflictInput("patch", "Patch", patch, true)
+        ], @"bin_x64\xrEngine.exe", main);
+
+        Assert.True(result["main"].ProvidesLaunchExecutable);
+        Assert.False(result["patch"].ProvidesLaunchExecutable);
+    }
+
+    [Fact]
     public async Task AnalyzeAsync_ClassifiesConfigurationAndBinaryOverlays()
     {
         var main = CreateMod("main", "gamedata/config/system.ltx", "bin/xrCore.dll", "textures/test.dds");

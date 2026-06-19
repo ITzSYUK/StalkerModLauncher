@@ -193,8 +193,8 @@ public sealed partial class MainViewModel
             return;
         }
 
-        var relativePath = TryGetWorkspaceRelativePath(selected);
-        if (relativePath is null)
+        var selection = TryGetExecutableSelection(selected);
+        if (selection is null)
         {
             _dialogService.ShowError(
                 "Executable is outside profile sources",
@@ -202,8 +202,13 @@ public sealed partial class MainViewModel
             return;
         }
 
-        SelectedProfile.ExecutableRelativePath = relativePath;
-        Log($"Launch executable selected: {relativePath}");
+        SelectedProfile.ExecutableRelativePath = selection.RelativePath;
+        SelectedProfile.ExecutableSourcePath = !SelectedProfile.IsStandalone && selection.PinsSource
+            ? selection.SourceRootPath
+            : string.Empty;
+        Log(!SelectedProfile.IsStandalone && selection.PinsSource
+            ? $"Launch executable selected: {selection.RelativePath} from {selection.SourceName}"
+            : $"Launch executable selected: {selection.RelativePath}");
         RefreshValidation();
         _ = SaveAsync();
     }
@@ -225,21 +230,18 @@ public sealed partial class MainViewModel
             return;
         }
 
-        var found = Directory.EnumerateFiles(modRoot, "*.exe", SearchOption.AllDirectories)
-            .Select(p => Path.GetRelativePath(modRoot, p))
-            .OrderBy(p => Path.GetFileNameWithoutExtension(p).Equals("xrEngine", StringComparison.OrdinalIgnoreCase) ? 0
-                       : Path.GetFileNameWithoutExtension(p).Equals("xr_3da", StringComparison.OrdinalIgnoreCase) ? 1
-                       : 2)
-            .ThenBy(p => p, StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault();
+        var found = LaunchExecutableDetector.DetectBest(
+            [new LaunchExecutableSearchRoot(modRoot, "автономный мод", 1)],
+            currentExe);
 
         if (found is null)
         {
             return;
         }
 
-        SelectedProfile.ExecutableRelativePath = found;
-        Log($"Standalone executable auto-detected: {found}");
+        SelectedProfile.ExecutableRelativePath = found.RelativePath;
+        SelectedProfile.ExecutableSourcePath = string.Empty;
+        Log($"Standalone executable auto-detected: {found.RelativePath}");
     }
 
     public void RemoveMods(IReadOnlyList<ModEntry> mods)
