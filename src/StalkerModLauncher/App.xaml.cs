@@ -1,8 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
+using StalkerModLauncher.Infrastructure;
 using StalkerModLauncher.Services;
 
 namespace StalkerModLauncher;
@@ -11,10 +13,13 @@ public partial class App : Application
 {
     private readonly AppServices _services = new();
     private readonly SingleInstanceGuard _singleInstance = new("StalkerModLauncher");
+    private readonly UiSoundService _uiSoundService = new();
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        EventManager.RegisterClassHandler(typeof(ButtonBase), ButtonBase.ClickEvent, new RoutedEventHandler(ButtonBase_OnClick));
+        EventManager.RegisterClassHandler(typeof(ListBox), Selector.SelectionChangedEvent, new SelectionChangedEventHandler(ListBox_OnSelectionChanged));
 
         if (!_singleInstance.IsPrimaryInstance)
         {
@@ -26,6 +31,8 @@ public partial class App : Application
             Shutdown();
             return;
         }
+
+        _uiSoundService.Initialize();
 
         BitmapImage? bitmap = null;
         try
@@ -101,8 +108,39 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _uiSoundService.Dispose();
         _singleInstance.Dispose();
         base.OnExit(e);
+    }
+
+    private void ButtonBase_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ButtonBase button || button is RepeatButton)
+        {
+            return;
+        }
+
+        if (UiSound.GetKind(button) == UiSoundKind.ProfileActionsToggle && button is ToggleButton toggle)
+        {
+            _uiSoundService.Play(toggle.IsChecked == true
+                ? UiSoundEffect.ProfileActionsOpened
+                : UiSoundEffect.ProfileActionsClosed);
+            return;
+        }
+
+        _uiSoundService.Play(UiSoundEffect.ButtonPress);
+    }
+
+    private void ListBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is not ListBox { Name: "ProfilesList", IsLoaded: true } profileList ||
+            e.AddedItems.Count == 0 ||
+            (!profileList.IsMouseOver && !profileList.IsKeyboardFocusWithin))
+        {
+            return;
+        }
+
+        _uiSoundService.Play(UiSoundEffect.ButtonPress);
     }
 
     private Views.MainWindow CreateMainWindow()

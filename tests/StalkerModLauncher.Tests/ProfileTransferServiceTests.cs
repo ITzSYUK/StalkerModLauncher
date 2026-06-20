@@ -20,18 +20,17 @@ public sealed class ProfileTransferServiceTests : IDisposable
         {
             Name = "Zona",
             IsStandalone = true,
+            IsDiscordStatusEnabled = false,
             ExecutableRelativePath = @"bin_x64\xrEngine.exe",
             LaunchArguments = "-nointro",
-            GameInstallPath = @"D:\Games\Stalker",
-            ConfigNotes = "notes"
+            GameInstallPath = @"D:\Games\Stalker"
         };
         source.Mods.Add(new ModEntry
         {
             Name = "Main",
             SourcePath = @"D:\Mods\Zona",
             IsEnabled = true,
-            Order = 1,
-            Notes = "main mod"
+            Order = 1
         });
         var service = new ProfileTransferService();
 
@@ -39,6 +38,7 @@ public sealed class ProfileTransferServiceTests : IDisposable
         var imported = service.Import(filePath);
 
         Assert.Equal(source.Name, imported.Name);
+        Assert.False(imported.IsDiscordStatusEnabled);
         Assert.Equal(source.ExecutableRelativePath, imported.ExecutableRelativePath);
         Assert.Equal(source.Mods[0].SourcePath, imported.Mods[0].SourcePath);
         Assert.Equal(1, imported.Mods[0].Order);

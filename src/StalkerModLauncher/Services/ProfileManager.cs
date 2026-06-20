@@ -30,12 +30,12 @@ public sealed class ProfileManager
             Name = GetUniqueName(profiles, $"{source.Name} — копия"),
             Description = source.Description,
             IsEnabled = source.IsEnabled,
+            IsDiscordStatusEnabled = source.IsDiscordStatusEnabled,
             IsStandalone = source.IsStandalone,
             LaunchArguments = source.LaunchArguments,
             ExecutableRelativePath = source.ExecutableRelativePath,
             ExecutableSourcePath = source.ExecutableSourcePath,
             WorkingDirectoryRelative = source.WorkingDirectoryRelative,
-            ConfigNotes = source.ConfigNotes,
             GameInstallPath = source.GameInstallPath
         };
 
@@ -46,8 +46,7 @@ public sealed class ProfileManager
                 Name = sourceMod.Name,
                 SourcePath = sourceMod.SourcePath,
                 IsEnabled = sourceMod.IsEnabled,
-                Order = duplicate.Mods.Count + 1,
-                Notes = sourceMod.Notes
+                Order = duplicate.Mods.Count + 1
             });
         }
 

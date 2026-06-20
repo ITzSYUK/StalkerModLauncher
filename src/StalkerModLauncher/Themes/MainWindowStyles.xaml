@@ -146,18 +146,39 @@
                                             Command="{Binding DataContext.InlineDuplicateProfileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                             CommandParameter="{Binding}"
                                             ToolTip="Создать копию профиля">
-                                        <Viewbox Width="19" Height="19">
+                                        <Viewbox Width="18" Height="18">
                                             <Canvas Width="24" Height="24">
-                                                <Rectangle Canvas.Left="8"
-                                                           Canvas.Top="8"
-                                                           Width="11"
-                                                           Height="11"
+                                                <Path Data="M15.5,8.2 V5.8 C15.5,4.81 14.69,4 13.7,4 H6 C5.01,4 4.2,4.81 4.2,5.8 V13.5 C4.2,14.49 5.01,15.3 6,15.3 H8.2"
+                                                      Stroke="{StaticResource TextBrush}"
+                                                      StrokeThickness="1.65"
+                                                      StrokeStartLineCap="Round"
+                                                      StrokeEndLineCap="Round"
+                                                      StrokeLineJoin="Round"/>
+                                                <Rectangle Canvas.Left="8.2"
+                                                           Canvas.Top="8.2"
+                                                           Width="11.6"
+                                                           Height="11.6"
                                                            RadiusX="2"
                                                            RadiusY="2"
-                                                           Stroke="{StaticResource TextBrush}"
-                                                           StrokeThickness="1.8"/>
-                                                <Path Data="M16,8 V6 C16,4.895 15.105,4 14,4 H6 C4.895,4 4,4.895 4,6 V14 C4,15.105 4.895,16 6,16 H8"
+                                                           Stroke="{StaticResource AccentBrush}"
+                                                           StrokeThickness="1.7"/>
+                                            </Canvas>
+                                        </Viewbox>
+                                    </Button>
+                                    <Button Style="{StaticResource InlineProfileActionButtonStyle}"
+                                            Command="{Binding DataContext.InlineExportProfileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip="Экспортировать профиль">
+                                        <Viewbox Width="19" Height="19">
+                                            <Canvas Width="24" Height="24">
+                                                <Path Data="M5,3.8 H12.4 L16.8,8.2 V19.2 C16.8,20.19 15.99,21 15,21 H5 C4.01,21 3.2,20.19 3.2,19.2 V5.6 C3.2,4.61 4.01,3.8 5,3.8 Z M12.2,3.8 V8.4 H16.8"
                                                       Stroke="{StaticResource TextBrush}"
+                                                      StrokeThickness="1.65"
+                                                      StrokeStartLineCap="Round"
+                                                      StrokeEndLineCap="Round"
+                                                      StrokeLineJoin="Round"/>
+                                                <Path Data="M10,13 H20 M16.6,9.6 L20,13 L16.6,16.4"
+                                                      Stroke="{StaticResource AccentBrush}"
                                                       StrokeThickness="1.8"
                                                       StrokeStartLineCap="Round"
                                                       StrokeEndLineCap="Round"

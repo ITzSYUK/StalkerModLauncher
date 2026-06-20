@@ -10,6 +10,7 @@ public sealed class ModProfile : ObservableObject
     private string _name = "New profile";
     private string _description = string.Empty;
     private bool _isEnabled = true;
+    private bool _isDiscordStatusEnabled = true;
     private bool _isStandalone;
     private string _launchArguments = "-nointro";
     private string _executableRelativePath = @"bin\xr_3da.exe";
@@ -18,7 +19,6 @@ public sealed class ModProfile : ObservableObject
     private DateTime? _lastPlayedAt;
     private string _workspacePath = string.Empty;
     private string _workingDirectoryRelative = string.Empty;
-    private string _configNotes = string.Empty;
     private string _gameInstallPath = string.Empty;
     private bool _isRunning;
     private ObservableCollection<ModEntry> _mods = new();
@@ -45,6 +45,16 @@ public sealed class ModProfile : ObservableObject
     {
         get => _isEnabled;
         set => SetProperty(ref _isEnabled, value);
+    }
+
+    /// <summary>
+    /// Publishes this profile's launch as Discord Rich Presence.
+    /// The value is profile-specific because some modpacks already provide their own status.
+    /// </summary>
+    public bool IsDiscordStatusEnabled
+    {
+        get => _isDiscordStatusEnabled;
+        set => SetProperty(ref _isDiscordStatusEnabled, value);
     }
 
     public bool IsStandalone
@@ -128,12 +138,6 @@ public sealed class ModProfile : ObservableObject
     {
         get => _workingDirectoryRelative;
         set => SetProperty(ref _workingDirectoryRelative, value);
-    }
-
-    public string ConfigNotes
-    {
-        get => _configNotes;
-        set => SetProperty(ref _configNotes, value);
     }
 
     public string GameInstallPath

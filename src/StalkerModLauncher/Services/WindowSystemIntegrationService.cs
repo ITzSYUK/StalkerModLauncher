@@ -4,58 +4,17 @@ using System.Windows.Interop;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class WindowSystemIntegrationService : IDisposable
+public sealed class WindowSystemIntegrationService
 {
-    private const int WhKeyboardLl = 13;
-    private const int WmKeydown = 0x0100;
-    private const int VkF2 = 0x71;
-    private const int VkShift = 0x10;
     private const int DwmUseImmersiveDarkModeBefore20H1 = 19;
     private const int DwmUseImmersiveDarkMode = 20;
     private const int DwmBorderColor = 34;
     private const int DwmCaptionColor = 35;
     private const int DwmTextColor = 36;
 
-    private nint _keyboardHook;
-    private HookProc? _keyboardHookProc;
-    private Action? _notesHotkeyAction;
-
-    public void Initialize(Window window, Action notesHotkeyAction)
+    public void Initialize(Window window)
     {
         ApplyDarkWindowFrame(window);
-        if (_keyboardHook != nint.Zero)
-        {
-            return;
-        }
-
-        _notesHotkeyAction = notesHotkeyAction;
-        _keyboardHookProc = LowLevelKeyboardProc;
-        _keyboardHook = SetWindowsHookEx(WhKeyboardLl, _keyboardHookProc, GetModuleHandle(null), 0);
-    }
-
-    public void Dispose()
-    {
-        if (_keyboardHook != nint.Zero)
-        {
-            _ = UnhookWindowsHookEx(_keyboardHook);
-            _keyboardHook = nint.Zero;
-        }
-
-        _keyboardHookProc = null;
-        _notesHotkeyAction = null;
-    }
-
-    private nint LowLevelKeyboardProc(int nCode, nint wParam, nint lParam)
-    {
-        if (nCode >= 0 &&
-            wParam == WmKeydown &&
-            Marshal.ReadInt32(lParam) == VkF2 &&
-            (GetAsyncKeyState(VkShift) & 0x8000) != 0)
-        {
-            _notesHotkeyAction?.Invoke();
-        }
-
-        return CallNextHookEx(nint.Zero, nCode, wParam, lParam);
     }
 
     private static void ApplyDarkWindowFrame(Window window)
@@ -85,23 +44,4 @@ public sealed class WindowSystemIntegrationService : IDisposable
 
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int attributeValue, int attributeSize);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern nint SetWindowsHookEx(int idHook, HookProc lpfn, nint hMod, uint dwThreadId);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool UnhookWindowsHookEx(nint hhk);
-
-    [DllImport("user32.dll")]
-    private static extern nint CallNextHookEx(nint hhk, int nCode, nint wParam, nint lParam);
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
-    private static extern nint GetModuleHandle(string? lpModuleName);
-
-    [DllImport("user32.dll")]
-    private static extern short GetAsyncKeyState(int vKey);
-
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    private delegate nint HookProc(int nCode, nint wParam, nint lParam);
 }

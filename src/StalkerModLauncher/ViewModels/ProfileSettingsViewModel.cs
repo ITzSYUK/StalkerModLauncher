@@ -21,6 +21,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     private string _launchArguments;
     private string _workspacePath;
     private bool _isEnabled;
+    private bool _isDiscordStatusEnabled;
     private bool _isStandalone;
 
     public ProfileSettingsViewModel(
@@ -45,6 +46,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         _launchArguments = profile.LaunchArguments;
         _workspacePath = profile.WorkspacePath;
         _isEnabled = profile.IsEnabled;
+        _isDiscordStatusEnabled = profile.IsDiscordStatusEnabled;
         _isStandalone = profile.IsStandalone;
 
         SaveCommand = new AsyncRelayCommand(async () => await TrySaveAsync());
@@ -128,6 +130,12 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         set => SetProperty(ref _isEnabled, value);
     }
 
+    public bool IsDiscordStatusEnabled
+    {
+        get => _isDiscordStatusEnabled;
+        set => SetProperty(ref _isDiscordStatusEnabled, value);
+    }
+
     public bool IsStandalone
     {
         get => _isStandalone;
@@ -162,6 +170,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         _profile.LaunchArguments = LaunchArguments;
         _profile.WorkspacePath = WorkspacePath;
         _profile.IsEnabled = IsEnabled;
+        _profile.IsDiscordStatusEnabled = IsDiscordStatusEnabled;
         _profile.IsStandalone = IsStandalone;
     }
 

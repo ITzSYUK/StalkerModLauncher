@@ -96,6 +96,17 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveAndLoadAsync_PreservesPerProfileDiscordStatus()
+    {
+        var profile = new ModProfile { Name = "No Discord", IsDiscordStatusEnabled = false };
+
+        await _store.SaveAsync(new AppSettings { Profiles = [profile] });
+        var loaded = await _store.LoadAsync();
+
+        Assert.False(loaded.Profiles.Single().IsDiscordStatusEnabled);
+    }
+
+    [Fact]
     public async Task LoadAsync_MigratesLegacyGlobalGamePath()
     {
         Directory.CreateDirectory(_paths.ConfigDirectory);

@@ -40,20 +40,19 @@ public sealed class ProfileTransferService
         {
             Name = profile.Name,
             IsEnabled = profile.IsEnabled,
+            IsDiscordStatusEnabled = profile.IsDiscordStatusEnabled,
             IsStandalone = profile.IsStandalone,
             ExecutableRelativePath = profile.ExecutableRelativePath,
             ExecutableSourcePath = profile.ExecutableSourcePath,
             LaunchArguments = profile.LaunchArguments,
             WorkingDirectoryRelative = profile.WorkingDirectoryRelative,
             GameInstallPath = profile.GameInstallPath,
-            ConfigNotes = profile.ConfigNotes,
             Mods = profile.Mods.Select(mod => new ExportedMod
             {
                 Name = mod.Name,
                 SourcePath = mod.SourcePath,
                 IsEnabled = mod.IsEnabled,
-                Order = mod.Order,
-                Notes = mod.Notes
+                Order = mod.Order
             }).ToList()
         };
     }
@@ -64,13 +63,13 @@ public sealed class ProfileTransferService
         {
             Name = exported.Name.Trim(),
             IsEnabled = exported.IsEnabled,
+            IsDiscordStatusEnabled = exported.IsDiscordStatusEnabled,
             IsStandalone = exported.IsStandalone,
             ExecutableRelativePath = exported.ExecutableRelativePath,
             ExecutableSourcePath = exported.ExecutableSourcePath ?? string.Empty,
             LaunchArguments = exported.LaunchArguments,
             WorkingDirectoryRelative = exported.WorkingDirectoryRelative,
-            GameInstallPath = exported.GameInstallPath,
-            ConfigNotes = exported.ConfigNotes
+            GameInstallPath = exported.GameInstallPath
         };
 
         foreach (var exportedMod in exported.Mods.OrderBy(mod => mod.Order))
@@ -80,8 +79,7 @@ public sealed class ProfileTransferService
                 Name = exportedMod.Name,
                 SourcePath = exportedMod.SourcePath,
                 IsEnabled = exportedMod.IsEnabled,
-                Order = profile.Mods.Count + 1,
-                Notes = exportedMod.Notes
+                Order = profile.Mods.Count + 1
             });
         }
 

@@ -30,6 +30,7 @@ public sealed class ProfileCreationViewModel : ObservableObject
         AddModCommand = new RelayCommand(AddMod, () => !IsStandalone || Mods.Count == 0);
         RemoveModCommand = new RelayCommand(parameter => RemoveMod(parameter as ModEntry), parameter => parameter is ModEntry);
         BrowseExecutableCommand = new RelayCommand(BrowseExecutable);
+        Mods.CollectionChanged += (_, _) => OnModListChanged();
     }
 
     public event EventHandler<ModProfile>? Completed;
@@ -56,9 +57,9 @@ public sealed class ProfileCreationViewModel : ObservableObject
 
     public string StepTitle => Step switch
     {
-        1 => "1. Выберите тип профиля",
-        2 => "2. Укажите источники файлов",
-        _ => "3. Проверьте запуск"
+        1 => "Тип профиля",
+        2 => IsStandalone ? "Автономная сборка" : "Игра и моды",
+        _ => "Запуск профиля"
     };
 
     public bool IsStepOne => Step == 1;
@@ -82,10 +83,12 @@ public sealed class ProfileCreationViewModel : ObservableObject
             {
                 OnPropertyChanged(nameof(ProfileTypeLabel));
                 OnPropertyChanged(nameof(ProfileTypeDescription));
+                OnPropertyChanged(nameof(StepTitle));
                 OnPropertyChanged(nameof(SourceStepDescription));
                 OnPropertyChanged(nameof(SourceSummary));
                 OnPropertyChanged(nameof(IsOverlay));
                 OnPropertyChanged(nameof(StandalonePath));
+                OnPropertyChanged(nameof(ModListHint));
                 ((RelayCommand)AddModCommand).RaiseCanExecuteChanged();
                 if (value && Mods.Count > 1)
                 {
@@ -114,6 +117,14 @@ public sealed class ProfileCreationViewModel : ObservableObject
 
     public string StandalonePath => Mods.FirstOrDefault()?.SourcePath ?? string.Empty;
 
+    public bool HasMods => Mods.Count > 0;
+
+    public bool HasNoMods => !HasMods;
+
+    public string ModListHint => IsStandalone
+        ? "Выберите корневую директорию с модом или игрой."
+        : "Добавьте папки модов. Моды ниже в списке имеют больший приоритет.";
+
     public string ProfileTypeDescription => IsStandalone
         ? "Автономный мод уже содержит движок и запускается прямо из своей папки."
         : "Обычный профиль объединяет базовую игру и включённые модификации в изолированном workspace.";
@@ -123,8 +134,8 @@ public sealed class ProfileCreationViewModel : ObservableObject
         : "Мод поверх базовой игры";
 
     public string SourceStepDescription => IsStandalone
-        ? "Выберите одну корневую папку готовой сборки. Базовая игра для такого профиля не нужна."
-        : "Выберите папку базовой игры и добавьте моды в нужном порядке. Моды ниже в списке перезаписывают моды выше.";
+        ? "Выберите корневую директорию с модом или игрой."
+        : "Выберите папку базовой игры и добавьте моды в нужном порядке.";
 
     public string SourceSummary
     {
@@ -465,5 +476,15 @@ public sealed class ProfileCreationViewModel : ObservableObject
         ((RelayCommand)NextCommand).RaiseCanExecuteChanged();
         ((RelayCommand)BackCommand).RaiseCanExecuteChanged();
         ((RelayCommand)FinishCommand).RaiseCanExecuteChanged();
+    }
+
+    private void OnModListChanged()
+    {
+        OnPropertyChanged(nameof(HasMods));
+        OnPropertyChanged(nameof(HasNoMods));
+        OnPropertyChanged(nameof(StandalonePath));
+        OnPropertyChanged(nameof(SourceSummary));
+        OnPropertyChanged(nameof(ModListHint));
+        ((RelayCommand)AddModCommand).RaiseCanExecuteChanged();
     }
 }

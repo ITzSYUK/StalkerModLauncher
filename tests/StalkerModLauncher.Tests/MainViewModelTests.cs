@@ -261,11 +261,11 @@ public sealed class MainViewModelTests
 
     private sealed class FakeGameSessionTracker : IGameSessionTracker
     {
-        public void ConfigureDiscord(string clientId)
+        public void ConfigureDiscord(string clientId, Action<string>? diagnostic = null)
         {
         }
 
-        public Task<GameSessionResult> TrackAsync(Process process, string profileName)
+        public Task<GameSessionResult> TrackAsync(Process process, string profileName, bool publishDiscordStatus)
         {
             throw new NotSupportedException("MainViewModel tests must not track game processes.");
         }

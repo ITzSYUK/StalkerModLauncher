@@ -29,7 +29,6 @@ public sealed class AppServices
         GameExitDiagnosticsService = new GameExitDiagnosticsService(ProfileDataPathResolver);
         ProfileHealthService = new ProfileHealthService(GameValidator, ProfileManager, ProfileDataPathResolver, WorkspaceManagementService);
         WindowNavigationService = new WindowNavigationService(
-            Paths,
             DialogService,
             SettingsStore,
             ProfileHealthService,

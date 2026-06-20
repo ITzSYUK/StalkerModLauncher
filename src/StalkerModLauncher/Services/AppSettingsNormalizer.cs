@@ -33,7 +33,6 @@ public static class AppSettingsNormalizer
             profile.ExecutableSourcePath ??= string.Empty;
             profile.WorkspacePath ??= string.Empty;
             profile.WorkingDirectoryRelative ??= string.Empty;
-            profile.ConfigNotes ??= string.Empty;
             profile.GameInstallPath ??= string.Empty;
             profile.IsRunning = false;
             profile.Mods ??= [];
@@ -49,7 +48,6 @@ public static class AppSettingsNormalizer
                 mod.Name = string.IsNullOrWhiteSpace(mod.Name)
                     ? GetFallbackModName(mod.SourcePath, order)
                     : mod.Name.Trim();
-                mod.Notes ??= string.Empty;
                 mod.Order = order++;
                 mod.IsLocked = false;
                 mod.HasOverlapsAbove = false;

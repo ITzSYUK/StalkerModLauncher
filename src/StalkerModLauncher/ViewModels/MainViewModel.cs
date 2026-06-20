@@ -71,6 +71,9 @@ public sealed partial class MainViewModel : ObservableObject
         InlineDuplicateProfileCommand = new RelayCommand(
             parameter => DuplicateProfile(parameter as ModProfile),
             parameter => parameter is ModProfile);
+        InlineExportProfileCommand = new RelayCommand(
+            parameter => ExportProfile(parameter as ModProfile),
+            parameter => parameter is ModProfile);
         InlineDeleteProfileCommand = new RelayCommand(
             parameter => DeleteProfile(parameter as ModProfile),
             parameter => parameter is ModProfile { IsRunning: false });
@@ -227,6 +230,7 @@ public sealed partial class MainViewModel : ObservableObject
     public RelayCommand DuplicateProfileCommand { get; }
     public RelayCommand DeleteProfileCommand { get; }
     public RelayCommand InlineDuplicateProfileCommand { get; }
+    public RelayCommand InlineExportProfileCommand { get; }
     public RelayCommand InlineDeleteProfileCommand { get; }
     public RelayCommand BrowseExecutableCommand { get; }
     public RelayCommand AddModCommand { get; }
@@ -258,6 +262,7 @@ public sealed partial class MainViewModel : ObservableObject
         DeleteProfileCommand.RaiseCanExecuteChanged();
         DuplicateProfileCommand.RaiseCanExecuteChanged();
         InlineDuplicateProfileCommand.RaiseCanExecuteChanged();
+        InlineExportProfileCommand.RaiseCanExecuteChanged();
         InlineDeleteProfileCommand.RaiseCanExecuteChanged();
         BrowseExecutableCommand.RaiseCanExecuteChanged();
         AddModCommand.RaiseCanExecuteChanged();

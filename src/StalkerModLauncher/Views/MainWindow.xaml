@@ -68,8 +68,7 @@
                     <controls:ProfileHeaderView Grid.Row="1"
                                                 ProfileHealthRequested="ProfileHealthButton_OnClick"
                                                 ProfileSettingsRequested="EditProfileButton_OnClick"
-                                                ScreenshotsRequested="ScreenshotsButton_OnClick"
-                                                NotesRequested="NotesButton_OnClick"/>
+                                                ScreenshotsRequested="ScreenshotsButton_OnClick"/>
 
                     <controls:ProfileSummaryView Grid.Row="2"/>
 

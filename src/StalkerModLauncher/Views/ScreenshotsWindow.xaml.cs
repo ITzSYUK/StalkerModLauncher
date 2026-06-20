@@ -18,6 +18,7 @@ public partial class ScreenshotsWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         (DataContext as IDisposable)?.Dispose();
+        DataContext = null;
         base.OnClosed(e);
     }
 

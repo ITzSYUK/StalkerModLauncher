@@ -6,10 +6,13 @@ public sealed class DiscordPresenceService : IDisposable
 {
     private DiscordRpcClient? _client;
     private readonly string _clientId;
+    private readonly Action<string>? _diagnostic;
+    private bool _failureReported;
 
-    public DiscordPresenceService(string clientId)
+    public DiscordPresenceService(string clientId, Action<string>? diagnostic = null)
     {
         _clientId = clientId;
+        _diagnostic = diagnostic;
     }
 
     public bool IsEnabled => !string.IsNullOrWhiteSpace(_clientId);
@@ -27,10 +30,9 @@ public sealed class DiscordPresenceService : IDisposable
             _client = new DiscordRpcClient(_clientId);
             _client.Initialize();
         }
-        catch
+        catch (Exception ex)
         {
-            _client?.Dispose();
-            _client = null;
+            HandleFailure(ex);
         }
     }
 
@@ -41,15 +43,22 @@ public sealed class DiscordPresenceService : IDisposable
             return;
         }
 
-        _client.SetPresence(new RichPresence
+        try
         {
-            Details = profileName,
-            State = null,
-            Assets = new Assets
+            _client.SetPresence(new RichPresence
             {
-                LargeImageText = "S.T.A.L.K.E.R. Mod Launcher"
-            }
-        });
+                Details = profileName,
+                State = null,
+                Assets = new Assets
+                {
+                    LargeImageText = "S.T.A.L.K.E.R. Mod Launcher"
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            HandleFailure(ex);
+        }
     }
 
     public void Clear()
@@ -59,7 +68,14 @@ public sealed class DiscordPresenceService : IDisposable
             return;
         }
 
-        _client.ClearPresence();
+        try
+        {
+            _client.ClearPresence();
+        }
+        catch (Exception ex)
+        {
+            HandleFailure(ex);
+        }
     }
 
     public void Dispose()
@@ -73,5 +89,26 @@ public sealed class DiscordPresenceService : IDisposable
         {
             // ignore
         }
+    }
+
+    private void HandleFailure(Exception ex)
+    {
+        try
+        {
+            _client?.Dispose();
+        }
+        catch
+        {
+            // The original Discord error is more useful than a disposal error.
+        }
+
+        _client = null;
+        if (_failureReported)
+        {
+            return;
+        }
+
+        _failureReported = true;
+        _diagnostic?.Invoke($"Discord: статус недоступен ({ex.Message}). Игра продолжит работать без него.");
     }
 }

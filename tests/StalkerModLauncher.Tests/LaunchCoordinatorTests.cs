@@ -24,6 +24,7 @@ public sealed class LaunchCoordinatorTests
         Assert.Same(profile, launcher.Profile);
         Assert.Same(process, tracker.Process);
         Assert.Equal("Test profile", tracker.ProfileName);
+        Assert.True(tracker.PublishDiscordStatus);
         Assert.Equal(TimeSpan.FromMinutes(2), result.Duration);
     }
 
@@ -39,6 +40,20 @@ public sealed class LaunchCoordinatorTests
 
         Assert.Equal("client-id", tracker.DiscordClientId);
         Assert.True(tracker.IsDisposed);
+    }
+
+    [Fact]
+    public async Task StartAsync_DoesNotPublishDiscordStatusWhenProfileDisablesIt()
+    {
+        using var process = Process.GetCurrentProcess();
+        var tracker = new FakeSessionTracker();
+        using var coordinator = new LaunchCoordinator(new FakeProfileLauncher(process), tracker);
+        var profile = new ModProfile { Name = "Local only", IsDiscordStatusEnabled = false };
+
+        var session = await coordinator.StartAsync("game path", profile, new Progress<string>());
+        await session.Completion;
+
+        Assert.False(tracker.PublishDiscordStatus);
     }
 
     private sealed class FakeProfileLauncher(Process process) : IProfileLauncher
@@ -65,15 +80,18 @@ public sealed class LaunchCoordinatorTests
         public string? DiscordClientId { get; private set; }
         public bool IsDisposed { get; private set; }
 
-        public void ConfigureDiscord(string clientId)
+        public void ConfigureDiscord(string clientId, Action<string>? diagnostic = null)
         {
             DiscordClientId = clientId;
         }
 
-        public Task<GameSessionResult> TrackAsync(Process process, string profileName)
+        public bool PublishDiscordStatus { get; private set; }
+
+        public Task<GameSessionResult> TrackAsync(Process process, string profileName, bool publishDiscordStatus)
         {
             Process = process;
             ProfileName = profileName;
+            PublishDiscordStatus = publishDiscordStatus;
             return Task.FromResult(new GameSessionResult(TimeSpan.FromMinutes(2), true));
         }
 

@@ -52,18 +52,7 @@ public partial class MainWindow : Window
 
     private void Window_OnSourceInitialized(object? sender, EventArgs e)
     {
-        _windowSystemIntegration.Initialize(this, ToggleNotesOverlay);
-    }
-
-    private void ToggleNotesOverlay()
-    {
-        var profile = ViewModel?.SelectedProfile;
-        if (profile is null)
-        {
-            return;
-        }
-
-        _navigation.ToggleNotesOverlay(profile);
+        _windowSystemIntegration.Initialize(this);
     }
 
     private void EditProfileButton_OnClick(object sender, RoutedEventArgs e)
@@ -75,17 +64,6 @@ public partial class MainWindow : Window
         }
 
         _navigation.ShowProfileSettings(this, settingsVm);
-    }
-
-    private void NotesButton_OnClick(object sender, RoutedEventArgs e)
-    {
-        var profile = ViewModel?.SelectedProfile;
-        if (profile is null)
-        {
-            return;
-        }
-
-        _navigation.ShowNotes(this, profile);
     }
 
     private void ScreenshotsButton_OnClick(object sender, RoutedEventArgs e)
@@ -132,9 +110,4 @@ public partial class MainWindow : Window
         Close();
     }
 
-    protected override void OnClosed(EventArgs e)
-    {
-        base.OnClosed(e);
-        _windowSystemIntegration.Dispose();
-    }
 }

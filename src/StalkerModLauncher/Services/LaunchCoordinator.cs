@@ -13,9 +13,9 @@ public sealed class LaunchCoordinator : IDisposable
         _sessionTracker = sessionTracker;
     }
 
-    public void ConfigureDiscord(string clientId)
+    public void ConfigureDiscord(string clientId, Action<string>? diagnostic = null)
     {
-        _sessionTracker.ConfigureDiscord(clientId);
+        _sessionTracker.ConfigureDiscord(clientId, diagnostic);
     }
 
     public async Task<LaunchedGameSession> StartAsync(
@@ -26,7 +26,7 @@ public sealed class LaunchCoordinator : IDisposable
     {
         var process = await _profileLauncher.LaunchAsync(gamePath, profile, progress, cancellationToken);
         var processId = process.Id;
-        var completion = _sessionTracker.TrackAsync(process, profile.Name);
+        var completion = _sessionTracker.TrackAsync(process, profile.Name, profile.IsDiscordStatusEnabled);
         return new LaunchedGameSession(processId, completion);
     }
 

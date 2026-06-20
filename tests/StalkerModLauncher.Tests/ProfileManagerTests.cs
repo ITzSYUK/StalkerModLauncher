@@ -34,12 +34,13 @@ public sealed class ProfileManagerTests
         {
             Name = "Zona",
             Description = "Description",
+            IsDiscordStatusEnabled = false,
             GameInstallPath = @"D:\Games\STALKER",
             WorkspacePath = @"D:\OldWorkspace",
             TotalPlaytimeSeconds = 500,
             LastPlayedAt = DateTime.Now
         };
-        source.Mods.Add(new ModEntry { Name = "Patch", SourcePath = @"D:\Mods\Patch", Order = 1, Notes = "note" });
+        source.Mods.Add(new ModEntry { Name = "Patch", SourcePath = @"D:\Mods\Patch", Order = 1 });
 
         var duplicate = _manager.Duplicate([source], source);
 
@@ -49,6 +50,7 @@ public sealed class ProfileManagerTests
         Assert.EndsWith($"Zona — копия-{duplicate.Id[..8]}", duplicate.WorkspacePath);
         Assert.Equal(0, duplicate.TotalPlaytimeSeconds);
         Assert.Null(duplicate.LastPlayedAt);
+        Assert.False(duplicate.IsDiscordStatusEnabled);
         Assert.Single(duplicate.Mods);
         Assert.NotSame(source.Mods[0], duplicate.Mods[0]);
         Assert.NotEqual(source.Mods[0].Id, duplicate.Mods[0].Id);

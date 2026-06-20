@@ -71,12 +71,74 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Text="{Binding StepTitle}"
-                   FontSize="24"
-                   FontWeight="SemiBold"/>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,16,0">
+                <TextBlock Text="{Binding StepTitle}"
+                           FontSize="24"
+                           FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding Message}"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="0,3,0,0"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center">
+                <Button Command="{Binding BackCommand}"
+                        Width="42"
+                        Height="34"
+                        ToolTip="Назад"
+                        Margin="0,0,8,0">
+                    <Viewbox Width="13"
+                             Height="19">
+                        <Path Data="M335.99,42.42 L336,468.99 C336,492.44 316.98,511.45 293.54,511.45 C282.48,511.45 272.42,507.23 264.86,500.3 L15.37,293.87 C-2.67,278.95 -5.19,252.21 9.73,234.17 C11.22,232.37 12.85,230.71 14.55,229.21 L265.69,10.42 C283.35,-4.96 310.16,-3.09 325.54,14.57 C332.54,22.61 335.97,32.53 335.99,42.42 Z"
+                              Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              Stretch="Uniform"/>
+                    </Viewbox>
+                </Button>
+                <Button Command="{Binding NextCommand}"
+                        Width="42"
+                        Height="34"
+                        ToolTip="Далее"
+                        Margin="0,0,8,0">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsNextVisible}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <Viewbox Width="13"
+                             Height="19">
+                        <Path Data="M0,469 L0,42.42 C0.02,32.53 3.46,22.61 10.45,14.57 C25.84,-3.09 52.65,-4.96 70.31,10.42 L321.46,229.2 C323.15,230.71 324.78,232.37 326.27,234.17 C341.19,252.21 338.67,278.95 320.63,293.87 L71.14,500.3 C63.58,507.23 53.52,511.46 42.46,511.46 C19.02,511.46 0,492.44 0,469 Z"
+                              Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              Stretch="Uniform"/>
+                    </Viewbox>
+                </Button>
+                <Button Content="Создать"
+                        Command="{Binding FinishCommand}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsFinishVisible}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
+        </Grid>
 
         <Border Grid.Row="1"
                 Background="{StaticResource PanelBrush}"
@@ -84,7 +146,7 @@
                 BorderThickness="1"
                 CornerRadius="6"
                 Padding="18"
-                Margin="0,14,0,12">
+                Margin="0,14,0,0">
             <Grid>
                 <StackPanel>
                     <StackPanel.Style>
@@ -93,7 +155,7 @@
                             <Style.Triggers><DataTrigger Binding="{Binding IsStepOne}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
                         </Style>
                     </StackPanel.Style>
-                    <TextBlock Text="Как будет запускаться профиль?"
+                    <TextBlock Text="Выберите вариант"
                                FontSize="15"
                                FontWeight="SemiBold"
                                Margin="0,0,0,10"/>
@@ -149,39 +211,111 @@
                         </Style>
                     </Grid.Style>
 
-                    <StackPanel>
-                        <StackPanel.Style>
-                            <Style TargetType="StackPanel">
+                    <Grid>
+                        <Grid.Style>
+                            <Style TargetType="Grid">
                                 <Setter Property="Visibility" Value="Visible"/>
                                 <Style.Triggers><DataTrigger Binding="{Binding IsStandalone}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers>
                             </Style>
-                        </StackPanel.Style>
-                        <TextBlock Text="{Binding SourceStepDescription}"
-                                   Foreground="{StaticResource MutedTextBrush}"
-                                   Margin="0,0,0,14"/>
-                        <TextBlock Text="Папка базовой игры" Foreground="{StaticResource MutedTextBrush}"/>
-                        <Grid Margin="0,5,0,14">
+                        </Grid.Style>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0"
+                                   Text="Папка базовой игры"
+                                   Foreground="{StaticResource MutedTextBrush}"/>
+                        <Grid Grid.Row="1"
+                              Margin="0,5,0,14">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBox Text="{Binding GamePath}" IsReadOnly="True"/>
                             <Button Grid.Column="1" Content="Выбрать" Command="{Binding BrowseGameCommand}" Margin="8,0,0,0"/>
                         </Grid>
-                        <TextBlock Text="Моды" Foreground="{StaticResource MutedTextBrush}"/>
-                        <ListBox ItemsSource="{Binding Mods}" Height="230" Margin="0,5,0,8">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding SourcePath}" Foreground="{StaticResource MutedTextBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
-                                        <Button Grid.Column="1" Content="Убрать" Command="{Binding DataContext.RemoveModCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}" Margin="8,0,0,0"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                        <Button Content="Добавить папку мода" Command="{Binding AddModCommand}" HorizontalAlignment="Left"/>
-                    </StackPanel>
+                        <Grid Grid.Row="2"
+                              Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Моды"
+                                       Foreground="{StaticResource MutedTextBrush}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="Ниже — больший приоритет"
+                                       Foreground="{StaticResource DisabledTextBrush}"
+                                       FontSize="11"/>
+                        </Grid>
+                        <Border Grid.Row="3"
+                                Background="{StaticResource FieldBackgroundBrush}"
+                                BorderBrush="{StaticResource StrokeBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="0"
+                                Margin="0,0,0,10">
+                            <Grid Margin="1"
+                                  ClipToBounds="True">
+                                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                              VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding Mods}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="12,7"
+                                                      ClipToBounds="True">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0"
+                                                                Margin="0,0,10,0">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   FontWeight="SemiBold"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   ToolTip="{Binding Name}"/>
+                                                        <TextBlock Text="{Binding SourcePath}"
+                                                                   Foreground="{StaticResource MutedTextBrush}"
+                                                                   FontSize="11"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   ToolTip="{Binding SourcePath}"/>
+                                                    </StackPanel>
+                                                    <Button Grid.Column="1"
+                                                            Content="Убрать"
+                                                            Command="{Binding DataContext.RemoveModCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}"
+                                                            MinWidth="68"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                                <Border Background="{StaticResource FieldBackgroundBrush}"
+                                        BorderThickness="0"
+                                        Padding="20">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasNoMods}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="{Binding ModListHint}"
+                                               Foreground="{StaticResource MutedTextBrush}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               TextAlignment="Center"
+                                               TextWrapping="Wrap"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <Button Grid.Row="4"
+                                Content="Добавить мод"
+                                Command="{Binding AddModCommand}"
+                                HorizontalAlignment="Left"/>
+                    </Grid>
 
                     <StackPanel>
                         <StackPanel.Style>
@@ -190,15 +324,10 @@
                                 <Style.Triggers><DataTrigger Binding="{Binding IsStandalone}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBlock Text="{Binding SourceStepDescription}"
-                                   Foreground="{StaticResource MutedTextBrush}"
-                                   Margin="0,0,0,14"/>
-                        <TextBlock Text="Папка автономной игры или мода"
+                        <TextBlock Text="Выберите корневую директорию с модом или игрой"
                                    FontSize="15"
-                                   FontWeight="SemiBold"/>
-                        <TextBlock Text="Выберите корневую папку готовой сборки. В ней должны находиться движок, игровые файлы и запускаемый EXE."
-                                   Foreground="{StaticResource MutedTextBrush}"
-                                   Margin="0,5,0,14"/>
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,14"/>
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBox Text="{Binding StandalonePath, Mode=OneWay}"
@@ -235,7 +364,7 @@
                                        Margin="0,5,0,0"/>
                         </StackPanel>
                     </Border>
-                    <TextBlock Text="Запускаемый файл" Foreground="{StaticResource MutedTextBrush}"/>
+                    <TextBlock Text="Файл запуска" Foreground="{StaticResource MutedTextBrush}"/>
                     <Grid Margin="0,5,0,14">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBox Text="{Binding ExecutableRelativePath, UpdateSourceTrigger=PropertyChanged}"/>
@@ -252,36 +381,5 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBlock Text="{Binding Message}" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,16,0"/>
-            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button Content="Назад" Command="{Binding BackCommand}" Margin="0,0,8,0"/>
-                <Button Content="Далее" Command="{Binding NextCommand}" Margin="0,0,8,0">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-                            <Setter Property="Visibility" Value="Visible"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsNextVisible}" Value="False">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
-                <Button Content="Создать" Command="{Binding FinishCommand}">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsFinishVisible}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
-            </StackPanel>
-        </Grid>
     </Grid>
 </Window>

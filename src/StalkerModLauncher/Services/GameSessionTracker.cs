@@ -4,25 +4,39 @@ namespace StalkerModLauncher.Services;
 
 public interface IGameSessionTracker : IDisposable
 {
-    void ConfigureDiscord(string clientId);
-    Task<GameSessionResult> TrackAsync(Process process, string profileName);
+    void ConfigureDiscord(string clientId, Action<string>? diagnostic = null);
+    Task<GameSessionResult> TrackAsync(Process process, string profileName, bool publishDiscordStatus);
 }
 
 public sealed class GameSessionTracker : IGameSessionTracker
 {
+    private readonly object _sync = new();
+    private readonly Dictionary<int, DiscordSession> _activeDiscordSessions = [];
     private DiscordPresenceService _discordPresence = new(string.Empty);
+    private long _discordSessionOrder;
 
-    public void ConfigureDiscord(string clientId)
+    public void ConfigureDiscord(string clientId, Action<string>? diagnostic = null)
     {
-        _discordPresence.Dispose();
-        _discordPresence = new DiscordPresenceService(clientId);
-        _discordPresence.Initialize();
+        lock (_sync)
+        {
+            _discordPresence.Dispose();
+            _discordPresence = new DiscordPresenceService(clientId, diagnostic);
+            UpdateDiscordPresenceLocked();
+        }
     }
 
-    public async Task<GameSessionResult> TrackAsync(Process process, string profileName)
+    public async Task<GameSessionResult> TrackAsync(Process process, string profileName, bool publishDiscordStatus)
     {
         var startedAtUtc = DateTime.UtcNow;
-        _discordPresence.SetPlaying(profileName);
+        var processId = process.Id;
+        if (publishDiscordStatus)
+        {
+            lock (_sync)
+            {
+                _activeDiscordSessions[processId] = new DiscordSession(profileName, ++_discordSessionOrder);
+                UpdateDiscordPresenceLocked();
+            }
+        }
 
         try
         {
@@ -31,7 +45,15 @@ public sealed class GameSessionTracker : IGameSessionTracker
         }
         finally
         {
-            _discordPresence.Clear();
+            if (publishDiscordStatus)
+            {
+                lock (_sync)
+                {
+                    _activeDiscordSessions.Remove(processId);
+                    UpdateDiscordPresenceLocked();
+                }
+            }
+
             process.Dispose();
         }
     }
@@ -49,8 +71,30 @@ public sealed class GameSessionTracker : IGameSessionTracker
 
     public void Dispose()
     {
-        _discordPresence.Dispose();
+        lock (_sync)
+        {
+            _activeDiscordSessions.Clear();
+            _discordPresence.Dispose();
+        }
     }
+
+    private void UpdateDiscordPresenceLocked()
+    {
+        var activeSession = _activeDiscordSessions.Values
+            .OrderByDescending(session => session.Order)
+            .FirstOrDefault();
+
+        if (activeSession is null)
+        {
+            _discordPresence.Clear();
+            return;
+        }
+
+        _discordPresence.Initialize();
+        _discordPresence.SetPlaying(activeSession.ProfileName);
+    }
+
+    private sealed record DiscordSession(string ProfileName, long Order);
 }
 
 public sealed record GameSessionResult(

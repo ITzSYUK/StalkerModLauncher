@@ -18,8 +18,13 @@
     <Resource Include="..\..\icons\add_mods.png" Link="Resources\add_mods.png" />
     <Resource Include="..\..\icons\scan_add_mods.png" Link="Resources\scan_add_mods.png" />
     <EmbeddedResource Include="Resources\ModLauncherLogo.png" />
+    <EmbeddedResource Include="..\..\sounds\pda_btn_press.ogg" LogicalName="StalkerModLauncher.Resources.Sounds.pda_btn_press.ogg" />
+    <EmbeddedResource Include="..\..\sounds\pda_guide.ogg" LogicalName="StalkerModLauncher.Resources.Sounds.pda_guide.ogg" />
+    <EmbeddedResource Include="..\..\sounds\pda_guide_2.ogg" LogicalName="StalkerModLauncher.Resources.Sounds.pda_guide_2.ogg" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="DiscordRichPresence" Version="1.6.1.70" />
+    <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
+    <PackageReference Include="NAudio.WinMM" Version="2.2.1" />
   </ItemGroup>
 </Project>

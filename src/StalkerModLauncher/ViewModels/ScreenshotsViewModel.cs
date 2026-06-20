@@ -15,6 +15,7 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
     private BitmapImage? _selectedScreenshot;
     private bool _isFullScreen;
     private bool _isLoading = true;
+    private bool _isDisposed;
     private int _selectedIndex = -1;
     private string _statusText = string.Empty;
 
@@ -109,7 +110,7 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
         }
 
         _selectedIndex = index;
-        SelectedScreenshot = Screenshots[index].Source;
+        SelectedScreenshot = Screenshots[index].LoadForDisplay();
         if (!_isFullScreen)
         {
             IsFullScreen = true;
@@ -123,6 +124,8 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
     public void CloseFullScreen()
     {
         IsFullScreen = false;
+        SelectedScreenshot = null;
+        _selectedIndex = -1;
     }
 
     public void GoPrevious()
@@ -182,7 +185,7 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
     {
         try
         {
-            _clipboardService.Copy(item.Source);
+            _clipboardService.Copy(item.FilePath);
             ShowTemporaryStatus($"Скопировано: {Path.GetFileName(item.FilePath)}");
         }
         catch (Exception ex)
@@ -193,11 +196,19 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _isDisposed = true;
         _loadCancellation.Cancel();
         _loadCancellation.Dispose();
         _statusCancellation?.Cancel();
         _statusCancellation?.Dispose();
         _statusCancellation = null;
+        SelectedScreenshot = null;
+        Screenshots.Clear();
     }
 
     private async void ShowTemporaryStatus(string message)
@@ -229,6 +240,11 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
             foreach (var file in files)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (_isDisposed)
+                {
+                    return;
+                }
+
                 try
                 {
                     Screenshots.Add(new ScreenshotItem(file));
@@ -244,8 +260,11 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
         }
         finally
         {
-            IsLoading = false;
-            OnPropertyChanged(nameof(ShowThumbnailGrid));
+            if (!_isDisposed)
+            {
+                IsLoading = false;
+                OnPropertyChanged(nameof(ShowThumbnailGrid));
+            }
         }
     }
 }

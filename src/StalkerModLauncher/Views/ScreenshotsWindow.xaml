@@ -54,7 +54,7 @@
                                               Command="{Binding DataContext.OpenScreenshotCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                               CommandParameter="{Binding}"/>
                             </Border.InputBindings>
-                            <Image Source="{Binding Source}"
+                            <Image Source="{Binding Thumbnail}"
                                    Width="240"
                                    Stretch="Uniform">
                                 <Image.Style>

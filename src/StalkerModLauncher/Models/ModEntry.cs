@@ -18,7 +18,6 @@ public sealed class ModEntry : ObservableObject
     private int _overwrittenBinaryCount;
     private string _overlayDetails = string.Empty;
     private int _order;
-    private string _notes = string.Empty;
 
     public string Id
     {
@@ -159,12 +158,6 @@ public sealed class ModEntry : ObservableObject
     {
         get => _order;
         set => SetProperty(ref _order, value);
-    }
-
-    public string Notes
-    {
-        get => _notes;
-        set => SetProperty(ref _notes, value);
     }
 
     private static string Pluralize(int value, string one, string few, string many)

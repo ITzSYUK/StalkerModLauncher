@@ -19,7 +19,12 @@ public sealed partial class MainViewModel
 
     private void ExportProfile()
     {
-        if (SelectedProfile is null)
+        ExportProfile(SelectedProfile);
+    }
+
+    private void ExportProfile(ModProfile? profile)
+    {
+        if (profile is null)
         {
             return;
         }
@@ -28,7 +33,7 @@ public sealed partial class MainViewModel
         {
             Title = "Экспорт профиля",
             Filter = "Profile files (*.stalkerprofile)|*.stalkerprofile|JSON files (*.json)|*.json|All files (*.*)|*.*",
-            FileName = $"{SelectedProfile.Name}.stalkerprofile"
+            FileName = $"{profile.Name}.stalkerprofile"
         };
 
         if (dialog.ShowDialog() != true)
@@ -38,8 +43,8 @@ public sealed partial class MainViewModel
 
         try
         {
-            _profileTransferService.Export(dialog.FileName, SelectedProfile);
-            Log($"Profile exported: {dialog.FileName}");
+            _profileTransferService.Export(dialog.FileName, profile);
+            Log($"Profile exported: {profile.Name}");
         }
         catch (Exception ex)
         {

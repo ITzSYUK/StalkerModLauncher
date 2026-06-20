@@ -17,7 +17,7 @@ public sealed partial class MainViewModel
 
             if (!string.IsNullOrWhiteSpace(settings.DiscordClientId))
             {
-                _launchCoordinator.ConfigureDiscord(settings.DiscordClientId);
+                _launchCoordinator.ConfigureDiscord(settings.DiscordClientId, Log);
             }
 
             Profiles.Clear();
