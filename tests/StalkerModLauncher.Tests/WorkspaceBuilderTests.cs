@@ -58,6 +58,65 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildAsync_RebuildsReadOnlyModFilesWithoutChangingTheirAttributes()
+    {
+        var modPath = CreateMod("read-only", "mod source");
+        var sourceFile = Path.Combine(modPath, "gamedata", "config", "shared.ltx");
+        File.SetAttributes(sourceFile, File.GetAttributes(sourceFile) | FileAttributes.ReadOnly);
+        var profile = CreateProfile(modPath);
+
+        try
+        {
+            await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+            CreateFile(modPath, "gamedata/config/rebuild-marker.ltx", "changed");
+
+            var rebuilt = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+            Assert.Equal("mod source", File.ReadAllText(sourceFile));
+            Assert.True((File.GetAttributes(sourceFile) & FileAttributes.ReadOnly) != 0);
+            Assert.Equal("mod source", File.ReadAllText(Path.Combine(rebuilt.WorkspaceRoot, "gamedata", "config", "shared.ltx")));
+            Assert.True(File.Exists(Path.Combine(rebuilt.WorkspaceRoot, "gamedata", "config", "rebuild-marker.ltx")));
+        }
+        finally
+        {
+            if (File.Exists(sourceFile))
+            {
+                File.SetAttributes(sourceFile, File.GetAttributes(sourceFile) & ~FileAttributes.ReadOnly);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task BuildAsync_RepairsLegacyReadOnlyHardLinkBeforeRebuild()
+    {
+        var modPath = CreateMod("legacy-read-only", "mod source");
+        var sourceFile = Path.Combine(modPath, "gamedata", "config", "shared.ltx");
+        var profile = CreateProfile(modPath);
+        var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+        var workspaceFile = Path.Combine(first.WorkspaceRoot, "gamedata", "config", "shared.ltx");
+        File.SetAttributes(sourceFile, File.GetAttributes(sourceFile) | FileAttributes.ReadOnly);
+
+        try
+        {
+            Assert.True((File.GetAttributes(workspaceFile) & FileAttributes.ReadOnly) != 0);
+            CreateFile(modPath, "gamedata/config/rebuild-marker.ltx", "changed");
+
+            var rebuilt = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+            Assert.Equal("mod source", File.ReadAllText(sourceFile));
+            Assert.True((File.GetAttributes(sourceFile) & FileAttributes.ReadOnly) != 0);
+            Assert.Equal("mod source", File.ReadAllText(Path.Combine(rebuilt.WorkspaceRoot, "gamedata", "config", "shared.ltx")));
+        }
+        finally
+        {
+            if (File.Exists(sourceFile))
+            {
+                File.SetAttributes(sourceFile, File.GetAttributes(sourceFile) & ~FileAttributes.ReadOnly);
+            }
+        }
+    }
+
+    [Fact]
     public async Task BuildAsync_RewritesOnlyWorkspaceFsgameAndKeepsProfileUserData()
     {
         var modPath = CreateMod("mod", "mod");
@@ -109,6 +168,21 @@ public sealed class WorkspaceBuilderTests : IDisposable
 
         Assert.True(File.Exists(rebuilt.ExecutablePath));
         Assert.Contains(progress.Messages, message => message.Contains("Preparing clean profile workspace"));
+    }
+
+    [Fact]
+    public async Task ClearProfileWorkspaceCache_RestoresMissingMarkerForGeneratedWorkspace()
+    {
+        var profile = CreateProfile(CreateMod("mod", "mod"));
+        var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+        profile.WorkspacePath = first.ProfileWorkspacePath;
+        var markerPath = Path.Combine(first.ProfileWorkspacePath, ".stalker-launcher-workspace");
+        File.Delete(markerPath);
+
+        _builder.ClearProfileWorkspaceCache(profile, _gamePath);
+
+        Assert.True(File.Exists(markerPath));
+        Assert.False(Directory.Exists(first.WorkspaceRoot));
     }
 
     [Fact]

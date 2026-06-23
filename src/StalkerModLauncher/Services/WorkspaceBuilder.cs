@@ -86,7 +86,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         _materializer.ValidateLinkSupport(sourceSnapshot, workspaceRoot, progress);
 
         progress.Report("Preparing clean profile workspace...");
-        FileSystemSafety.DeleteDirectoryContents(currentWorkspace, workspaceRoot);
+        _materializer.DeleteWorkspaceContents(currentWorkspace, workspaceRoot, () => sourceSnapshot, progress);
         Directory.CreateDirectory(currentWorkspace);
 
         var stats = new WorkspaceBuildStats();
@@ -199,10 +199,18 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var markerPath = Path.Combine(workspacePath, MarkerFileName);
         if (!File.Exists(markerPath))
         {
+            RestoreGeneratedWorkspaceMarker(profile, workspacePath, allowedRoot);
+        }
+
+        if (!File.Exists(markerPath))
+        {
             throw new InvalidOperationException($"Refusing to delete profile workspace without launcher marker file: {workspacePath}");
         }
 
-        FileSystemSafety.DeleteDirectoryContents(workspacePath, allowedRoot);
+        _materializer.DeleteWorkspaceContents(
+            workspacePath,
+            allowedRoot,
+            () => _sourceScanner.Capture(gamePath, profile, CancellationToken.None));
     }
 
     public void ClearProfileWorkspaceCache(ModProfile profile, string gamePath)
@@ -214,7 +222,13 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
 
         var workspacePath = Path.GetFullPath(profile.WorkspacePath);
         var allowedRoot = FindAllowedWorkspaceParent(workspacePath, gamePath);
-        if (allowedRoot is null || !File.Exists(Path.Combine(workspacePath, MarkerFileName)))
+        if (allowedRoot is null)
+        {
+            throw new InvalidOperationException("Лаунчер отказался очищать папку без защитного маркера workspace.");
+        }
+
+        RestoreGeneratedWorkspaceMarker(profile, workspacePath, allowedRoot);
+        if (!File.Exists(Path.Combine(workspacePath, MarkerFileName)))
         {
             throw new InvalidOperationException("Лаунчер отказался очищать папку без защитного маркера workspace.");
         }
@@ -222,7 +236,10 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var current = Path.Combine(workspacePath, "current");
         if (Directory.Exists(current))
         {
-            FileSystemSafety.DeleteDirectoryContents(current, workspacePath);
+            _materializer.DeleteWorkspaceContents(
+                current,
+                workspacePath,
+                () => _sourceScanner.Capture(gamePath, profile, CancellationToken.None));
         }
 
         var manifest = Path.Combine(workspacePath, ManifestFileName);
@@ -262,11 +279,12 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         }
 
         Directory.CreateDirectory(workspacePath);
+        EnsureWorkspaceRootMarker(preferredRoot);
 
         var markerPath = Path.Combine(workspacePath, MarkerFileName);
         if (!File.Exists(markerPath))
         {
-            File.WriteAllText(markerPath, "Managed by Stalker Mod Launcher. It is safe for the launcher to recreate the 'current' subfolder.");
+            WriteWorkspaceMarker(markerPath);
         }
 
         return workspacePath;
@@ -296,6 +314,42 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
     {
         var parent = Directory.GetParent(Path.GetFullPath(workspacePath))?.FullName;
         return parent is not null && File.Exists(Path.Combine(parent, RootMarkerFileName));
+    }
+
+    private static void RestoreGeneratedWorkspaceMarker(
+        ModProfile profile,
+        string workspacePath,
+        string managedRoot)
+    {
+        var expectedWorkspace = Path.Combine(managedRoot, ProfileManager.CreateWorkspaceDirectoryName(profile));
+        if (!FileSystemSafety.IsSameDirectory(workspacePath, expectedWorkspace))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(managedRoot);
+        EnsureWorkspaceRootMarker(managedRoot);
+        Directory.CreateDirectory(workspacePath);
+        var markerPath = Path.Combine(workspacePath, MarkerFileName);
+        if (!File.Exists(markerPath))
+        {
+            WriteWorkspaceMarker(markerPath);
+        }
+    }
+
+    private static void EnsureWorkspaceRootMarker(string workspaceRoot)
+    {
+        Directory.CreateDirectory(workspaceRoot);
+        var rootMarker = Path.Combine(workspaceRoot, RootMarkerFileName);
+        if (!File.Exists(rootMarker))
+        {
+            File.WriteAllText(rootMarker, "Managed workspace root created by Stalker Mod Launcher.");
+        }
+    }
+
+    private static void WriteWorkspaceMarker(string markerPath)
+    {
+        File.WriteAllText(markerPath, "Managed by Stalker Mod Launcher. It is safe for the launcher to recreate the 'current' subfolder.");
     }
 
     private static bool ShouldRefreshUnusedGeneratedPath(ModProfile profile, IReadOnlyList<string> managedRoots)

@@ -5,6 +5,38 @@ namespace StalkerModLauncher.Services;
 
 internal sealed class WorkspaceMaterializer
 {
+    public void DeleteWorkspaceContents(
+        string workspaceDirectory,
+        string allowedRoot,
+        Func<WorkspaceSourceSnapshot> snapshotFactory,
+        IProgress<string>? progress = null)
+    {
+        try
+        {
+            FileSystemSafety.DeleteDirectoryContents(workspaceDirectory, allowedRoot);
+            return;
+        }
+        catch (Exception ex) when (Directory.Exists(workspaceDirectory) &&
+                                   (ex is UnauthorizedAccessException or IOException))
+        {
+            // Old workspace versions could contain read-only hard links. NTFS shares
+            // attributes between hard links, so we temporarily unlock only the
+            // workspace entries and restore the source attributes immediately after.
+            progress?.Report("Releasing read-only links from an older workspace...");
+        }
+
+        var sourceAttributes = CaptureReadOnlySourceAttributes(snapshotFactory());
+        try
+        {
+            ClearReadOnlyWorkspaceAttributes(workspaceDirectory);
+            FileSystemSafety.DeleteDirectoryContents(workspaceDirectory, allowedRoot);
+        }
+        finally
+        {
+            RestoreSourceAttributes(sourceAttributes);
+        }
+    }
+
     public void ValidateLinkSupport(WorkspaceSourceSnapshot snapshot, string workspaceRoot, IProgress<string> progress)
     {
         var workspaceVolume = Path.GetPathRoot(Path.GetFullPath(workspaceRoot));
@@ -126,8 +158,23 @@ internal sealed class WorkspaceMaterializer
         var length = new FileInfo(sourceFile).Length;
         if (WorkspaceFileStrategy.MustCopy(relativePath))
         {
-            File.Copy(sourceFile, targetFile, overwrite: false);
-            stats.Record(relativePath, WorkspaceFileKind.LocalCopy, length);
+            CopyIndependentFile(sourceFile, targetFile, relativePath, stats, length);
+            return;
+        }
+
+        // A hard link shares the ReadOnly attribute with the source file. The next
+        // workspace rebuild would then be unable to remove the link without also
+        // changing the user's mod. Prefer a symlink; use a small local copy only
+        // when Windows does not permit symbolic links on this machine.
+        if ((File.GetAttributes(sourceFile) & FileAttributes.ReadOnly) != 0)
+        {
+            if (TryCreateSymbolicFileLink(targetFile, sourceFile) && File.Exists(targetFile))
+            {
+                stats.Record(relativePath, WorkspaceFileKind.SymbolicLink, length);
+                return;
+            }
+
+            CopyIndependentFile(sourceFile, targetFile, relativePath, stats, length);
             return;
         }
 
@@ -145,6 +192,88 @@ internal sealed class WorkspaceMaterializer
 
         File.Delete(targetFile);
         throw CreateLinkFailureException(sourceFile, targetFile);
+    }
+
+    private static void CopyIndependentFile(
+        string sourceFile,
+        string targetFile,
+        string relativePath,
+        WorkspaceBuildStats stats,
+        long length)
+    {
+        File.Copy(sourceFile, targetFile, overwrite: false);
+        var attributes = File.GetAttributes(targetFile);
+        if ((attributes & FileAttributes.ReadOnly) != 0)
+        {
+            File.SetAttributes(targetFile, attributes & ~FileAttributes.ReadOnly);
+        }
+
+        stats.Record(relativePath, WorkspaceFileKind.LocalCopy, length);
+    }
+
+    private static IReadOnlyList<SourceFileAttributes> CaptureReadOnlySourceAttributes(WorkspaceSourceSnapshot snapshot)
+    {
+        var sourceFiles = new[] { snapshot.Game }
+            .Concat(snapshot.Mods.Values)
+            .SelectMany(directory => directory.Files)
+            .GroupBy(file => file.FullPath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First());
+        var attributes = new List<SourceFileAttributes>();
+
+        foreach (var sourceFile in sourceFiles)
+        {
+            if (!File.Exists(sourceFile.FullPath))
+            {
+                continue;
+            }
+
+            var sourceAttributes = File.GetAttributes(sourceFile.FullPath);
+            if ((sourceAttributes & FileAttributes.ReadOnly) != 0)
+            {
+                attributes.Add(new SourceFileAttributes(sourceFile.FullPath, sourceAttributes));
+            }
+        }
+
+        return attributes;
+    }
+
+    private static void ClearReadOnlyWorkspaceAttributes(string workspaceDirectory)
+    {
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = false,
+            AttributesToSkip = FileAttributes.ReparsePoint
+        };
+
+        foreach (var file in Directory.EnumerateFiles(workspaceDirectory, "*", options))
+        {
+            var attributes = File.GetAttributes(file);
+            if ((attributes & FileAttributes.ReadOnly) != 0)
+            {
+                File.SetAttributes(file, attributes & ~FileAttributes.ReadOnly);
+            }
+        }
+
+        foreach (var directory in Directory.EnumerateDirectories(workspaceDirectory, "*", options))
+        {
+            var attributes = File.GetAttributes(directory);
+            if ((attributes & FileAttributes.ReadOnly) != 0)
+            {
+                File.SetAttributes(directory, attributes & ~FileAttributes.ReadOnly);
+            }
+        }
+    }
+
+    private static void RestoreSourceAttributes(IEnumerable<SourceFileAttributes> sourceAttributes)
+    {
+        foreach (var source in sourceAttributes)
+        {
+            if (File.Exists(source.FullPath))
+            {
+                File.SetAttributes(source.FullPath, source.Attributes);
+            }
+        }
     }
 
     private static IOException CreateLinkFailureException(string sourceFile, string targetFile)
@@ -189,6 +318,8 @@ internal sealed class WorkspaceMaterializer
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.U1)]
     private static extern bool CreateSymbolicLink(string lpSymlinkFileName, string lpTargetFileName, int dwFlags);
+
+    private sealed record SourceFileAttributes(string FullPath, FileAttributes Attributes);
 }
 
 internal sealed class WorkspaceBuildStats
