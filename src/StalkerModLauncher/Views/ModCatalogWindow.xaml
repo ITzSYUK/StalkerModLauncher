@@ -1,0 +1,183 @@
+<Window x:Class="StalkerModLauncher.Views.ModCatalogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Браузер модификаций"
+        Width="1060"
+        Height="720"
+        MinWidth="800"
+        MinHeight="540"
+        Background="{StaticResource WindowBackgroundBrush}"
+        Foreground="{StaticResource TextBrush}"
+        WindowStartupLocation="CenterOwner"
+        SourceInitialized="Window_OnSourceInitialized">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center">
+                <Button x:Name="ShadowOfChernobylButton"
+                        Content="Тень Чернобыля"
+                        Click="ShadowOfChernobylButton_OnClick"
+                        Margin="0,0,8,0"/>
+                <Button x:Name="ClearSkyButton"
+                        Content="Чистое Небо"
+                        Click="ClearSkyButton_OnClick"
+                        Margin="0,0,8,0"/>
+                <Button x:Name="CallOfPripyatButton"
+                        Content="Зов Припяти"
+                        Click="CallOfPripyatButton_OnClick"/>
+            </StackPanel>
+            <Button Grid.Column="1"
+                    Style="{StaticResource ModToolbarIconButtonStyle}"
+                    Click="RefreshButton_OnClick"
+                    ToolTip="Обновить список модификаций">
+                <Viewbox Width="22" Height="22">
+                    <Canvas Width="24" Height="24">
+                        <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              Data="M22.55,18.71 C22.3045,18.6325 22.0387,18.6527 21.8077,18.7663 C21.5767,18.8799 21.3985,19.0783 21.31,19.32 C21.0945,19.9637 20.7188,20.542 20.2181,21.0004 C19.7174,21.4588 19.1083,21.7822 18.4482,21.9403 C17.788,22.0983 17.0985,22.0857 16.4445,21.9037 C15.7905,21.7218 15.1936,21.3763 14.71,20.9 C14.6158,20.8077 14.5619,20.6819 14.56,20.55 C14.5592,20.4844 14.5722,20.4194 14.598,20.3591 C14.6238,20.2988 14.662,20.2446 14.71,20.2 L16.22,18.68 C16.2895,18.613 16.3372,18.5265 16.3569,18.432 C16.3765,18.3374 16.3671,18.2391 16.33,18.15 C16.2927,18.0613 16.2302,17.9856 16.1502,17.9323 C16.0701,17.8789 15.9762,17.8503 15.88,17.85 H11.51 C11.3801,17.85 11.2554,17.9016 11.1635,17.9935 C11.0716,18.0854 11.02,18.21 11.02,18.34 V22.71 C11.0216,22.8059 11.0507,22.8993 11.1039,22.979 C11.1571,23.0588 11.2321,23.1216 11.32,23.16 C11.4111,23.1953 11.5104,23.2037 11.6062,23.1842 C11.7019,23.1647 11.79,23.1181 11.86,23.05 L12.63,22.28 C12.723,22.1913 12.8465,22.1419 12.975,22.1419 C13.1035,22.1419 13.227,22.1913 13.32,22.28 C14.0401,22.9821 14.9251,23.4919 15.8937,23.7627 C16.8623,24.0334 17.8834,24.0563 18.8632,23.8293 C19.8429,23.6023 20.7499,23.1326 21.5007,22.4635 C22.2515,21.7944 22.8221,20.9472 23.16,20 C23.2059,19.8753 23.2265,19.7427 23.2206,19.61 C23.2147,19.4773 23.1824,19.3471 23.1256,19.227 C23.0688,19.1069 22.9887,18.9993 22.8898,18.9106 C22.791,18.8218 22.6755,18.7536 22.55,18.71 Z"/>
+                        <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              Data="M8.99999,23.13 C9.06377,23.1444 9.12991,23.1446 9.19381,23.1308 C9.25771,23.117 9.31783,23.0894 9.36999,23.05 C9.42306,23.0107 9.46612,22.9594 9.49566,22.9004 C9.52519,22.8413 9.54038,22.7761 9.53999,22.71 V21.61 C9.54174,21.504 9.50835,21.4004 9.44504,21.3154 C9.38172,21.2304 9.29204,21.1687 9.18999,21.14 C8.63582,20.9737 8.09713,20.7595 7.57999,20.5 V19.22 C7.58024,18.8624 7.65817,18.509 7.80838,18.1844 C7.95859,17.8598 8.17751,17.5717 8.44999,17.34 C9.14479,16.761 9.64425,15.9818 9.88038,15.1087 C10.1165,14.2356 10.0778,13.311 9.76961,12.4606 C9.46139,11.6103 8.89861,10.8756 8.15788,10.3566 C7.41715,9.83755 6.53446,9.55942 5.62999,9.56003 H2.45999 C2.96667,7.4098 4.18428,5.49352 5.91567,4.12148 C7.64706,2.74943 9.79087,2.00194 12,2.00003 C13.9755,1.99687 15.9048,2.59696 17.53,3.72003 H14.21 C13.8423,3.69762 13.4739,3.7507 13.1274,3.876 C12.781,4.0013 12.4638,4.19618 12.1955,4.44863 C11.9272,4.70108 11.7134,5.00577 11.5673,5.34395 C11.4211,5.68212 11.3457,6.04663 11.3457,6.41503 C11.3457,6.78343 11.4211,7.14794 11.5673,7.48611 C11.7134,7.82428 11.9272,8.12897 12.1955,8.38143 C12.4638,8.63388 12.781,8.82875 13.1274,8.95406 C13.4739,9.07936 13.8423,9.13244 14.21,9.11003 C14.5566,9.11282 14.8989,9.18708 15.2155,9.32817 C15.5321,9.46927 15.8162,9.67415 16.05,9.93003 C16.4431,9.86286 16.8412,9.8294 17.24,9.83003 C18.7528,9.83056 20.2291,10.2947 21.47,11.16 C21.5275,11.208 21.6001,11.2343 21.675,11.2343 C21.7499,11.2343 21.8225,11.208 21.88,11.16 C22.2516,10.7966 22.7502,10.5922 23.27,10.59 C23.3233,10.5898 23.3759,10.5781 23.4242,10.5556 C23.4725,10.5332 23.5154,10.5006 23.55,10.46 C23.5866,10.42 23.6137,10.3723 23.6293,10.3203 C23.6449,10.2684 23.6486,10.2136 23.64,10.16 C23.2176,7.22296 21.7005,4.55415 19.3929,2.6887 C17.0854,0.823257 14.1579,-0.100909 11.1975,0.10151 C8.23716,0.303928 5.46273,1.61797 3.43056,3.78015 C1.39838,5.94233 0.258684,8.7928 0.23999,11.76 C0.23999,13 0.759991,21 8.99999,23.13 Z"/>
+                        <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              Data="M23.76,12.47 C23.761,12.3735 23.7329,12.279 23.6794,12.1987 C23.6259,12.1185 23.5494,12.0562 23.46,12.02 C23.3703,11.9808 23.2709,11.9694 23.1747,11.9872 C23.0784,12.0051 22.9897,12.0513 22.92,12.12 L22.09,12.95 C21.9982,13.041 21.8742,13.092 21.745,13.092 C21.6157,13.092 21.4917,13.041 21.4,12.95 C20.6749,12.2538 19.7865,11.751 18.8165,11.4876 C17.8464,11.2243 16.8257,11.2089 15.8481,11.4428 C14.8705,11.6768 13.9674,12.1526 13.2216,12.8265 C12.4759,13.5005 11.9114,14.351 11.58,15.3 C11.5025,15.5455 11.5227,15.8113 11.6363,16.0423 C11.7499,16.2733 11.9483,16.4515 12.19,16.54 C12.4354,16.6174 12.7013,16.5973 12.9323,16.4836 C13.1633,16.37 13.3415,16.1717 13.43,15.93 C13.6454,15.2904 14.0192,14.7157 14.5165,14.2594 C15.0138,13.8031 15.6185,13.4801 16.2743,13.3204 C16.93,13.1607 17.6155,13.1695 18.267,13.346 C18.9184,13.5226 19.5146,13.861 20,14.33 C20.0942,14.4223 20.1481,14.5481 20.15,14.68 C20.1389,14.8009 20.0858,14.9141 20,15 L18.55,16.45 C18.4806,16.5179 18.433,16.605 18.4132,16.7 C18.3934,16.7951 18.4023,16.8938 18.4387,16.9838 C18.4751,17.0738 18.5375,17.151 18.6178,17.2055 C18.6982,17.26 18.7929,17.2894 18.89,17.29 H23.26 C23.3899,17.29 23.5146,17.2384 23.6065,17.1465 C23.6984,17.0546 23.75,16.93 23.75,16.8 L23.76,12.47 Z"/>
+                    </Canvas>
+                </Viewbox>
+            </Button>
+        </Grid>
+
+        <Grid Grid.Row="1"
+              Margin="0,14,0,0">
+            <ScrollViewer x:Name="CatalogScrollViewer"
+                          VerticalScrollBarVisibility="Auto"
+                          ScrollChanged="CatalogScrollViewer_OnScrollChanged"
+                          HorizontalScrollBarVisibility="Disabled">
+                <Border Margin="0,0,14,0">
+                    <StackPanel>
+                        <ItemsControl ItemsSource="{Binding Items}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                <Button Click="ListingButton_OnClick"
+                                        CommandParameter="{Binding}"
+                                        HorizontalContentAlignment="Stretch"
+                                        Padding="0"
+                                        Margin="0,0,0,10"
+                                        Background="{StaticResource PanelBrush}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="Chrome"
+                                                    Background="{TemplateBinding Background}"
+                                                    BorderBrush="{StaticResource StrokeBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="6"
+                                                    Padding="12">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="190"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Background="{StaticResource FieldBackgroundBrush}"
+                                                            CornerRadius="4"
+                                                            ClipToBounds="True">
+                                                        <Image Source="{Binding Thumbnail}"
+                                                               Stretch="UniformToFill"/>
+                                                    </Border>
+                                                    <StackPanel Grid.Column="1"
+                                                                Margin="14,0,0,0">
+                                                        <TextBlock Text="{Binding Title}"
+                                                                   FontSize="17"
+                                                                   FontWeight="SemiBold"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding Description}"
+                                                                   Foreground="{StaticResource MutedTextBrush}"
+                                                                   Margin="0,7,0,0"
+                                                                   MaxHeight="74"
+                                                                   LineHeight="18"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding Metadata}"
+                                                                   Foreground="{StaticResource AccentBrush}"
+                                                                   FontSize="12"
+                                                                   Margin="0,10,0,0"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Chrome" Property="Background" Value="{StaticResource PanelHoverBrush}"/>
+                                                    <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                                </Trigger>
+                                                <Trigger Property="IsPressed" Value="True">
+                                                    <Setter TargetName="Chrome" Property="Background" Value="{StaticResource PanelPressedBrush}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="Загружаем ещё модификации..."
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   FontSize="12"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,4,0,14"
+                                   Visibility="{Binding IsLoadingMore, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    </StackPanel>
+                </Border>
+            </ScrollViewer>
+
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="Загрузка каталога..."
+                           Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="16"/>
+            </StackPanel>
+
+            <TextBlock Text="{Binding StatusText}"
+                       Foreground="{StaticResource MutedTextBrush}"
+                       FontSize="16"
+                       TextAlignment="Center"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       MaxWidth="620">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding StatusText}" Value="">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsLoading}" Value="False">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Grid>
+
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    Margin="0,10,0,0">
+            <TextBlock Text="Модификации, отображаемые на странице, принадлежат их авторам. Информация предоставляется с использованием материалов сайта "
+                       Foreground="{StaticResource MutedTextBrush}"
+                       FontSize="10.5"/>
+            <TextBlock Text="AP-PRO.RU ©"
+                       Foreground="{StaticResource AccentBrush}"
+                       FontSize="10.5"
+                       FontWeight="SemiBold"
+                       Cursor="Hand"
+                       ToolTip="Открыть AP-PRO.RU"
+                       MouseLeftButtonUp="ApProLink_OnMouseLeftButtonUp"/>
+        </StackPanel>
+    </Grid>
+</Window>

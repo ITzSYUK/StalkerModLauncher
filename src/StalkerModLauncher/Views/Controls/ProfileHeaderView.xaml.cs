@@ -28,4 +28,5 @@ public partial class ProfileHeaderView : UserControl
     {
         ScreenshotsRequested?.Invoke(this, e);
     }
+
 }

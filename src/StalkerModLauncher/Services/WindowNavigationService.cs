@@ -13,6 +13,8 @@ public sealed class WindowNavigationService
     private readonly WorkspaceManagementService _workspaceManagementService;
     private readonly ScreenshotScannerService _screenshotScannerService;
     private readonly IScreenshotClipboardService _screenshotClipboardService;
+    private readonly ApProCatalogService _apProCatalogService;
+    private readonly WindowSystemIntegrationService _windowSystemIntegrationService;
 
     public WindowNavigationService(
         DialogService dialogService,
@@ -20,7 +22,9 @@ public sealed class WindowNavigationService
         ProfileHealthService profileHealthService,
         WorkspaceManagementService workspaceManagementService,
         ScreenshotScannerService screenshotScannerService,
-        IScreenshotClipboardService screenshotClipboardService)
+        IScreenshotClipboardService screenshotClipboardService,
+        ApProCatalogService apProCatalogService,
+        WindowSystemIntegrationService windowSystemIntegrationService)
     {
         _dialogService = dialogService;
         _settingsStore = settingsStore;
@@ -28,6 +32,8 @@ public sealed class WindowNavigationService
         _workspaceManagementService = workspaceManagementService;
         _screenshotScannerService = screenshotScannerService;
         _screenshotClipboardService = screenshotClipboardService;
+        _apProCatalogService = apProCatalogService;
+        _windowSystemIntegrationService = windowSystemIntegrationService;
     }
 
     public void ShowProfileCreation(Window owner, MainViewModel mainViewModel)
@@ -48,6 +54,12 @@ public sealed class WindowNavigationService
     {
         var viewModel = new ScreenshotsViewModel(profile, _screenshotScannerService, _screenshotClipboardService);
         new ScreenshotsWindow(viewModel) { Owner = owner }.ShowDialog();
+    }
+
+    public void ShowModCatalog(Window owner)
+    {
+        var viewModel = new ModCatalogViewModel(_apProCatalogService, _dialogService);
+        new ModCatalogWindow(viewModel, _windowSystemIntegrationService) { Owner = owner }.ShowDialog();
     }
 
     public void ShowProfileHealth(Window owner, ModProfile profile)

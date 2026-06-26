@@ -44,7 +44,8 @@
                                         Margin="0,0,0,10"
                                         MouseDown="Title_MouseDown"/>
 
-                <controls:ProfileSidebarView Grid.Row="1"/>
+                <controls:ProfileSidebarView Grid.Row="1"
+                                             ModCatalogRequested="ModCatalogButton_OnClick"/>
             </Grid>
 
             <Border Grid.Column="2"

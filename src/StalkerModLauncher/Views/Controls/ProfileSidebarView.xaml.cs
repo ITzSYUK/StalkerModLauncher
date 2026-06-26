@@ -19,7 +19,14 @@ public partial class ProfileSidebarView : UserControl
         InitializeComponent();
     }
 
+    public event RoutedEventHandler? ModCatalogRequested;
+
     private MainViewModel? ViewModel => DataContext as MainViewModel;
+
+    private void ModCatalogButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        ModCatalogRequested?.Invoke(this, e);
+    }
 
     private void ProfilesList_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {

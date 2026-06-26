@@ -26,6 +26,7 @@ public sealed class AppServices
         ProfileDataPathResolver = new ProfileDataPathResolver();
         ScreenshotScannerService = new ScreenshotScannerService(ProfileDataPathResolver);
         ScreenshotClipboardService = new ScreenshotClipboardService();
+        ApProCatalogService = new ApProCatalogService();
         GameExitDiagnosticsService = new GameExitDiagnosticsService(ProfileDataPathResolver);
         ProfileHealthService = new ProfileHealthService(GameValidator, ProfileManager, ProfileDataPathResolver, WorkspaceManagementService);
         WindowNavigationService = new WindowNavigationService(
@@ -34,7 +35,9 @@ public sealed class AppServices
             ProfileHealthService,
             WorkspaceManagementService,
             ScreenshotScannerService,
-            ScreenshotClipboardService);
+            ScreenshotClipboardService,
+            ApProCatalogService,
+            WindowSystemIntegrationService);
     }
 
     public AppPaths Paths { get; }
@@ -57,6 +60,7 @@ public sealed class AppServices
     public ProfileDataPathResolver ProfileDataPathResolver { get; }
     public ScreenshotScannerService ScreenshotScannerService { get; }
     public ScreenshotClipboardService ScreenshotClipboardService { get; }
+    public ApProCatalogService ApProCatalogService { get; }
     public WindowNavigationService WindowNavigationService { get; }
 
     public MainViewModel CreateMainViewModel()

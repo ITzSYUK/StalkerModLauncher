@@ -72,6 +72,21 @@ public sealed class DialogService
         });
     }
 
+    public void OpenUrl(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new ArgumentException("Указан некорректный адрес сайта.", nameof(url));
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = uri.AbsoluteUri,
+            UseShellExecute = true
+        });
+    }
+
     public void CopyText(string text)
     {
         Clipboard.SetText(text);

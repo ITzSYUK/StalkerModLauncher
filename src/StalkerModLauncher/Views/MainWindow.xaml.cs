@@ -77,6 +77,11 @@ public partial class MainWindow : Window
         _navigation.ShowScreenshots(this, profile);
     }
 
+    private void ModCatalogButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        _navigation.ShowModCatalog(this);
+    }
+
     private void ProfileHealthButton_OnClick(object sender, RoutedEventArgs e)
     {
         var profile = ViewModel?.SelectedProfile;
