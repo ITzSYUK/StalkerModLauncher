@@ -81,6 +81,40 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task SelectedProfile_ControlsProfileActionCommandAvailability()
+    {
+        await RunWithViewModelAsync((viewModel, root) =>
+        {
+            Assert.False(viewModel.DuplicateProfileCommand.CanExecute(null));
+            Assert.False(viewModel.DeleteProfileCommand.CanExecute(null));
+            Assert.False(viewModel.ExportProfileCommand.CanExecute(null));
+            Assert.False(viewModel.OpenProfileFolderCommand.CanExecute(null));
+
+            var profile = new ModProfile { Name = "Actions", GameInstallPath = Path.Combine(root, "game") };
+            viewModel.AddCreatedProfile(profile);
+
+            Assert.True(viewModel.DuplicateProfileCommand.CanExecute(null));
+            Assert.True(viewModel.DeleteProfileCommand.CanExecute(null));
+            Assert.True(viewModel.ExportProfileCommand.CanExecute(null));
+            Assert.True(viewModel.OpenProfileFolderCommand.CanExecute(null));
+            Assert.True(viewModel.InlineExportProfileCommand.CanExecute(profile));
+
+            profile.IsRunning = true;
+
+            Assert.False(viewModel.InlineDeleteProfileCommand.CanExecute(profile));
+            Assert.True(viewModel.InlineExportProfileCommand.CanExecute(profile));
+
+            viewModel.SelectedProfile = null;
+
+            Assert.False(viewModel.DuplicateProfileCommand.CanExecute(null));
+            Assert.False(viewModel.DeleteProfileCommand.CanExecute(null));
+            Assert.False(viewModel.ExportProfileCommand.CanExecute(null));
+            Assert.False(viewModel.OpenProfileFolderCommand.CanExecute(null));
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
     public async Task MoveModToInsertionIndex_ReordersSelectedProfileAndRenumbersMods()
     {
         await RunWithViewModelAsync((viewModel, root) =>

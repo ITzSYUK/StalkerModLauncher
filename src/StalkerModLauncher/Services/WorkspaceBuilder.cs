@@ -1,4 +1,5 @@
 using System.IO;
+using System.Diagnostics;
 using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
@@ -66,15 +67,19 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             throw new DirectoryNotFoundException($"Game folder was not found: {gamePath}");
         }
 
-        var workspaceRoot = EnsureProfileWorkspace(profile, gamePath);
+        var totalTimer = Stopwatch.StartNew();
+        var workspaceRoot = EnsureProfileWorkspace(profile, gamePath, progress);
         var currentWorkspace = Path.Combine(workspaceRoot, "current");
         FileSystemSafety.EnsureDirectoryInside(currentWorkspace, workspaceRoot);
-        progress.Report("Checking game and mod files...");
+        progress.Report("Проверка файлов игры и модов...");
+        var scanTimer = Stopwatch.StartNew();
         var sourceSnapshot = _sourceScanner.Capture(gamePath, profile, cancellationToken);
         var buildSignature = _sourceScanner.CreateBuildSignature(WorkspaceFormatVersion, profile, sourceSnapshot);
+        scanTimer.Stop();
         var cachedExecutable = _manifestStore.TryGetCachedExecutable(workspaceRoot, currentWorkspace, profile, buildSignature, progress);
         if (cachedExecutable is not null)
         {
+            progress.Report($"Проверка источников: {FormatElapsed(scanTimer.Elapsed)}. Пересборка не требуется.");
             return new WorkspaceBuildResult(
                 currentWorkspace,
                 cachedExecutable,
@@ -85,23 +90,32 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
 
         _materializer.ValidateLinkSupport(sourceSnapshot, workspaceRoot, progress);
 
-        progress.Report("Preparing clean profile workspace...");
+        progress.Report("Подготовка чистой рабочей среды профиля...");
+        var cleanupTimer = Stopwatch.StartNew();
         _materializer.DeleteWorkspaceContents(currentWorkspace, workspaceRoot, () => sourceSnapshot, progress);
         Directory.CreateDirectory(currentWorkspace);
+        cleanupTimer.Stop();
 
         var stats = new WorkspaceBuildStats();
 
-        progress.Report("Linking base game into isolated workspace...");
+        progress.Report("Подключение базовой игры к рабочей среде...");
+        var baseGameTimer = Stopwatch.StartNew();
         _materializer.MirrorBaseGame(sourceSnapshot.Game, currentWorkspace, progress, stats, cancellationToken);
+        baseGameTimer.Stop();
 
-        foreach (var mod in profile.Mods.Where(mod => mod.IsEnabled).OrderBy(mod => mod.Order))
+        var enabledMods = profile.Mods.Where(mod => mod.IsEnabled).OrderBy(mod => mod.Order).ToArray();
+        var modsTimer = Stopwatch.StartNew();
+        foreach (var mod in enabledMods)
         {
             cancellationToken.ThrowIfCancellationRequested();
             _materializer.ApplyMod(currentWorkspace, mod, sourceSnapshot.Mods[mod.Id], progress, stats, cancellationToken);
         }
+        modsTimer.Stop();
 
+        var configurationTimer = Stopwatch.StartNew();
         var workingDirectoryRelative = _dataConfigurator.Configure(gamePath, currentWorkspace, workspaceRoot, progress);
         ApplyPinnedExecutableSource(profile, currentWorkspace, progress, stats);
+        configurationTimer.Stop();
 
         var executablePath = Path.Combine(currentWorkspace, profile.ExecutableRelativePath);
         var executableRelativePath = profile.ExecutableRelativePath;
@@ -128,7 +142,17 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             executableRelativePath = detectedExecutable.RelativePath;
         }
 
-        progress.Report($"Workspace is ready. Hard links: {stats.LinkedFiles:N0}, symbolic links: {stats.SymbolicLinkedFiles:N0}, profile-local copies: {stats.ProtectedCopies:N0}.");
+        progress.Report($"Рабочая среда готова. Hard link: {stats.LinkedFiles:N0}; symbolic link: {stats.SymbolicLinkedFiles:N0}; локальных файлов: {stats.ProtectedCopies:N0}.");
+        if (stats.ReadOnlyHandledFiles > 0)
+        {
+            progress.Report($"Файлы «только чтение»: {stats.ReadOnlyHandledFiles:N0}. Символические ссылки: {stats.ReadOnlySymbolicLinkedFiles:N0}; независимые копии: {stats.ReadOnlyCopiedFiles:N0}. Исходные файлы модов не изменены.");
+        }
+
+        totalTimer.Stop();
+        progress.Report(
+            $"Время подготовки: проверка {FormatElapsed(scanTimer.Elapsed)}; очистка {FormatElapsed(cleanupTimer.Elapsed)}; " +
+            $"игра {FormatElapsed(baseGameTimer.Elapsed)}; моды {FormatElapsed(modsTimer.Elapsed)}; " +
+            $"настройка {FormatElapsed(configurationTimer.Elapsed)}; всего {FormatElapsed(totalTimer.Elapsed)}.");
         _manifestStore.Write(workspaceRoot, buildSignature, stats);
         return new WorkspaceBuildResult(
             currentWorkspace,
@@ -215,6 +239,14 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
 
     public void ClearProfileWorkspaceCache(ModProfile profile, string gamePath)
     {
+        ClearProfileWorkspaceCache(profile, gamePath, progress: null);
+    }
+
+    public void ClearProfileWorkspaceCache(
+        ModProfile profile,
+        string gamePath,
+        IProgress<string>? progress)
+    {
         if (string.IsNullOrWhiteSpace(profile.WorkspacePath) || !Directory.Exists(profile.WorkspacePath))
         {
             return;
@@ -227,7 +259,10 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             throw new InvalidOperationException("Лаунчер отказался очищать папку без защитного маркера workspace.");
         }
 
-        RestoreGeneratedWorkspaceMarker(profile, workspacePath, allowedRoot);
+        if (RestoreGeneratedWorkspaceMarker(profile, workspacePath, allowedRoot))
+        {
+            progress?.Report("Восстановлен защитный маркер профиля. Рабочую папку снова можно безопасно очищать.");
+        }
         if (!File.Exists(Path.Combine(workspacePath, MarkerFileName)))
         {
             throw new InvalidOperationException("Лаунчер отказался очищать папку без защитного маркера workspace.");
@@ -249,7 +284,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         }
     }
 
-    private string EnsureProfileWorkspace(ModProfile profile, string gamePath)
+    private string EnsureProfileWorkspace(ModProfile profile, string gamePath, IProgress<string> progress)
     {
         var preferredRoot = _paths.GetPreferredWorkspaceRoot(gamePath);
         var managedRoots = _paths.GetManagedWorkspaceRoots(gamePath);
@@ -278,13 +313,22 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             throw new InvalidOperationException($"Profile workspace must be a profile-specific folder inside a managed launcher workspace root: {workspacePath}");
         }
 
+        var workspaceAlreadyExisted = Directory.Exists(workspacePath);
+        var workspaceRootAlreadyExisted = Directory.Exists(preferredRoot);
         Directory.CreateDirectory(workspacePath);
-        EnsureWorkspaceRootMarker(preferredRoot);
+        if (EnsureWorkspaceRootMarker(preferredRoot) && workspaceRootAlreadyExisted)
+        {
+            progress.Report("Восстановлен служебный маркер корня workspace.");
+        }
 
         var markerPath = Path.Combine(workspacePath, MarkerFileName);
         if (!File.Exists(markerPath))
         {
             WriteWorkspaceMarker(markerPath);
+            if (workspaceAlreadyExisted)
+            {
+                progress.Report("Восстановлен защитный маркер профиля. Рабочую папку снова можно безопасно пересобирать.");
+            }
         }
 
         return workspacePath;
@@ -316,7 +360,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         return parent is not null && File.Exists(Path.Combine(parent, RootMarkerFileName));
     }
 
-    private static void RestoreGeneratedWorkspaceMarker(
+    private static bool RestoreGeneratedWorkspaceMarker(
         ModProfile profile,
         string workspacePath,
         string managedRoot)
@@ -324,32 +368,46 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var expectedWorkspace = Path.Combine(managedRoot, ProfileManager.CreateWorkspaceDirectoryName(profile));
         if (!FileSystemSafety.IsSameDirectory(workspacePath, expectedWorkspace))
         {
-            return;
+            return false;
         }
 
         Directory.CreateDirectory(managedRoot);
-        EnsureWorkspaceRootMarker(managedRoot);
+        var rootMarkerRestored = EnsureWorkspaceRootMarker(managedRoot);
         Directory.CreateDirectory(workspacePath);
         var markerPath = Path.Combine(workspacePath, MarkerFileName);
+        var profileMarkerRestored = false;
         if (!File.Exists(markerPath))
         {
             WriteWorkspaceMarker(markerPath);
+            profileMarkerRestored = true;
         }
+
+        return rootMarkerRestored || profileMarkerRestored;
     }
 
-    private static void EnsureWorkspaceRootMarker(string workspaceRoot)
+    private static bool EnsureWorkspaceRootMarker(string workspaceRoot)
     {
         Directory.CreateDirectory(workspaceRoot);
         var rootMarker = Path.Combine(workspaceRoot, RootMarkerFileName);
         if (!File.Exists(rootMarker))
         {
             File.WriteAllText(rootMarker, "Managed workspace root created by Stalker Mod Launcher.");
+            return true;
         }
+
+        return false;
     }
 
     private static void WriteWorkspaceMarker(string markerPath)
     {
         File.WriteAllText(markerPath, "Managed by Stalker Mod Launcher. It is safe for the launcher to recreate the 'current' subfolder.");
+    }
+
+    private static string FormatElapsed(TimeSpan elapsed)
+    {
+        return elapsed.TotalSeconds < 1
+            ? $"{elapsed.TotalMilliseconds:0} мс"
+            : $"{elapsed.TotalSeconds:0.0} с";
     }
 
     private static bool ShouldRefreshUnusedGeneratedPath(ModProfile profile, IReadOnlyList<string> managedRoots)

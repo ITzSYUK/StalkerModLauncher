@@ -34,7 +34,7 @@ internal sealed class WorkspaceManifestStore
                 return null;
             }
 
-            progress.Report("Using cached profile workspace. No file overlay changes detected.");
+            progress.Report("Workspace уже актуален: изменений в игре и модах не найдено.");
             return executablePath;
         }
         catch

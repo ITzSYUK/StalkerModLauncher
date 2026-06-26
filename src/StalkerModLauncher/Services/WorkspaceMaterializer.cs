@@ -22,13 +22,14 @@ internal sealed class WorkspaceMaterializer
             // Old workspace versions could contain read-only hard links. NTFS shares
             // attributes between hard links, so we temporarily unlock only the
             // workspace entries and restore the source attributes immediately after.
-            progress?.Report("Releasing read-only links from an older workspace...");
+            progress?.Report("Обнаружены защищённые ссылки от старой сборки. Подготавливаю безопасную очистку workspace...");
         }
 
         var sourceAttributes = CaptureReadOnlySourceAttributes(snapshotFactory());
         try
         {
-            ClearReadOnlyWorkspaceAttributes(workspaceDirectory);
+            var releasedFiles = ClearReadOnlyWorkspaceAttributes(workspaceDirectory);
+            progress?.Report($"Освобождено защищённых ссылок старого workspace: {releasedFiles:N0}. Атрибуты исходных файлов будут восстановлены.");
             FileSystemSafety.DeleteDirectoryContents(workspaceDirectory, allowedRoot);
         }
         finally
@@ -95,7 +96,7 @@ internal sealed class WorkspaceMaterializer
 
             if (++fileCount % 500 == 0)
             {
-                progress.Report($"Linked {fileCount:N0} base files...");
+                progress.Report($"Подключено файлов базовой игры: {fileCount:N0}...");
             }
         }
     }
@@ -108,7 +109,7 @@ internal sealed class WorkspaceMaterializer
         WorkspaceBuildStats stats,
         CancellationToken cancellationToken)
     {
-        progress.Report($"Applying mod: {mod.Name}");
+        progress.Report($"Подключение мода: {mod.Name}");
         foreach (var relativePath in source.Directories)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -129,10 +130,10 @@ internal sealed class WorkspaceMaterializer
             LinkFile(file.FullPath, targetFile, file.RelativePath, stats);
         }
 
-        progress.Report($"Applied mod '{mod.Name}': {source.Files.Count:N0} files, {source.Directories.Count:N0} folders.");
+        progress.Report($"Мод подключён: {mod.Name}. Файлов: {source.Files.Count:N0}; папок: {source.Directories.Count:N0}.");
         if (source.Files.Count == 0)
         {
-            progress.Report($"Warning: mod '{mod.Name}' did not contain files visible to the launcher. Check that the profile points to the mod root folder, not an empty wrapper folder.");
+            progress.Report($"Предупреждение: в моде «{mod.Name}» не найдено файлов. Проверьте, что выбрана корневая папка мода, а не пустая внешняя папка.");
         }
     }
 
@@ -170,11 +171,11 @@ internal sealed class WorkspaceMaterializer
         {
             if (TryCreateSymbolicFileLink(targetFile, sourceFile) && File.Exists(targetFile))
             {
-                stats.Record(relativePath, WorkspaceFileKind.SymbolicLink, length);
+                stats.RecordReadOnly(relativePath, WorkspaceFileKind.SymbolicLink, length);
                 return;
             }
 
-            CopyIndependentFile(sourceFile, targetFile, relativePath, stats, length);
+            CopyIndependentFile(sourceFile, targetFile, relativePath, stats, length, isReadOnlySource: true);
             return;
         }
 
@@ -199,7 +200,8 @@ internal sealed class WorkspaceMaterializer
         string targetFile,
         string relativePath,
         WorkspaceBuildStats stats,
-        long length)
+        long length,
+        bool isReadOnlySource = false)
     {
         File.Copy(sourceFile, targetFile, overwrite: false);
         var attributes = File.GetAttributes(targetFile);
@@ -208,7 +210,14 @@ internal sealed class WorkspaceMaterializer
             File.SetAttributes(targetFile, attributes & ~FileAttributes.ReadOnly);
         }
 
-        stats.Record(relativePath, WorkspaceFileKind.LocalCopy, length);
+        if (isReadOnlySource)
+        {
+            stats.RecordReadOnly(relativePath, WorkspaceFileKind.LocalCopy, length);
+        }
+        else
+        {
+            stats.Record(relativePath, WorkspaceFileKind.LocalCopy, length);
+        }
     }
 
     private static IReadOnlyList<SourceFileAttributes> CaptureReadOnlySourceAttributes(WorkspaceSourceSnapshot snapshot)
@@ -237,7 +246,7 @@ internal sealed class WorkspaceMaterializer
         return attributes;
     }
 
-    private static void ClearReadOnlyWorkspaceAttributes(string workspaceDirectory)
+    private static int ClearReadOnlyWorkspaceAttributes(string workspaceDirectory)
     {
         var options = new EnumerationOptions
         {
@@ -246,12 +255,14 @@ internal sealed class WorkspaceMaterializer
             AttributesToSkip = FileAttributes.ReparsePoint
         };
 
+        var releasedFiles = 0;
         foreach (var file in Directory.EnumerateFiles(workspaceDirectory, "*", options))
         {
             var attributes = File.GetAttributes(file);
             if ((attributes & FileAttributes.ReadOnly) != 0)
             {
                 File.SetAttributes(file, attributes & ~FileAttributes.ReadOnly);
+                releasedFiles++;
             }
         }
 
@@ -263,6 +274,8 @@ internal sealed class WorkspaceMaterializer
                 File.SetAttributes(directory, attributes & ~FileAttributes.ReadOnly);
             }
         }
+
+        return releasedFiles;
     }
 
     private static void RestoreSourceAttributes(IEnumerable<SourceFileAttributes> sourceAttributes)
@@ -325,16 +338,29 @@ internal sealed class WorkspaceMaterializer
 internal sealed class WorkspaceBuildStats
 {
     private readonly Dictionary<string, WorkspaceFileStat> _files = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, WorkspaceFileKind> _readOnlyFiles = new(StringComparer.OrdinalIgnoreCase);
 
     public int FileCount => _files.Count;
     public int LinkedFiles => _files.Values.Count(file => file.Kind == WorkspaceFileKind.HardLink);
     public int SymbolicLinkedFiles => _files.Values.Count(file => file.Kind == WorkspaceFileKind.SymbolicLink);
     public int ProtectedCopies => _files.Values.Count(file => file.Kind == WorkspaceFileKind.LocalCopy);
+    public int ReadOnlyHandledFiles => _readOnlyFiles.Count;
+    public int ReadOnlySymbolicLinkedFiles => _readOnlyFiles.Values.Count(kind => kind == WorkspaceFileKind.SymbolicLink);
+    public int ReadOnlyCopiedFiles => _readOnlyFiles.Values.Count(kind => kind == WorkspaceFileKind.LocalCopy);
     public long LogicalSizeBytes => _files.Values.Sum(file => file.Length);
     public long PhysicalSizeBytes => _files.Values.Where(file => file.Kind == WorkspaceFileKind.LocalCopy).Sum(file => file.Length);
 
-    public void Record(string relativePath, WorkspaceFileKind kind, long length) =>
+    public void Record(string relativePath, WorkspaceFileKind kind, long length)
+    {
         _files[relativePath] = new WorkspaceFileStat(kind, length);
+        _readOnlyFiles.Remove(relativePath);
+    }
+
+    public void RecordReadOnly(string relativePath, WorkspaceFileKind kind, long length)
+    {
+        _files[relativePath] = new WorkspaceFileStat(kind, length);
+        _readOnlyFiles[relativePath] = kind;
+    }
 }
 
 internal enum WorkspaceFileKind { HardLink, SymbolicLink, LocalCopy }

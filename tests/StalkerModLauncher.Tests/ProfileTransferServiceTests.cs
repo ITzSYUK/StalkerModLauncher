@@ -23,7 +23,11 @@ public sealed class ProfileTransferServiceTests : IDisposable
             IsDiscordStatusEnabled = false,
             ExecutableRelativePath = @"bin_x64\xrEngine.exe",
             LaunchArguments = "-nointro",
-            GameInstallPath = @"D:\Games\Stalker"
+            GameInstallPath = @"D:\Games\Stalker",
+            WorkspacePath = @"D:\Workspaces\Zona",
+            IsRunning = true,
+            TotalPlaytimeSeconds = 3600,
+            LastPlayedAt = DateTime.Now
         };
         source.Mods.Add(new ModEntry
         {
@@ -44,6 +48,9 @@ public sealed class ProfileTransferServiceTests : IDisposable
         Assert.Equal(1, imported.Mods[0].Order);
         Assert.NotEqual(source.Id, imported.Id);
         Assert.Empty(imported.WorkspacePath);
+        Assert.False(imported.IsRunning);
+        Assert.Equal(0, imported.TotalPlaytimeSeconds);
+        Assert.Null(imported.LastPlayedAt);
     }
 
     [Fact]

@@ -67,15 +67,18 @@ public sealed class WorkspaceBuilderTests : IDisposable
 
         try
         {
+            var progress = new ProgressLog();
             await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
             CreateFile(modPath, "gamedata/config/rebuild-marker.ltx", "changed");
 
-            var rebuilt = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+            var rebuilt = await _builder.BuildAsync(_gamePath, profile, progress);
 
             Assert.Equal("mod source", File.ReadAllText(sourceFile));
             Assert.True((File.GetAttributes(sourceFile) & FileAttributes.ReadOnly) != 0);
             Assert.Equal("mod source", File.ReadAllText(Path.Combine(rebuilt.WorkspaceRoot, "gamedata", "config", "shared.ltx")));
             Assert.True(File.Exists(Path.Combine(rebuilt.WorkspaceRoot, "gamedata", "config", "rebuild-marker.ltx")));
+            Assert.Contains(progress.Messages, message => message.Contains("Файлы «только чтение»", StringComparison.Ordinal));
+            Assert.Contains(progress.Messages, message => message.Contains("Время подготовки", StringComparison.Ordinal));
         }
         finally
         {
@@ -101,11 +104,13 @@ public sealed class WorkspaceBuilderTests : IDisposable
             Assert.True((File.GetAttributes(workspaceFile) & FileAttributes.ReadOnly) != 0);
             CreateFile(modPath, "gamedata/config/rebuild-marker.ltx", "changed");
 
-            var rebuilt = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+            var progress = new ProgressLog();
+            var rebuilt = await _builder.BuildAsync(_gamePath, profile, progress);
 
             Assert.Equal("mod source", File.ReadAllText(sourceFile));
             Assert.True((File.GetAttributes(sourceFile) & FileAttributes.ReadOnly) != 0);
             Assert.Equal("mod source", File.ReadAllText(Path.Combine(rebuilt.WorkspaceRoot, "gamedata", "config", "shared.ltx")));
+            Assert.Contains(progress.Messages, message => message.Contains("Освобождено защищённых ссылок", StringComparison.Ordinal));
         }
         finally
         {
@@ -146,13 +151,13 @@ public sealed class WorkspaceBuilderTests : IDisposable
 
         await _builder.BuildAsync(_gamePath, profile, cachedProgress);
 
-        Assert.Contains(cachedProgress.Messages, message => message.Contains("Using cached profile workspace"));
+        Assert.Contains(cachedProgress.Messages, message => message.Contains("Workspace уже актуален", StringComparison.Ordinal));
 
         CreateFile(modPath, "gamedata/config/shared.ltx", "updated content");
         var rebuildProgress = new ProgressLog();
         var rebuilt = await _builder.BuildAsync(_gamePath, profile, rebuildProgress);
 
-        Assert.DoesNotContain(rebuildProgress.Messages, message => message.Contains("Using cached profile workspace"));
+        Assert.DoesNotContain(rebuildProgress.Messages, message => message.Contains("Workspace уже актуален", StringComparison.Ordinal));
         Assert.Equal("updated content", File.ReadAllText(Path.Combine(rebuilt.WorkspaceRoot, "gamedata", "config", "shared.ltx")));
     }
 
@@ -167,7 +172,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
         var rebuilt = await _builder.BuildAsync(_gamePath, profile, progress);
 
         Assert.True(File.Exists(rebuilt.ExecutablePath));
-        Assert.Contains(progress.Messages, message => message.Contains("Preparing clean profile workspace"));
+        Assert.Contains(progress.Messages, message => message.Contains("Подготовка чистой рабочей среды", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -179,10 +184,12 @@ public sealed class WorkspaceBuilderTests : IDisposable
         var markerPath = Path.Combine(first.ProfileWorkspacePath, ".stalker-launcher-workspace");
         File.Delete(markerPath);
 
-        _builder.ClearProfileWorkspaceCache(profile, _gamePath);
+        var progress = new ProgressLog();
+        _builder.ClearProfileWorkspaceCache(profile, _gamePath, progress);
 
         Assert.True(File.Exists(markerPath));
         Assert.False(Directory.Exists(first.WorkspaceRoot));
+        Assert.Contains(progress.Messages, message => message.Contains("Восстановлен защитный маркер", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -256,7 +263,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
         using var cancellation = new CancellationTokenSource();
         var progress = new ProgressLog(message =>
         {
-            if (message.Contains("Preparing clean profile workspace"))
+            if (message.Contains("Подготовка чистой рабочей среды", StringComparison.Ordinal))
             {
                 cancellation.Cancel();
             }

@@ -17,14 +17,14 @@ public sealed class WorkspaceManagementService
         return Task.Run(() => Inspect(profile, cancellationToken), cancellationToken);
     }
 
-    public void ClearCache(ModProfile profile)
+    public void ClearCache(ModProfile profile, IProgress<string>? progress = null)
     {
-        _workspaceBuilder.ClearProfileWorkspaceCache(profile, profile.GameInstallPath);
+        _workspaceBuilder.ClearProfileWorkspaceCache(profile, profile.GameInstallPath, progress);
     }
 
     public async Task RebuildAsync(ModProfile profile, IProgress<string> progress, CancellationToken cancellationToken = default)
     {
-        ClearCache(profile);
+        ClearCache(profile, progress);
         var result = await _workspaceBuilder.BuildAsync(profile.GameInstallPath, profile, progress, cancellationToken);
         profile.WorkspacePath = result.ProfileWorkspacePath;
         profile.ExecutableRelativePath = result.ExecutableRelativePath;

@@ -51,7 +51,7 @@ public sealed class WorkspaceLifecycleIntegrationTests : IDisposable
 
         await builder.BuildAsync(game, profile, cachedProgress);
 
-        Assert.Contains(cachedProgress.Messages, message => message.Contains("Using cached profile workspace"));
+        Assert.Contains(cachedProgress.Messages, message => message.Contains("Workspace уже актуален", StringComparison.Ordinal));
         Assert.Equal("profile save", File.ReadAllText(save));
 
         builder.ClearProfileWorkspaceCache(profile, game);
