@@ -54,6 +54,16 @@ public partial class ModCatalogWindow : Window
 
     private void ListingButton_OnClick(object sender, RoutedEventArgs e) => ViewModel?.OpenListing((sender as FrameworkElement)?.DataContext as ModCatalogItemViewModel);
 
+    private void SearchTextBox_OnTextChanged(object sender, TextChangedEventArgs e) => CatalogScrollViewer.ScrollToTop();
+
+    private void SearchBoxChrome_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!SearchTextBox.IsKeyboardFocusWithin)
+        {
+            SearchTextBox.Focus();
+        }
+    }
+
     private async Task LoadCategoryAsync(ApProCatalogCategory category)
     {
         if (ViewModel is not null && ViewModel.SelectedCategory != category)

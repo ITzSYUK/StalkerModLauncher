@@ -11,13 +11,17 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
 {
     private readonly ApProCatalogService _catalogService;
     private readonly DialogService _dialogService;
+    private readonly List<ModCatalogItemViewModel> _allItems = new();
     private CancellationTokenSource? _loadCancellation;
     private ApProCatalogCategory _selectedCategory = ApProCatalogCategory.ShadowOfChernobyl;
     private bool _isLoading;
     private bool _isLoadingMore;
+    private bool _isSearchLoadingAll;
     private bool _hasMorePages;
     private int _nextPageNumber = 1;
     private int _totalPageCount = 1;
+    private int _loadGeneration;
+    private string _searchQuery = string.Empty;
     private string _statusText = string.Empty;
 
     public ModCatalogViewModel(ApProCatalogService catalogService, DialogService dialogService)
@@ -41,6 +45,19 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
     }
 
     public string CategoryTitle => ApProCatalogService.GetCategoryTitle(SelectedCategory);
+
+    public string SearchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            if (SetProperty(ref _searchQuery, value))
+            {
+                ApplyFilter();
+                _ = EnsureAllPagesLoadedForSearchAsync();
+            }
+        }
+    }
 
     public bool IsLoading
     {
@@ -71,12 +88,16 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
         _loadCancellation?.Cancel();
         _loadCancellation?.Dispose();
         _loadCancellation = new CancellationTokenSource();
+        _loadGeneration++;
+        var generation = _loadGeneration;
         var cancellationToken = _loadCancellation.Token;
 
         try
         {
             SelectedCategory = category;
             IsLoading = true;
+            IsLoadingMore = false;
+            _isSearchLoadingAll = false;
             StatusText = "Загружаем каталог AP-PRO...";
 
             DisposeItems();
@@ -86,28 +107,35 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
 
             var page = await _catalogService.LoadPageAsync(category, _nextPageNumber, forceRefresh, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
+            if (generation != _loadGeneration)
+            {
+                return;
+            }
 
             AddItems(page.Items, cancellationToken);
             _totalPageCount = page.TotalPages;
             _nextPageNumber = page.PageNumber + 1;
             HasMorePages = page.Items.Count > 0 && _nextPageNumber <= _totalPageCount;
 
-            StatusText = Items.Count == 0
-                ? "В этом разделе пока не найдено модификаций."
-                : string.Empty;
+            UpdateEmptyStatus();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
-            StatusText = "Не удалось загрузить каталог. Проверьте подключение к интернету и попробуйте обновить страницу.";
+            if (generation == _loadGeneration)
+            {
+                StatusText = "Не удалось загрузить каталог. Проверьте подключение к интернету и попробуйте обновить страницу.";
+            }
         }
         finally
         {
-            if (!cancellationToken.IsCancellationRequested)
+            if (!cancellationToken.IsCancellationRequested && generation == _loadGeneration)
             {
                 IsLoading = false;
+                UpdateEmptyStatus();
+                _ = EnsureAllPagesLoadedForSearchAsync();
             }
         }
     }
@@ -119,12 +147,18 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
             return;
         }
 
+        var generation = _loadGeneration;
         var cancellationToken = _loadCancellation.Token;
         try
         {
             IsLoadingMore = true;
+            UpdateEmptyStatus();
             var page = await _catalogService.LoadPageAsync(SelectedCategory, _nextPageNumber, cancellationToken: cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
+            if (generation != _loadGeneration)
+            {
+                return;
+            }
 
             AddItems(page.Items, cancellationToken);
             _totalPageCount = Math.Max(_totalPageCount, page.TotalPages);
@@ -136,14 +170,18 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
-            StatusText = "Не удалось загрузить следующую страницу. Попробуйте обновить список.";
-            HasMorePages = false;
+            if (generation == _loadGeneration)
+            {
+                StatusText = "Не удалось загрузить следующую страницу. Попробуйте обновить список.";
+                HasMorePages = false;
+            }
         }
         finally
         {
-            if (!cancellationToken.IsCancellationRequested)
+            if (generation == _loadGeneration)
             {
                 IsLoadingMore = false;
+                UpdateEmptyStatus();
             }
         }
     }
@@ -163,28 +201,109 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
         _loadCancellation?.Cancel();
         _loadCancellation?.Dispose();
         _loadCancellation = null;
+        _loadGeneration++;
         DisposeItems();
     }
 
     private void AddItems(IEnumerable<ApProModListing> listings, CancellationToken cancellationToken)
     {
-        var existingUrls = Items.Select(item => item.DetailUrl).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var existingUrls = _allItems.Select(item => item.DetailUrl).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var listing in listings.Where(listing => existingUrls.Add(listing.DetailUrl)))
         {
             var item = new ModCatalogItemViewModel(listing, _catalogService, cancellationToken);
-            Items.Add(item);
+            _allItems.Add(item);
+            if (MatchesSearch(item))
+            {
+                Items.Add(item);
+            }
+
             item.StartThumbnailLoading();
         }
+
+        UpdateEmptyStatus();
     }
 
     private void DisposeItems()
     {
-        foreach (var item in Items)
+        foreach (var item in _allItems)
         {
             item.Dispose();
         }
 
+        _allItems.Clear();
         Items.Clear();
+    }
+
+    private void ApplyFilter()
+    {
+        Items.Clear();
+        foreach (var item in _allItems.Where(MatchesSearch))
+        {
+            Items.Add(item);
+        }
+
+        UpdateEmptyStatus();
+    }
+
+    private bool MatchesSearch(ModCatalogItemViewModel item)
+    {
+        var query = SearchQuery.Trim();
+        return string.IsNullOrWhiteSpace(query) ||
+               item.Title.Contains(query, StringComparison.CurrentCultureIgnoreCase);
+    }
+
+    private void UpdateEmptyStatus()
+    {
+        if (Items.Count > 0 || IsLoading)
+        {
+            StatusText = string.Empty;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            StatusText = "В этом разделе пока не найдено модификаций.";
+            return;
+        }
+
+        StatusText = _isSearchLoadingAll || IsLoadingMore || HasMorePages
+            ? "Ищем модификации..."
+            : "По этому запросу ничего не найдено.";
+    }
+
+    private async Task EnsureAllPagesLoadedForSearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SearchQuery) ||
+            _isSearchLoadingAll ||
+            IsLoading ||
+            !HasMorePages ||
+            _loadCancellation is null)
+        {
+            return;
+        }
+
+        var generation = _loadGeneration;
+        var cancellationToken = _loadCancellation.Token;
+        try
+        {
+            _isSearchLoadingAll = true;
+            UpdateEmptyStatus();
+            while (!cancellationToken.IsCancellationRequested &&
+                   !string.IsNullOrWhiteSpace(SearchQuery) &&
+                   generation == _loadGeneration &&
+                   HasMorePages)
+            {
+                await LoadNextPageAsync();
+            }
+        }
+        finally
+        {
+            if (generation == _loadGeneration)
+            {
+                _isSearchLoadingAll = false;
+                UpdateEmptyStatus();
+            }
+        }
     }
 }
 
@@ -260,7 +379,7 @@ public sealed class ModCatalogItemViewModel : ObservableObject, IDisposable
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
-            image.DecodePixelWidth = 360;
+            image.DecodePixelWidth = 460;
             image.StreamSource = stream;
             image.EndInit();
             image.Freeze();
