@@ -15,17 +15,20 @@ public interface IProfileLauncher
 public sealed class ProfileLauncher : IProfileLauncher
 {
     private readonly IReadOnlyDictionary<LaunchBackendKind, IProfileLaunchBackend> _backends;
+    private readonly ILaunchPlanExecutor _launchPlanExecutor;
 
-    public ProfileLauncher(IEnumerable<IProfileLaunchBackend> backends)
+    public ProfileLauncher(IEnumerable<IProfileLaunchBackend> backends, ILaunchPlanExecutor? launchPlanExecutor = null)
     {
         _backends = backends.ToDictionary(backend => backend.Kind);
         if (!_backends.ContainsKey(LaunchBackendKind.LinkedWorkspace))
         {
             throw new ArgumentException("The linked workspace launch backend must be registered.", nameof(backends));
         }
+
+        _launchPlanExecutor = launchPlanExecutor ?? new LaunchPlanExecutor();
     }
 
-    public Task<Process> LaunchAsync(
+    public async Task<Process> LaunchAsync(
         string gamePath,
         ModProfile profile,
         IProgress<string> progress,
@@ -33,7 +36,9 @@ public sealed class ProfileLauncher : IProfileLauncher
     {
         var backend = ResolveBackend(profile.LaunchBackendKind);
         progress.Report($"Launch backend: {backend.Kind}.");
-        return backend.LaunchAsync(gamePath, profile, progress, cancellationToken);
+        var plan = await backend.PrepareAsync(gamePath, profile, progress, cancellationToken);
+        progress.Report($"Starting: {plan.ExecutablePath}");
+        return _launchPlanExecutor.Start(plan);
     }
 
     private IProfileLaunchBackend ResolveBackend(LaunchBackendKind kind)

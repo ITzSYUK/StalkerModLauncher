@@ -1,11 +1,30 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
+
+public interface ILaunchPlanExecutor
+{
+    Process Start(LaunchPlan plan);
+}
+
+public sealed class LaunchPlanExecutor : ILaunchPlanExecutor
+{
+    public Process Start(LaunchPlan plan)
+    {
+        return ProcessLauncher.Start(plan);
+    }
+}
 
 public static class ProcessLauncher
 {
     private const int ErrorElevationRequired = 740;
+
+    public static Process Start(LaunchPlan plan)
+    {
+        return Start(plan.ExecutablePath, plan.Arguments, plan.WorkingDirectory);
+    }
 
     public static Process Start(string executablePath, string? launchArguments, string workingDir)
     {

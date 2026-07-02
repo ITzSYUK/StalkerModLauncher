@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using StalkerModLauncher.Models;
 
@@ -17,7 +16,7 @@ public sealed class LinkedWorkspaceLaunchBackend : IProfileLaunchBackend
 
     public LaunchBackendKind Kind => LaunchBackendKind.LinkedWorkspace;
 
-    public async Task<Process> LaunchAsync(
+    public async Task<LaunchPlan> PrepareAsync(
         string gamePath,
         ModProfile profile,
         IProgress<string> progress,
@@ -28,7 +27,6 @@ public sealed class LinkedWorkspaceLaunchBackend : IProfileLaunchBackend
         profile.ExecutableRelativePath = workspace.ExecutableRelativePath;
         profile.WorkingDirectoryRelative = workspace.WorkingDirectoryRelative;
         RemoveLegacyScriptAutoloadPatch(workspace, profile, progress);
-        progress.Report($"Starting: {workspace.ExecutablePath}");
 
         var workingDir = string.IsNullOrWhiteSpace(profile.WorkingDirectoryRelative)
             ? workspace.WorkspaceRoot
@@ -37,7 +35,11 @@ public sealed class LinkedWorkspaceLaunchBackend : IProfileLaunchBackend
                 profile.WorkingDirectoryRelative,
                 "Working directory");
 
-        return ProcessLauncher.Start(workspace.ExecutablePath, profile.LaunchArguments, workingDir);
+        return new LaunchPlan(
+            LaunchBackendKind.LinkedWorkspace,
+            workspace.ExecutablePath,
+            profile.LaunchArguments,
+            workingDir);
     }
 
     private static void RemoveLegacyScriptAutoloadPatch(WorkspaceBuildResult workspace, ModProfile profile, IProgress<string> progress)
