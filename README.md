@@ -1,15 +1,16 @@
 # S.T.A.L.K.E.R. Mod Launcher
 
 <p align="center">
+  <img src="assets/screenshots/launcher_main_screen.png" alt="S.T.A.L.K.E.R. Mod Launcher main window" width="49%">
+  <img src="assets/screenshots/launcher_mods_browser.png" alt="AP-PRO modification browser" width="49%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/ITzSYUK/StalkerModLauncher/releases/latest"><strong>Download latest release / Скачать последний релиз</strong></a>
+</p>
+
+<p align="center">
   <a href="#english">English</a> | <a href="#russian">Русский</a>
-</p>
-
-<p align="center">
-  <img src="assets/screenshots/launcher_main_screen.png" alt="S.T.A.L.K.E.R. Mod Launcher main window" width="900">
-</p>
-
-<p align="center">
-  <img src="assets/screenshots/launcher_mods_browser.png" alt="AP-PRO modification browser" width="900">
 </p>
 
 ---
@@ -21,8 +22,6 @@
 **S.T.A.L.K.E.R. Mod Launcher** is a Windows launcher for local S.T.A.L.K.E.R. mods and standalone X-Ray based builds.
 
 It creates separate profiles, keeps saves/logs/settings isolated, and avoids changing the original game or mod folders. Regular profiles do not copy the whole game: the launcher connects source files with links, so profile workspaces usually take very little extra disk space.
-
-### [Download latest release](https://github.com/ITzSYUK/StalkerModLauncher/releases/latest)
 
 ### Features
 
@@ -64,10 +63,6 @@ dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 
 Technical notes about profiles, workspaces, file safety, settings and diagnostics are available in [docs/TECHNICAL.md](docs/TECHNICAL.md).
 
-### License
-
-The launcher source code is licensed under the [GNU GPLv3](LICENSE.md). Third-party assets keep their original licenses.
-
 ---
 
 <a id="russian"></a>
@@ -77,8 +72,6 @@ The launcher source code is licensed under the [GNU GPLv3](LICENSE.md). Third-pa
 **S.T.A.L.K.E.R. Mod Launcher** — Windows-лаунчер для локальных модификаций S.T.A.L.K.E.R. и автономных сборок на базе X-Ray.
 
 Лаунчер создаёт отдельные профили, изолирует сохранения, логи и настройки, а исходные папки игры и модов не изменяет. Создаваемые профили не копируют игру целиком: лаунчер подключает исходные файлы ссылками, поэтому обычно занимает минимум дополнительного места на диске.
-
-### [Скачать последний релиз](https://github.com/ITzSYUK/StalkerModLauncher/releases/latest)
 
 ### Возможности
 
@@ -120,6 +113,8 @@ dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 
 Техническое описание профилей, workspace, безопасности файлов, настроек и диагностики находится в [docs/TECHNICAL.md](docs/TECHNICAL.md).
 
-### Лицензия
+---
 
-Исходный код лаунчера распространяется по лицензии [GNU GPLv3](LICENSE.md). Сторонние ассеты сохраняют свои исходные лицензии.
+## License
+
+The launcher source code is licensed under the [GNU GPLv3](LICENSE.md). Third-party assets keep their original licenses.
