@@ -34,6 +34,11 @@ public static class AppSettingsNormalizer
             profile.WorkspacePath ??= string.Empty;
             profile.WorkingDirectoryRelative ??= string.Empty;
             profile.GameInstallPath ??= string.Empty;
+            if (!Enum.IsDefined(profile.LaunchBackendKind))
+            {
+                profile.LaunchBackendKind = LaunchBackendKind.LinkedWorkspace;
+            }
+
             profile.IsRunning = false;
             profile.Mods ??= [];
             profile.Mods = new System.Collections.ObjectModel.ObservableCollection<ModEntry>(

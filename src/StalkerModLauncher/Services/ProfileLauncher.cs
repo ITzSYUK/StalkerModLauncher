@@ -1,6 +1,4 @@
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Text;
 using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
@@ -16,137 +14,40 @@ public interface IProfileLauncher
 
 public sealed class ProfileLauncher : IProfileLauncher
 {
-    private const int ErrorElevationRequired = 740;
-    private const string AutoLoadBeginMarker = "-- STALKER_MOD_LAUNCHER_AUTOLOAD_BEGIN";
-    private const string AutoLoadEndMarker = "-- STALKER_MOD_LAUNCHER_AUTOLOAD_END";
-    private readonly WorkspaceBuilder _workspaceBuilder;
+    private readonly IReadOnlyDictionary<LaunchBackendKind, IProfileLaunchBackend> _backends;
 
-    public ProfileLauncher(WorkspaceBuilder workspaceBuilder)
+    public ProfileLauncher(IEnumerable<IProfileLaunchBackend> backends)
     {
-        _workspaceBuilder = workspaceBuilder;
+        _backends = backends.ToDictionary(backend => backend.Kind);
+        if (!_backends.ContainsKey(LaunchBackendKind.LinkedWorkspace))
+        {
+            throw new ArgumentException("The linked workspace launch backend must be registered.", nameof(backends));
+        }
     }
 
-    public async Task<Process> LaunchAsync(
+    public Task<Process> LaunchAsync(
         string gamePath,
         ModProfile profile,
         IProgress<string> progress,
         CancellationToken cancellationToken = default)
     {
-        var workspace = await _workspaceBuilder.BuildAsync(gamePath, profile, progress, cancellationToken);
-        profile.WorkspacePath = workspace.ProfileWorkspacePath;
-        profile.ExecutableRelativePath = workspace.ExecutableRelativePath;
-        profile.WorkingDirectoryRelative = workspace.WorkingDirectoryRelative;
-        RemoveLegacyScriptAutoloadPatch(workspace, profile, progress);
-        progress.Report($"Starting: {workspace.ExecutablePath}");
-
-        var workingDir = string.IsNullOrWhiteSpace(profile.WorkingDirectoryRelative)
-            ? workspace.WorkspaceRoot
-            : FileSystemSafety.ResolvePathInside(
-                workspace.WorkspaceRoot,
-                profile.WorkingDirectoryRelative,
-                "Working directory");
-
-        var process = StartProcess(workspace.ExecutablePath, profile.LaunchArguments, workingDir);
-
-        return process;
+        var backend = ResolveBackend(profile.LaunchBackendKind);
+        progress.Report($"Launch backend: {backend.Kind}.");
+        return backend.LaunchAsync(gamePath, profile, progress, cancellationToken);
     }
 
-    private static Process StartProcess(string executablePath, string? launchArguments, string workingDir)
+    private IProfileLaunchBackend ResolveBackend(LaunchBackendKind kind)
     {
-        try
+        if (_backends.TryGetValue(kind, out var backend))
         {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = executablePath,
-                Arguments = BuildArguments(launchArguments),
-                WorkingDirectory = workingDir,
-                UseShellExecute = false
-            };
-
-            var process = Process.Start(startInfo);
-            if (process is null)
-            {
-                throw new InvalidOperationException("Windows did not start the game process.");
-            }
-
-            return process;
+            return backend;
         }
-        catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorElevationRequired)
+
+        if (kind == LaunchBackendKind.VirtualFileSystem)
         {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = executablePath,
-                Arguments = BuildArguments(launchArguments),
-                WorkingDirectory = workingDir,
-                UseShellExecute = true,
-                Verb = "runas"
-            };
-
-            var process = Process.Start(startInfo);
-            if (process is null)
-            {
-                throw new InvalidOperationException("Windows did not start the game process.");
-            }
-
-            return process;
+            throw new NotSupportedException("Virtual file system launch mode is not implemented yet. Use the workspace launch mode.");
         }
+
+        return _backends[LaunchBackendKind.LinkedWorkspace];
     }
-
-    private static string BuildArguments(string? baseArguments)
-    {
-        return baseArguments?.Trim() ?? string.Empty;
-    }
-
-    private static void RemoveLegacyScriptAutoloadPatch(WorkspaceBuildResult workspace, ModProfile profile, IProgress<string> progress)
-    {
-        if (profile.IsStandalone)
-        {
-            return;
-        }
-
-        var scriptRoot = string.IsNullOrWhiteSpace(profile.WorkingDirectoryRelative)
-            ? workspace.WorkspaceRoot
-            : Path.Combine(workspace.WorkspaceRoot, profile.WorkingDirectoryRelative);
-        var scriptPath = Path.Combine(scriptRoot, "gamedata", "scripts", "ui_main_menu.script");
-        if (!File.Exists(scriptPath))
-        {
-            return;
-        }
-
-        var text = File.ReadAllText(scriptPath, Encoding.Default);
-        var cleanedText = RemoveAutoloadBlock(text);
-
-        if (cleanedText == text)
-        {
-            return;
-        }
-
-        // This file can be linked from the source mod. Delete the workspace entry first so
-        // the cleanup never writes back into the mod folder.
-        File.Delete(scriptPath);
-        File.WriteAllText(scriptPath, cleanedText, Encoding.Default);
-        progress.Report("Removed legacy save autoload hook from profile workspace.");
-    }
-
-    private static string RemoveAutoloadBlock(string text)
-    {
-        while (true)
-        {
-            var begin = text.IndexOf(AutoLoadBeginMarker, StringComparison.Ordinal);
-            if (begin < 0)
-            {
-                return text;
-            }
-
-            var end = text.IndexOf(AutoLoadEndMarker, begin, StringComparison.Ordinal);
-            if (end < 0)
-            {
-                return text[..begin];
-            }
-
-            end += AutoLoadEndMarker.Length;
-            text = text.Remove(begin, end - begin);
-        }
-    }
-
 }

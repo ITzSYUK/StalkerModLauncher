@@ -12,6 +12,7 @@ public sealed class ModProfile : ObservableObject
     private bool _isEnabled = true;
     private bool _isDiscordStatusEnabled = true;
     private bool _isStandalone;
+    private LaunchBackendKind _launchBackendKind = LaunchBackendKind.LinkedWorkspace;
     private string _launchArguments = "-nointro";
     private string _executableRelativePath = @"bin\xr_3da.exe";
     private string _executableSourcePath = string.Empty;
@@ -61,6 +62,13 @@ public sealed class ModProfile : ObservableObject
     {
         get => _isStandalone;
         set => SetProperty(ref _isStandalone, value);
+    }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public LaunchBackendKind LaunchBackendKind
+    {
+        get => _launchBackendKind;
+        set => SetProperty(ref _launchBackendKind, value);
     }
 
     public string LaunchArguments

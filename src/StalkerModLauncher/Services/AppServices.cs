@@ -14,7 +14,13 @@ public sealed class AppServices
         var workspaceBuilder = new WorkspaceBuilder(Paths);
         WorkspaceManagementService = new WorkspaceManagementService(workspaceBuilder);
         ProfileManager = new ProfileManager(Paths, workspaceBuilder);
-        LaunchCoordinator = new LaunchCoordinator(new ProfileLauncher(workspaceBuilder), new GameSessionTracker());
+        LaunchCoordinator = new LaunchCoordinator(
+            new ProfileLauncher(
+                [
+                    new LinkedWorkspaceLaunchBackend(workspaceBuilder),
+                    new VirtualFileSystemLaunchBackend()
+                ]),
+            new GameSessionTracker());
         GameValidator = new GameInstallationValidator();
         ProfileReadinessService = new ProfileReadinessService(GameValidator);
         LaunchPreflightService = new LaunchPreflightService(GameValidator, ProfileManager);
