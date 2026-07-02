@@ -103,12 +103,16 @@ public sealed partial class MainViewModel : ObservableObject
         ScanForModsCommand = new AsyncRelayCommand(
             ScanForModsAsync,
             () => CanEditSelectedProfile && SelectedProfile is { IsStandalone: false });
-        _ = LoadAsync();
+        Initialization = LoadAsync();
     }
 
     public ObservableCollection<ModProfile> Profiles { get; } = new();
 
     public ActivityLogViewModel ActivityLog { get; }
+
+    public Task Initialization { get; }
+
+    public bool HasProfiles => Profiles.Count > 0;
 
     public event EventHandler? ProfileCreationRequested;
 
@@ -248,6 +252,8 @@ public sealed partial class MainViewModel : ObservableObject
     public RelayCommand ExportProfileCommand { get; }
     public RelayCommand ImportProfileCommand { get; }
     public AsyncRelayCommand ScanForModsCommand { get; }
+
+    public void AppendLog(string message) => Log(message);
 
     private void RefreshValidation()
     {

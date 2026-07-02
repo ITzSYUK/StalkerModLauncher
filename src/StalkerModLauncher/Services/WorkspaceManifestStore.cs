@@ -15,8 +15,15 @@ internal sealed class WorkspaceManifestStore
         IProgress<string> progress)
     {
         var manifestPath = Path.Combine(workspaceRoot, ManifestFileName);
-        if (!Directory.Exists(currentWorkspace) || !File.Exists(manifestPath))
+        if (!Directory.Exists(currentWorkspace))
         {
+            progress.Report("Workspace будет подготовлен: папка current ещё не создана.");
+            return null;
+        }
+
+        if (!File.Exists(manifestPath))
+        {
+            progress.Report("Workspace будет подготовлен: кэш сборки отсутствует.");
             return null;
         }
 
@@ -25,12 +32,14 @@ internal sealed class WorkspaceManifestStore
             var manifest = JsonSerializer.Deserialize<WorkspaceBuildManifest>(File.ReadAllText(manifestPath));
             if (!string.Equals(manifest?.Signature, buildSignature, StringComparison.Ordinal))
             {
+                progress.Report("Workspace будет пересобран: изменились файлы, порядок модов или настройки запуска.");
                 return null;
             }
 
             var executablePath = Path.Combine(currentWorkspace, profile.ExecutableRelativePath);
             if (!File.Exists(executablePath))
             {
+                progress.Report("Workspace будет пересобран: выбранный EXE отсутствует в текущей сборке.");
                 return null;
             }
 
@@ -39,6 +48,7 @@ internal sealed class WorkspaceManifestStore
         }
         catch
         {
+            progress.Report("Workspace будет пересобран: не удалось прочитать кэш сборки.");
             return null;
         }
     }

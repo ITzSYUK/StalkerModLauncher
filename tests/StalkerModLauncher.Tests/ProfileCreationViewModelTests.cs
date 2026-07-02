@@ -37,6 +37,26 @@ public sealed class ProfileCreationViewModelTests : IDisposable
         Assert.Contains("мод: patch", viewModel.ExecutableDetectionMessage);
     }
 
+    [Fact]
+    public void FinishCommand_BlocksProfileWhenExecutableIsMissing()
+    {
+        var game = CreateDirectory("game-without-exe");
+        var viewModel = new ProfileCreationViewModel(new DialogService())
+        {
+            Name = "Без бинарника",
+            GamePath = game
+        };
+        var completed = false;
+        viewModel.Completed += (_, _) => completed = true;
+
+        viewModel.NextCommand.Execute(null);
+        viewModel.NextCommand.Execute(null);
+        viewModel.FinishCommand.Execute(null);
+
+        Assert.False(completed);
+        Assert.Contains("Файл запуска не найден", viewModel.Message);
+    }
+
     private string CreateDirectory(string relativePath)
     {
         var path = Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));

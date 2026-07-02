@@ -19,6 +19,9 @@ public sealed class SettingsStore
         _paths = paths;
     }
 
+    public bool HasSettingsFile =>
+        File.Exists(_paths.SettingsFile) || File.Exists(_paths.SettingsBackupFile);
+
     public async Task<AppSettings> LoadAsync()
     {
         await _ioLock.WaitAsync();

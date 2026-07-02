@@ -31,7 +31,7 @@ public sealed record WorkspaceStatus(
     public string PhysicalSizeDisplay => StatisticsAvailable ? FormatSize(PhysicalSizeBytes) : "после пересборки";
     public string FileCountDisplay => StatisticsAvailable ? $"{FileCount:N0}" : "после пересборки";
     public string LinkSummaryDisplay => StatisticsAvailable
-        ? $"Hardlink: {HardLinkCount:N0}  ·  Symlink: {SymbolicLinkCount:N0}  ·  свои файлы: {LocalFileCount:N0}"
+        ? $"Жёсткие ссылки: {HardLinkCount:N0}  ·  Символические ссылки: {SymbolicLinkCount:N0}  ·  Локальные файлы: {LocalFileCount:N0}"
         : "Подробная статистика появится после следующей пересборки workspace.";
     public string BuiltAtDisplay => BuiltAtUtc?.ToLocalTime().ToString("g") ?? "не подготовлен";
     public string StateDisplay

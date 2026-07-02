@@ -142,7 +142,12 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             executableRelativePath = detectedExecutable.RelativePath;
         }
 
-        progress.Report($"Рабочая среда готова. Hard link: {stats.LinkedFiles:N0}; symbolic link: {stats.SymbolicLinkedFiles:N0}; локальных файлов: {stats.ProtectedCopies:N0}.");
+        progress.Report($"Рабочая среда готова. Жёсткие ссылки: {stats.LinkedFiles:N0}; символические ссылки: {stats.SymbolicLinkedFiles:N0}; локальные файлы: {stats.ProtectedCopies:N0}.");
+        if (stats.ProtectedCopies > 0)
+        {
+            progress.Report($"Локальные файлы workspace: {stats.ProtectedCopies:N0}. Служебные файлы: {stats.RequiredLocalFiles:N0}; копии read-only: {stats.ReadOnlyCopiedFiles:N0}. Исходные файлы игры и модов не изменены.");
+        }
+
         if (stats.ReadOnlyHandledFiles > 0)
         {
             progress.Report($"Файлы «только чтение»: {stats.ReadOnlyHandledFiles:N0}. Символические ссылки: {stats.ReadOnlySymbolicLinkedFiles:N0}; независимые копии: {stats.ReadOnlyCopiedFiles:N0}. Исходные файлы модов не изменены.");

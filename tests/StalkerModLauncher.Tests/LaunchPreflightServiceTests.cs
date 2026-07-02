@@ -118,6 +118,33 @@ public sealed class LaunchPreflightServiceTests : IDisposable
             check => check.Title == "Итоговый бинарник" && check.Status == ProfileHealthStatus.Error);
     }
 
+    [Fact]
+    public async Task AnalyzeAsync_WarnsWhenEnabledModFolderIsEmpty()
+    {
+        var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
+        var builder = new WorkspaceBuilder(paths);
+        var service = new LaunchPreflightService(
+            new GameInstallationValidator(),
+            new ProfileManager(paths, builder));
+        var game = CreateFile("game-empty-mod/fsgame.ltx");
+        CreateFile("game-empty-mod/bin/xr_3da.exe");
+        var emptyMod = Path.Combine(_root, "empty-mod");
+        Directory.CreateDirectory(emptyMod);
+        var profile = new ModProfile
+        {
+            GameInstallPath = Path.GetDirectoryName(game)!,
+            ExecutableRelativePath = @"bin\xr_3da.exe"
+        };
+        profile.Mods.Add(new ModEntry { Name = "Empty", SourcePath = emptyMod, Order = 1 });
+
+        var report = await service.AnalyzeAsync(profile);
+
+        Assert.True(report.CanLaunch);
+        Assert.Contains(
+            report.Checks,
+            check => check.Title == "Мод пуст: Empty" && check.Status == ProfileHealthStatus.Warning);
+    }
+
     private string CreateFile(string relativePath)
     {
         var path = Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));

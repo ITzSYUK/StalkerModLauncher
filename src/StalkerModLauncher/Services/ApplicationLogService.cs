@@ -2,6 +2,9 @@ namespace StalkerModLauncher.Services;
 
 public sealed class ApplicationLogService
 {
+    private const long MaxLogFileBytes = 1024 * 1024;
+    private const string LogFileName = "launcher.log";
+    private const string PreviousLogFileName = "launcher.old.log";
     private readonly AppPaths _paths;
     private readonly object _sync = new();
 
@@ -18,8 +21,10 @@ public sealed class ApplicationLogService
             lock (_sync)
             {
                 Directory.CreateDirectory(_paths.ConfigDirectory);
+                var logPath = Path.Combine(_paths.ConfigDirectory, LogFileName);
+                RotateIfNeeded(logPath);
                 File.AppendAllText(
-                    Path.Combine(_paths.ConfigDirectory, "launcher.log"),
+                    logPath,
                     $"[{time:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}");
             }
         }
@@ -29,5 +34,21 @@ public sealed class ApplicationLogService
         }
 
         return $"[{time:HH:mm:ss}] {message}";
+    }
+
+    private void RotateIfNeeded(string logPath)
+    {
+        if (!File.Exists(logPath) || new FileInfo(logPath).Length < MaxLogFileBytes)
+        {
+            return;
+        }
+
+        var previousLogPath = Path.Combine(_paths.ConfigDirectory, PreviousLogFileName);
+        if (File.Exists(previousLogPath))
+        {
+            File.Delete(previousLogPath);
+        }
+
+        File.Move(logPath, previousLogPath);
     }
 }

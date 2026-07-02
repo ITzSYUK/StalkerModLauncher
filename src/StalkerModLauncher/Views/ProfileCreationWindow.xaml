@@ -83,9 +83,19 @@
                            FontSize="24"
                            FontWeight="SemiBold"/>
                 <TextBlock Text="{Binding Message}"
-                           Foreground="{StaticResource MutedTextBrush}"
                            TextTrimming="CharacterEllipsis"
-                           Margin="0,3,0,0"/>
+                           Margin="0,3,0,0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsMessageWarning}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </StackPanel>
             <StackPanel Grid.Column="1"
                         Orientation="Horizontal"

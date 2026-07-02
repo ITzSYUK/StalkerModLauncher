@@ -62,7 +62,7 @@ public partial class App : Application
         {
             var main = CreateMainWindow();
             main.Show();
-            _ = ShowAboutIfNeededAsync();
+            _ = ShowAboutIfNeededAsync(main);
             return;
         }
 
@@ -99,7 +99,7 @@ public partial class App : Application
                 var main = CreateMainWindow();
                 main.Show();
                 splash.Close();
-                await ShowAboutIfNeededAsync();
+                await ShowAboutIfNeededAsync(main);
             };
             splash.BeginAnimation(UIElement.OpacityProperty, timer);
         };
@@ -151,8 +151,8 @@ public partial class App : Application
             _services.WindowSystemIntegrationService);
     }
 
-    private async Task ShowAboutIfNeededAsync()
+    private async Task ShowAboutIfNeededAsync(Window? owner = null)
     {
-        await _services.WindowNavigationService.ShowAboutAsync(onlyIfNeeded: true);
+        await _services.WindowNavigationService.ShowAboutAsync(owner, onlyIfNeeded: true);
     }
 }

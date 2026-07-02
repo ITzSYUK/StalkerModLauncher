@@ -18,6 +18,7 @@ public sealed class ProfileCreationViewModel : ObservableObject
     private string _launchArguments = "-nointro";
     private string _message = "Выберите тип профиля и задайте понятное название.";
     private string _executableDetectionMessage = string.Empty;
+    private bool _isMessageWarning;
 
     public ProfileCreationViewModel(DialogService dialogService)
     {
@@ -189,6 +190,12 @@ public sealed class ProfileCreationViewModel : ObservableObject
         private set => SetProperty(ref _message, value);
     }
 
+    public bool IsMessageWarning
+    {
+        get => _isMessageWarning;
+        private set => SetProperty(ref _isMessageWarning, value);
+    }
+
     public string ExecutableDetectionMessage
     {
         get => _executableDetectionMessage;
@@ -212,9 +219,9 @@ public sealed class ProfileCreationViewModel : ObservableObject
         }
 
         Step++;
-        Message = Step == 2
+        SetMessage(Step == 2
             ? SourceStepDescription
-            : "Проверьте, какой EXE будет запускаться. При необходимости выберите другой файл вручную.";
+            : "Проверьте, какой EXE будет запускаться. При необходимости выберите другой файл вручную.");
 
         if (Step == 3)
         {
@@ -225,9 +232,9 @@ public sealed class ProfileCreationViewModel : ObservableObject
     private void Back()
     {
         Step--;
-        Message = Step == 1
+        SetMessage(Step == 1
             ? "Выберите тип профиля и задайте понятное название."
-            : SourceStepDescription;
+            : SourceStepDescription);
     }
 
     private void Finish()
@@ -266,7 +273,7 @@ public sealed class ProfileCreationViewModel : ObservableObject
     {
         if (Step == 1 && string.IsNullOrWhiteSpace(Name))
         {
-            Message = "Введите название профиля.";
+            SetMessage("Введите название профиля.", isWarning: true);
             return false;
         }
 
@@ -274,13 +281,13 @@ public sealed class ProfileCreationViewModel : ObservableObject
         {
             if (!IsStandalone && !Directory.Exists(GamePath))
             {
-                Message = "Выберите существующую папку базовой игры.";
+                SetMessage("Выберите существующую папку базовой игры.", isWarning: true);
                 return false;
             }
 
             if (IsStandalone && (Mods.Count != 1 || !Directory.Exists(Mods[0].SourcePath)))
             {
-                Message = "Для автономного профиля выберите одну папку мода.";
+                SetMessage("Для автономного профиля выберите одну папку мода.", isWarning: true);
                 return false;
             }
         }
@@ -290,10 +297,15 @@ public sealed class ProfileCreationViewModel : ObservableObject
             try
             {
                 FileSystemSafety.EnsureRelativePath(ExecutableRelativePath, "Бинарник запуска");
+                if (FindExactExecutableSource(CreateExecutableSearchRoots().ToArray(), ExecutableRelativePath) is null)
+                {
+                    SetMessage("Файл запуска не найден в выбранных папках. Выберите EXE вручную или вернитесь к источникам файлов.", isWarning: true);
+                    return false;
+                }
             }
             catch (Exception ex)
             {
-                Message = ex.Message;
+                SetMessage(ex.Message, isWarning: true);
                 return false;
             }
         }
@@ -394,7 +406,7 @@ public sealed class ProfileCreationViewModel : ObservableObject
             }
         }
 
-        Message = "Выбранный бинарник должен находиться внутри папки игры или одного из модов.";
+        SetMessage("Выбранный бинарник должен находиться внутри папки игры или одного из модов.", isWarning: true);
     }
 
     private void AutoDetectExecutable()
@@ -476,6 +488,12 @@ public sealed class ProfileCreationViewModel : ObservableObject
         ((RelayCommand)NextCommand).RaiseCanExecuteChanged();
         ((RelayCommand)BackCommand).RaiseCanExecuteChanged();
         ((RelayCommand)FinishCommand).RaiseCanExecuteChanged();
+    }
+
+    private void SetMessage(string message, bool isWarning = false)
+    {
+        Message = message;
+        IsMessageWarning = isWarning;
     }
 
     private void OnModListChanged()

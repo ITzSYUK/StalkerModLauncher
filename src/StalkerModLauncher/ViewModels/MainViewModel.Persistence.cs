@@ -74,6 +74,8 @@ public sealed partial class MainViewModel
 
     private void ProfilesOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        OnPropertyChanged(nameof(HasProfiles));
+
         if (e.NewItems is not null)
         {
             foreach (ModProfile profile in e.NewItems)

@@ -62,13 +62,14 @@ public sealed class WindowNavigationService
         new ModCatalogWindow(viewModel, _windowSystemIntegrationService) { Owner = owner }.ShowDialog();
     }
 
-    public void ShowProfileHealth(Window owner, ModProfile profile)
+    public void ShowProfileHealth(Window owner, ModProfile profile, Action<string>? log = null)
     {
         var viewModel = new ProfileHealthViewModel(
             profile,
             _profileHealthService,
             _dialogService,
-            _workspaceManagementService);
+            _workspaceManagementService,
+            log);
         new ProfileHealthWindow(viewModel) { Owner = owner }.ShowDialog();
     }
 

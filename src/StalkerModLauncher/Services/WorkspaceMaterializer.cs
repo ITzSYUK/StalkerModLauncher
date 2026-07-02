@@ -55,7 +55,7 @@ internal sealed class WorkspaceMaterializer
             return;
         }
 
-        progress.Report("Checking symbolic link support for files stored on other drives...");
+        progress.Report("Проверка symbolic link для файлов на других дисках...");
         foreach (var sourceFile in crossVolumeFiles)
         {
             var testLink = Path.Combine(workspaceRoot, $".stalker-launcher-link-test-{Guid.NewGuid():N}");
@@ -159,7 +159,7 @@ internal sealed class WorkspaceMaterializer
         var length = new FileInfo(sourceFile).Length;
         if (WorkspaceFileStrategy.MustCopy(relativePath))
         {
-            CopyIndependentFile(sourceFile, targetFile, relativePath, stats, length);
+            CopyIndependentFile(sourceFile, targetFile, relativePath, stats, length, isRequiredLocalFile: true);
             return;
         }
 
@@ -201,7 +201,8 @@ internal sealed class WorkspaceMaterializer
         string relativePath,
         WorkspaceBuildStats stats,
         long length,
-        bool isReadOnlySource = false)
+        bool isReadOnlySource = false,
+        bool isRequiredLocalFile = false)
     {
         File.Copy(sourceFile, targetFile, overwrite: false);
         var attributes = File.GetAttributes(targetFile);
@@ -210,7 +211,11 @@ internal sealed class WorkspaceMaterializer
             File.SetAttributes(targetFile, attributes & ~FileAttributes.ReadOnly);
         }
 
-        if (isReadOnlySource)
+        if (isRequiredLocalFile)
+        {
+            stats.RecordRequiredLocal(relativePath, length);
+        }
+        else if (isReadOnlySource)
         {
             stats.RecordReadOnly(relativePath, WorkspaceFileKind.LocalCopy, length);
         }
@@ -339,11 +344,13 @@ internal sealed class WorkspaceBuildStats
 {
     private readonly Dictionary<string, WorkspaceFileStat> _files = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, WorkspaceFileKind> _readOnlyFiles = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _requiredLocalFiles = new(StringComparer.OrdinalIgnoreCase);
 
     public int FileCount => _files.Count;
     public int LinkedFiles => _files.Values.Count(file => file.Kind == WorkspaceFileKind.HardLink);
     public int SymbolicLinkedFiles => _files.Values.Count(file => file.Kind == WorkspaceFileKind.SymbolicLink);
     public int ProtectedCopies => _files.Values.Count(file => file.Kind == WorkspaceFileKind.LocalCopy);
+    public int RequiredLocalFiles => _requiredLocalFiles.Count;
     public int ReadOnlyHandledFiles => _readOnlyFiles.Count;
     public int ReadOnlySymbolicLinkedFiles => _readOnlyFiles.Values.Count(kind => kind == WorkspaceFileKind.SymbolicLink);
     public int ReadOnlyCopiedFiles => _readOnlyFiles.Values.Count(kind => kind == WorkspaceFileKind.LocalCopy);
@@ -354,12 +361,21 @@ internal sealed class WorkspaceBuildStats
     {
         _files[relativePath] = new WorkspaceFileStat(kind, length);
         _readOnlyFiles.Remove(relativePath);
+        _requiredLocalFiles.Remove(relativePath);
     }
 
     public void RecordReadOnly(string relativePath, WorkspaceFileKind kind, long length)
     {
         _files[relativePath] = new WorkspaceFileStat(kind, length);
         _readOnlyFiles[relativePath] = kind;
+        _requiredLocalFiles.Remove(relativePath);
+    }
+
+    public void RecordRequiredLocal(string relativePath, long length)
+    {
+        _files[relativePath] = new WorkspaceFileStat(WorkspaceFileKind.LocalCopy, length);
+        _readOnlyFiles.Remove(relativePath);
+        _requiredLocalFiles.Add(relativePath);
     }
 }
 

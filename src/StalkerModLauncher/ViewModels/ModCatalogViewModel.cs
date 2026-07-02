@@ -12,6 +12,7 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
     private readonly ApProCatalogService _catalogService;
     private readonly DialogService _dialogService;
     private readonly List<ModCatalogItemViewModel> _allItems = new();
+    private readonly SemaphoreSlim _pageLoadLock = new(1, 1);
     private CancellationTokenSource? _loadCancellation;
     private ApProCatalogCategory _selectedCategory = ApProCatalogCategory.ShadowOfChernobyl;
     private bool _isLoading;
@@ -83,6 +84,31 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
         private set => SetProperty(ref _statusText, value);
     }
 
+    public string CatalogProgressText
+    {
+        get
+        {
+            if (IsLoading)
+            {
+                return string.Empty;
+            }
+
+            var loaded = _allItems.Count;
+            if (loaded == 0)
+            {
+                return string.Empty;
+            }
+
+            var shown = Items.Count;
+            var pages = _totalPageCount > 1
+                ? $" · страниц: {Math.Min(_nextPageNumber - 1, _totalPageCount)}/{_totalPageCount}"
+                : string.Empty;
+            return string.IsNullOrWhiteSpace(SearchQuery)
+                ? $"Загружено: {loaded:N0}{pages}"
+                : $"Показано: {shown:N0} из {loaded:N0}{pages}";
+        }
+    }
+
     public async Task LoadInitialAsync(ApProCatalogCategory category, bool forceRefresh = false)
     {
         _loadCancellation?.Cancel();
@@ -99,6 +125,7 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
             IsLoadingMore = false;
             _isSearchLoadingAll = false;
             StatusText = "Загружаем каталог AP-PRO...";
+            OnPropertyChanged(nameof(CatalogProgressText));
 
             DisposeItems();
             _nextPageNumber = 1;
@@ -118,6 +145,7 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
             HasMorePages = page.Items.Count > 0 && _nextPageNumber <= _totalPageCount;
 
             UpdateEmptyStatus();
+            OnPropertyChanged(nameof(CatalogProgressText));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -126,7 +154,7 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
         {
             if (generation == _loadGeneration)
             {
-                StatusText = "Не удалось загрузить каталог. Проверьте подключение к интернету и попробуйте обновить страницу.";
+                StatusText = "AP-PRO недоступен или не отвечает. Проверьте интернет и попробуйте обновить каталог.";
             }
         }
         finally
@@ -144,6 +172,12 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
     {
         if (IsLoading || IsLoadingMore || !HasMorePages || _loadCancellation is null)
         {
+            return;
+        }
+
+        if (!await _pageLoadLock.WaitAsync(0))
+        {
+            await Task.Delay(50);
             return;
         }
 
@@ -172,7 +206,7 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
         {
             if (generation == _loadGeneration)
             {
-                StatusText = "Не удалось загрузить следующую страницу. Попробуйте обновить список.";
+                StatusText = "Не удалось загрузить страницу AP-PRO. Попробуйте обновить каталог.";
                 HasMorePages = false;
             }
         }
@@ -182,7 +216,10 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
             {
                 IsLoadingMore = false;
                 UpdateEmptyStatus();
+                OnPropertyChanged(nameof(CatalogProgressText));
             }
+
+            _pageLoadLock.Release();
         }
     }
 
@@ -221,6 +258,7 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
         }
 
         UpdateEmptyStatus();
+        OnPropertyChanged(nameof(CatalogProgressText));
     }
 
     private void DisposeItems()
@@ -232,6 +270,7 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
 
         _allItems.Clear();
         Items.Clear();
+        OnPropertyChanged(nameof(CatalogProgressText));
     }
 
     private void ApplyFilter()
@@ -243,6 +282,7 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
         }
 
         UpdateEmptyStatus();
+        OnPropertyChanged(nameof(CatalogProgressText));
     }
 
     private bool MatchesSearch(ModCatalogItemViewModel item)
@@ -293,6 +333,12 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
                    generation == _loadGeneration &&
                    HasMorePages)
             {
+                if (IsLoadingMore)
+                {
+                    await Task.Delay(50, cancellationToken);
+                    continue;
+                }
+
                 await LoadNextPageAsync();
             }
         }

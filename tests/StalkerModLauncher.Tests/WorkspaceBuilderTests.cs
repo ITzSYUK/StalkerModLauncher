@@ -158,6 +158,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
         var rebuilt = await _builder.BuildAsync(_gamePath, profile, rebuildProgress);
 
         Assert.DoesNotContain(rebuildProgress.Messages, message => message.Contains("Workspace уже актуален", StringComparison.Ordinal));
+        Assert.Contains(rebuildProgress.Messages, message => message.Contains("Workspace будет пересобран", StringComparison.Ordinal));
         Assert.Equal("updated content", File.ReadAllText(Path.Combine(rebuilt.WorkspaceRoot, "gamedata", "config", "shared.ltx")));
     }
 
@@ -172,6 +173,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
         var rebuilt = await _builder.BuildAsync(_gamePath, profile, progress);
 
         Assert.True(File.Exists(rebuilt.ExecutablePath));
+        Assert.Contains(progress.Messages, message => message.Contains("выбранный EXE отсутствует", StringComparison.Ordinal));
         Assert.Contains(progress.Messages, message => message.Contains("Подготовка чистой рабочей среды", StringComparison.Ordinal));
     }
 

@@ -12,6 +12,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
     private readonly ProfileHealthService _healthService;
     private readonly DialogService _dialogService;
     private readonly WorkspaceManagementService _workspaceManagementService;
+    private readonly Action<string>? _log;
     private ProfileHealthReport? _report;
     private string _summary = "Проверка состояния профиля...";
     private bool _isChecking;
@@ -22,12 +23,14 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         ModProfile profile,
         ProfileHealthService healthService,
         DialogService dialogService,
-        WorkspaceManagementService workspaceManagementService)
+        WorkspaceManagementService workspaceManagementService,
+        Action<string>? log = null)
     {
         _profile = profile;
         _healthService = healthService;
         _dialogService = dialogService;
         _workspaceManagementService = workspaceManagementService;
+        _log = log;
 
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => !IsChecking);
         OpenProfileCommand = new RelayCommand(OpenProfile, () => Directory.Exists(_report?.ProfileFolderPath));
@@ -172,7 +175,18 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
             return;
         }
 
-        RunAction(() => _workspaceManagementService.ClearCache(_profile));
+        try
+        {
+            _workspaceManagementService.ClearCache(_profile, new Progress<string>(ReportWorkspaceProgress));
+            Log($"Кэш workspace очищен из окна «Состояние»: {_profile.Name}");
+        }
+        catch (Exception ex)
+        {
+            Log($"Очистка кэша workspace не выполнена: {ex.Message}");
+            _dialogService.ShowError("Не удалось очистить кэш workspace", ex.Message);
+            return;
+        }
+
         _ = RefreshAsync();
     }
 
@@ -182,12 +196,15 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         {
             IsChecking = true;
             Summary = "Пересборка workspace...";
-            var progress = new Progress<string>(message => Summary = message);
+            Log($"Пересборка workspace запущена из окна «Состояние»: {_profile.Name}");
+            var progress = new Progress<string>(ReportWorkspaceProgress);
             await _workspaceManagementService.RebuildAsync(_profile, progress);
+            Log($"Пересборка workspace завершена из окна «Состояние»: {_profile.Name}");
             await RefreshAsync();
         }
         catch (Exception ex)
         {
+            Log($"Пересборка workspace не выполнена: {ex.Message}");
             _dialogService.ShowError("Не удалось пересобрать workspace", ex.Message);
         }
         finally
@@ -214,12 +231,15 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         try
         {
             IsChecking = true;
-            var progress = new Progress<string>(message => Summary = message);
+            Log($"Перенос workspace запущен из окна «Состояние»: {_profile.Name}");
+            var progress = new Progress<string>(ReportWorkspaceProgress);
             await _workspaceManagementService.MoveAsync(_profile, destination, progress);
+            Log($"Workspace перенесён из окна «Состояние»: {_profile.Name}");
             await RefreshAsync();
         }
         catch (Exception ex)
         {
+            Log($"Перенос workspace не выполнен: {ex.Message}");
             _dialogService.ShowError("Не удалось перенести workspace", ex.Message);
         }
         finally
@@ -239,6 +259,14 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
             _dialogService.ShowError("Состояние профиля", ex.Message);
         }
     }
+
+    private void ReportWorkspaceProgress(string message)
+    {
+        Summary = message;
+        Log(message);
+    }
+
+    private void Log(string message) => _log?.Invoke(message);
 
     private void RaiseCommandStates()
     {

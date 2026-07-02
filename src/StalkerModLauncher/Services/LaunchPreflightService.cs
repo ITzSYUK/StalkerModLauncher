@@ -45,10 +45,19 @@ public sealed class LaunchPreflightService
         foreach (var mod in enabledMods)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var exists = Directory.Exists(mod.SourcePath);
             checks.Add(new ProfileHealthCheck(
-                Directory.Exists(mod.SourcePath) ? ProfileHealthStatus.Healthy : ProfileHealthStatus.Error,
+                exists ? ProfileHealthStatus.Healthy : ProfileHealthStatus.Error,
                 $"Источник: {mod.Name}",
-                Directory.Exists(mod.SourcePath) ? mod.SourcePath : $"Папка не найдена: {mod.SourcePath}"));
+                exists ? mod.SourcePath : $"Папка не найдена: {mod.SourcePath}"));
+
+            if (exists && !HasAnyFile(mod.SourcePath, cancellationToken))
+            {
+                checks.Add(new ProfileHealthCheck(
+                    ProfileHealthStatus.Warning,
+                    $"Мод пуст: {mod.Name}",
+                    "В папке не найдено файлов. Возможно, выбрана внешняя или неправильная папка мода."));
+            }
         }
 
         try
@@ -185,6 +194,28 @@ public sealed class LaunchPreflightService
             hasEngineDll
                 ? "Рядом с бинарником найдены DLL движка."
                 : "Рядом с выбранным бинарником не найдены типичные DLL движка. Это допустимо не для всех сборок."));
+    }
+
+    private static bool HasAnyFile(string root, CancellationToken cancellationToken)
+    {
+        try
+        {
+            foreach (var _ in Directory.EnumerateFiles(root, "*", SafeEnumerationOptions).Take(1))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return true;
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return true;
+        }
+        catch (IOException)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     internal static string? FindFinalSource(ModProfile profile, string relativePath)
@@ -326,6 +357,13 @@ public sealed class LaunchPreflightService
 
     private static ProfileHealthCheck Error(string title, string details) =>
         new(ProfileHealthStatus.Error, title, details);
+
+    private static EnumerationOptions SafeEnumerationOptions { get; } = new()
+    {
+        RecurseSubdirectories = true,
+        IgnoreInaccessible = true,
+        AttributesToSkip = FileAttributes.ReparsePoint
+    };
 
     private sealed record ExecutableSourceInfo(
         string FullPath,

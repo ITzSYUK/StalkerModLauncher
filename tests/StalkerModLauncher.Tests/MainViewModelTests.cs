@@ -24,6 +24,21 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task HasProfiles_TracksProfileCollectionState()
+    {
+        await RunWithViewModelAsync((viewModel, _) =>
+        {
+            Assert.False(viewModel.HasProfiles);
+
+            var profile = new ModProfile { Name = "First profile" };
+            viewModel.AddCreatedProfile(profile);
+
+            Assert.True(viewModel.HasProfiles);
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
     public async Task AddCreatedProfile_SelectsProfileAndDoesNotInheritPreviousGamePath()
     {
         await RunWithViewModelAsync((viewModel, root) =>

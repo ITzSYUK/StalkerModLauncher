@@ -252,19 +252,29 @@
             </TextBlock>
         </Grid>
 
-        <StackPanel Grid.Row="2"
-                    Orientation="Horizontal"
-                    Margin="0,10,0,0">
-            <TextBlock Text="Модификации, отображаемые на странице, принадлежат их авторам. Информация предоставляется с использованием материалов сайта "
+        <Grid Grid.Row="2"
+              Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Модификации, отображаемые на странице, принадлежат их авторам. Информация предоставляется с использованием материалов сайта "
+                           Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="10.5"/>
+                <TextBlock Text="AP-PRO.RU ©"
+                           Foreground="{StaticResource AccentBrush}"
+                           FontSize="10.5"
+                           FontWeight="SemiBold"
+                           Cursor="Hand"
+                           ToolTip="Открыть AP-PRO.RU"
+                           MouseLeftButtonUp="ApProLink_OnMouseLeftButtonUp"/>
+            </StackPanel>
+            <TextBlock Grid.Column="1"
+                       Text="{Binding CatalogProgressText}"
                        Foreground="{StaticResource MutedTextBrush}"
-                       FontSize="10.5"/>
-            <TextBlock Text="AP-PRO.RU ©"
-                       Foreground="{StaticResource AccentBrush}"
                        FontSize="10.5"
-                       FontWeight="SemiBold"
-                       Cursor="Hand"
-                       ToolTip="Открыть AP-PRO.RU"
-                       MouseLeftButtonUp="ApProLink_OnMouseLeftButtonUp"/>
-        </StackPanel>
+                       Margin="16,0,0,0"/>
+        </Grid>
     </Grid>
 </Window>

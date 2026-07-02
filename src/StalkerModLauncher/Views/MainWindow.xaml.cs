@@ -90,7 +90,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        _navigation.ShowProfileHealth(this, profile);
+        _navigation.ShowProfileHealth(this, profile, ViewModel is null ? null : ViewModel.AppendLog);
     }
 
     private async void Title_MouseDown(object sender, MouseButtonEventArgs e)

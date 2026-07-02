@@ -79,6 +79,16 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task HasSettingsFile_IsFalseUntilSettingsAreSaved()
+    {
+        Assert.False(_store.HasSettingsFile);
+
+        await _store.SaveAsync(new AppSettings());
+
+        Assert.True(_store.HasSettingsFile);
+    }
+
+    [Fact]
     public async Task SaveAsync_PreservesProfileAndModOrder()
     {
         var first = new ModProfile { Name = "First" };

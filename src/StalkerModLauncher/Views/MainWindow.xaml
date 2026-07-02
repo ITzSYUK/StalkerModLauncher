@@ -55,26 +55,80 @@
                     CornerRadius="6"
                     Padding="14">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+                    <Grid>
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasProfiles}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-                    <controls:GamePathBar Grid.Row="0"
-                                          Margin="0,0,0,10"/>
+                        <controls:GamePathBar Grid.Row="0"
+                                              Margin="0,0,0,10"/>
 
-                    <controls:ProfileHeaderView Grid.Row="1"
-                                                ProfileHealthRequested="ProfileHealthButton_OnClick"
-                                                ProfileSettingsRequested="EditProfileButton_OnClick"
-                                                ScreenshotsRequested="ScreenshotsButton_OnClick"/>
+                        <controls:ProfileHeaderView Grid.Row="1"
+                                                    ProfileHealthRequested="ProfileHealthButton_OnClick"
+                                                    ProfileSettingsRequested="EditProfileButton_OnClick"
+                                                    ScreenshotsRequested="ScreenshotsButton_OnClick"/>
 
-                    <controls:ProfileSummaryView Grid.Row="2"/>
+                        <controls:ProfileSummaryView Grid.Row="2"/>
 
-                    <controls:ModPanelView Grid.Row="3"
-                                           Grid.RowSpan="2"/>
+                        <controls:ModPanelView Grid.Row="3"
+                                               Grid.RowSpan="2"/>
+                    </Grid>
+
+                    <Border Background="{StaticResource FieldBackgroundBrush}"
+                            BorderBrush="{StaticResource StrokeBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="28">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasProfiles}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Grid>
+                            <StackPanel Width="420"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="Профилей пока нет"
+                                           FontSize="28"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextBrush}"
+                                           TextAlignment="Center"
+                                           Margin="0,0,0,8"/>
+                                <TextBlock Text="Профиль хранит список модов, порядок загрузки, выбранный EXE, сохранения и рабочую среду."
+                                           FontSize="14"
+                                           Foreground="{StaticResource MutedTextBrush}"
+                                           TextWrapping="Wrap"
+                                           TextAlignment="Center"
+                                           LineHeight="21"
+                                           Margin="0,0,0,22"/>
+                                <Button Content="Создать первый профиль"
+                                        Command="{Binding NewProfileCommand}"
+                                        FontSize="15"
+                                        FontWeight="SemiBold"
+                                        Padding="18,10"
+                                        MinWidth="220"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
                 </Grid>
             </Border>
         </Grid>
