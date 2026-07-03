@@ -71,10 +71,11 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var workspaceRoot = EnsureProfileWorkspace(profile, gamePath, progress);
         var currentWorkspace = Path.Combine(workspaceRoot, "current");
         FileSystemSafety.EnsureDirectoryInside(currentWorkspace, workspaceRoot);
+        var fileLayerPlan = FileLayerPlan.CreateLinkedWorkspace(gamePath, profile, workspaceRoot);
         progress.Report("Проверка файлов игры и модов...");
         var scanTimer = Stopwatch.StartNew();
-        var sourceSnapshot = _sourceScanner.Capture(gamePath, profile, cancellationToken);
-        var buildSignature = _sourceScanner.CreateBuildSignature(WorkspaceFormatVersion, profile, sourceSnapshot);
+        var sourceSnapshot = _sourceScanner.Capture(fileLayerPlan, cancellationToken);
+        var buildSignature = _sourceScanner.CreateBuildSignature(WorkspaceFormatVersion, profile, sourceSnapshot, fileLayerPlan);
         scanTimer.Stop();
         var cachedExecutable = _manifestStore.TryGetCachedExecutable(workspaceRoot, currentWorkspace, profile, buildSignature, progress);
         if (cachedExecutable is not null)
@@ -103,11 +104,11 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         _materializer.MirrorBaseGame(sourceSnapshot.Game, currentWorkspace, progress, stats, cancellationToken);
         baseGameTimer.Stop();
 
-        var enabledMods = profile.Mods.Where(mod => mod.IsEnabled).OrderBy(mod => mod.Order).ToArray();
         var modsTimer = Stopwatch.StartNew();
-        foreach (var mod in enabledMods)
+        foreach (var layer in fileLayerPlan.Mods)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var mod = layer.Mod!;
             _materializer.ApplyMod(currentWorkspace, mod, sourceSnapshot.Mods[mod.Id], progress, stats, cancellationToken);
         }
         modsTimer.Stop();

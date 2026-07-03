@@ -6,6 +6,24 @@ namespace StalkerModLauncher.Services;
 
 internal sealed class WorkspaceSourceScanner
 {
+    public WorkspaceSourceSnapshot Capture(FileLayerPlan plan, CancellationToken cancellationToken)
+    {
+        var game = CaptureDirectory(plan.BaseGame.RootPath, cancellationToken);
+        var mods = new Dictionary<string, DirectorySnapshot>();
+        foreach (var layer in plan.Mods)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!Directory.Exists(layer.RootPath))
+            {
+                throw new DirectoryNotFoundException($"Mod folder was not found: {layer.RootPath}");
+            }
+
+            mods.Add(layer.Id, CaptureDirectory(layer.RootPath, cancellationToken));
+        }
+
+        return new WorkspaceSourceSnapshot(game, mods);
+    }
+
     public WorkspaceSourceSnapshot Capture(string gamePath, ModProfile profile, CancellationToken cancellationToken)
     {
         var game = CaptureDirectory(gamePath, cancellationToken);
@@ -24,20 +42,33 @@ internal sealed class WorkspaceSourceScanner
         return new WorkspaceSourceSnapshot(game, mods);
     }
 
-    public string CreateBuildSignature(string formatVersion, ModProfile profile, WorkspaceSourceSnapshot snapshot)
+    public string CreateBuildSignature(
+        string formatVersion,
+        ModProfile profile,
+        WorkspaceSourceSnapshot snapshot,
+        FileLayerPlan plan)
     {
         var builder = new StringBuilder();
         builder.AppendLine(formatVersion);
+        foreach (var layer in plan.SourceLayers)
+        {
+            builder.Append(layer.Kind).Append('|')
+                .Append(layer.Order).Append('|')
+                .Append(layer.Id).Append('|')
+                .Append(layer.RootPath).AppendLine();
+        }
+
         AppendDirectoryFingerprint(builder, snapshot.Game);
         builder.AppendLine(profile.ExecutableRelativePath);
         builder.AppendLine(profile.ExecutableSourcePath);
         builder.AppendLine(profile.IsStandalone ? "standalone" : "overlay");
 
-        foreach (var mod in profile.Mods.OrderBy(mod => mod.Order))
+        foreach (var layer in plan.Mods)
         {
-            builder.Append(mod.Order).Append('|')
+            var mod = layer.Mod!;
+            builder.Append(layer.Order).Append('|')
                 .Append(mod.IsEnabled).Append('|')
-                .Append(Path.GetFullPath(mod.SourcePath)).AppendLine();
+                .Append(layer.RootPath).AppendLine();
 
             if (snapshot.Mods.TryGetValue(mod.Id, out var modSnapshot))
             {

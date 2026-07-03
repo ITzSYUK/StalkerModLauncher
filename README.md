@@ -1,9 +1,7 @@
 # S.T.A.L.K.E.R. Mod Launcher
 
-<p align="center">
-  <img src="assets/screenshots/launcher_main_screen.png" alt="S.T.A.L.K.E.R. Mod Launcher main window" width="49%">
-  <img src="assets/screenshots/launcher_mods_browser.png" alt="AP-PRO modification browser" width="49%">
-</p>
+| ![Screenshot](assets/screenshots/launcher_main_screen.png) | ![Screenshot](assets/screenshots/launcher_mods_browser.png) |
+| ---------------------------------------------------------- | ----------------------------------------------------------- |
 
 <p align="center">
   <a href="https://github.com/ITzSYUK/StalkerModLauncher/releases/latest"><strong>Download latest release / Скачать последний релиз</strong></a>
