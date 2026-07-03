@@ -17,6 +17,18 @@ public sealed class ModConflictAnalyzer
     }
 
     public Task<IReadOnlyDictionary<string, ModConflictState>> AnalyzeAsync(
+        FileLayerPlan plan,
+        string? launchExecutableRelativePath,
+        string? launchExecutableSourcePath,
+        CancellationToken cancellationToken = default)
+    {
+        var mods = plan.Mods
+            .Select(ModConflictInput.FromLayer)
+            .ToArray();
+        return AnalyzeAsync(mods, launchExecutableRelativePath, launchExecutableSourcePath, cancellationToken);
+    }
+
+    public Task<IReadOnlyDictionary<string, ModConflictState>> AnalyzeAsync(
         IReadOnlyList<ModConflictInput> mods,
         string? launchExecutableRelativePath,
         CancellationToken cancellationToken = default)
@@ -195,6 +207,11 @@ public sealed record ModConflictInput(string Id, string Name, string SourcePath,
     public static ModConflictInput FromMod(ModEntry mod)
     {
         return new ModConflictInput(mod.Id, mod.Name, mod.SourcePath, mod.IsEnabled);
+    }
+
+    public static ModConflictInput FromLayer(FileLayer layer)
+    {
+        return new ModConflictInput(layer.Id, layer.Name, layer.RootPath, IsEnabled: true);
     }
 }
 

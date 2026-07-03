@@ -17,24 +17,37 @@ public sealed partial class MainViewModel
             return;
         }
 
-        var inputs = profile.Mods.Select(ModConflictInput.FromMod).ToArray();
+        var plan = TryCreateConflictAnalysisPlan(profile);
+        var inputs = plan is null
+            ? profile.Mods
+                .OrderBy(mod => mod.Order)
+                .Select(ModConflictInput.FromMod)
+                .ToArray()
+            : Array.Empty<ModConflictInput>();
         var cancellation = new CancellationTokenSource();
         _conflictAnalysisCancellation = cancellation;
-        _ = ApplyConflictAnalysisAsync(profile, inputs, cancellation.Token);
+        _ = ApplyConflictAnalysisAsync(profile, plan, inputs, cancellation.Token);
     }
 
     private async Task ApplyConflictAnalysisAsync(
         ModProfile profile,
+        FileLayerPlan? plan,
         IReadOnlyList<ModConflictInput> inputs,
         CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _modConflictAnalyzer.AnalyzeAsync(
-                inputs,
-                profile.ExecutableRelativePath,
-                profile.ExecutableSourcePath,
-                cancellationToken);
+            var result = plan is not null
+                ? await _modConflictAnalyzer.AnalyzeAsync(
+                    plan,
+                    profile.ExecutableRelativePath,
+                    profile.ExecutableSourcePath,
+                    cancellationToken)
+                : await _modConflictAnalyzer.AnalyzeAsync(
+                    inputs,
+                    profile.ExecutableRelativePath,
+                    profile.ExecutableSourcePath,
+                    cancellationToken);
             await InvokeOnUiAsync(() =>
             {
                 if (cancellationToken.IsCancellationRequested || SelectedProfile != profile)
@@ -52,6 +65,19 @@ public sealed partial class MainViewModel
         {
             // A newer profile or mod state superseded this analysis.
         }
+    }
+
+    private static FileLayerPlan? TryCreateConflictAnalysisPlan(ModProfile profile)
+    {
+        if (profile.IsStandalone || string.IsNullOrWhiteSpace(profile.GameInstallPath))
+        {
+            return null;
+        }
+
+        var workspaceRoot = string.IsNullOrWhiteSpace(profile.WorkspacePath)
+            ? Path.Combine(Path.GetTempPath(), "StalkerModLauncher", "analysis", profile.Id)
+            : profile.WorkspacePath;
+        return FileLayerPlan.CreateLinkedWorkspace(profile.GameInstallPath, profile, workspaceRoot);
     }
 
     private static void ApplyConflictState(ModEntry mod, ModConflictState? state, string executableRelativePath)

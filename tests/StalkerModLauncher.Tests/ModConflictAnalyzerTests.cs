@@ -1,3 +1,4 @@
+using StalkerModLauncher.Models;
 using StalkerModLauncher.Services;
 using Xunit;
 
@@ -83,6 +84,44 @@ public sealed class ModConflictAnalyzerTests : IDisposable
         Assert.False(result["main"].ProvidesLaunchExecutable);
         Assert.True(result["patch"].ProvidesLaunchExecutable);
         Assert.False(result["disabled"].ProvidesLaunchExecutable);
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_UsesFileLayerPlanOrder()
+    {
+        var main = CreateMod("main", "gamedata/config/shared.ltx", "bin/xr_3da.exe");
+        var patch = CreateMod("patch", "gamedata/config/shared.ltx", "bin/xr_3da.exe");
+        var profile = new ModProfile
+        {
+            GameInstallPath = Path.Combine(_root, "game"),
+            ExecutableRelativePath = @"bin\xr_3da.exe"
+        };
+        profile.Mods.Add(new ModEntry
+        {
+            Id = "patch",
+            Name = "Patch",
+            SourcePath = patch,
+            IsEnabled = true,
+            Order = 2
+        });
+        profile.Mods.Add(new ModEntry
+        {
+            Id = "main",
+            Name = "Main",
+            SourcePath = main,
+            IsEnabled = true,
+            Order = 1
+        });
+        var plan = FileLayerPlan.CreateLinkedWorkspace(profile.GameInstallPath, profile, Path.Combine(_root, "workspace"));
+        var analyzer = new ModConflictAnalyzer();
+
+        var result = await analyzer.AnalyzeAsync(plan, profile.ExecutableRelativePath, profile.ExecutableSourcePath);
+
+        Assert.False(result["main"].HasOverlapsAbove);
+        Assert.True(result["patch"].HasOverlapsAbove);
+        Assert.Equal(2, result["patch"].OverwrittenFileCount);
+        Assert.False(result["main"].ProvidesLaunchExecutable);
+        Assert.True(result["patch"].ProvidesLaunchExecutable);
     }
 
     [Fact]
