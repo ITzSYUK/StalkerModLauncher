@@ -135,13 +135,12 @@ public sealed class SettingsStoreTests : IDisposable
     public async Task SaveAsync_DoesNotPersistRuntimeProperties()
     {
         var profile = new ModProfile { IsRunning = true };
-        profile.Mods.Add(new ModEntry { IsLocked = true, HasOverlapsAbove = true });
+        profile.Mods.Add(new ModEntry { HasOverlapsAbove = true });
 
         await _store.SaveAsync(new AppSettings { Profiles = [profile] });
         var json = await File.ReadAllTextAsync(_paths.SettingsFile);
 
         Assert.DoesNotContain("\"IsRunning\"", json);
-        Assert.DoesNotContain("\"IsLocked\"", json);
         Assert.DoesNotContain("\"HasOverlapsAbove\"", json);
         Assert.DoesNotContain("\"PlaytimeDisplay\"", json);
         Assert.DoesNotContain("\"LastPlayedDisplay\"", json);

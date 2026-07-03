@@ -158,7 +158,7 @@ public sealed partial class MainViewModel : ObservableObject
             }
 
             SelectedMod = null;
-            RecalculateLockedMods();
+            RecalculateModOverlayInfo();
             RefreshValidation();
             RaiseCommandStates();
             OnPropertyChanged(nameof(GameInstallPath));
@@ -187,7 +187,7 @@ public sealed partial class MainViewModel : ObservableObject
         if (e.PropertyName == nameof(ModProfile.ExecutableRelativePath) ||
             e.PropertyName == nameof(ModProfile.ExecutableSourcePath))
         {
-            RecalculateLockedMods();
+            RecalculateModOverlayInfo();
         }
     }
 

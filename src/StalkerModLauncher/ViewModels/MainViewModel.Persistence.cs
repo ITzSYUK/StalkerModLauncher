@@ -109,7 +109,7 @@ public sealed partial class MainViewModel
         }
 
         if (SelectedProfile is not null) _modListEditor.Renumber(SelectedProfile);
-        RecalculateLockedMods();
+        RecalculateModOverlayInfo();
         RefreshValidation();
         _autoSave.Schedule();
     }
@@ -129,8 +129,7 @@ public sealed partial class MainViewModel
 
     private void ModOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(ModEntry.IsLocked)
-            or nameof(ModEntry.HasOverlapsAbove)
+        if (e.PropertyName is nameof(ModEntry.HasOverlapsAbove)
             or nameof(ModEntry.OverwrittenFileCount)
             or nameof(ModEntry.OverwrittenModCount)
             or nameof(ModEntry.ProvidesLaunchExecutable)
@@ -143,7 +142,7 @@ public sealed partial class MainViewModel
 
         RefreshValidation();
         _autoSave.Schedule();
-        if (e.PropertyName == nameof(ModEntry.IsEnabled)) RecalculateLockedMods();
+        if (e.PropertyName == nameof(ModEntry.IsEnabled)) RecalculateModOverlayInfo();
     }
 
     public async Task CleanupAsync()

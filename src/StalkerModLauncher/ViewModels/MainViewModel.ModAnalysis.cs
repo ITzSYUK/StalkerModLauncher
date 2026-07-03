@@ -5,7 +5,7 @@ namespace StalkerModLauncher.ViewModels;
 
 public sealed partial class MainViewModel
 {
-    private void RecalculateLockedMods()
+    private void RecalculateModOverlayInfo()
     {
         _conflictAnalysisCancellation?.Cancel();
         _conflictAnalysisCancellation?.Dispose();
@@ -56,7 +56,6 @@ public sealed partial class MainViewModel
 
     private static void ApplyConflictState(ModEntry mod, ModConflictState? state, string executableRelativePath)
     {
-        mod.IsLocked = state?.IsLocked ?? false;
         mod.HasOverlapsAbove = state?.HasOverlapsAbove ?? false;
         mod.OverwrittenFileCount = state?.OverwrittenFileCount ?? 0;
         mod.OverwrittenModCount = state?.OverwrittenModNames.Count ?? 0;

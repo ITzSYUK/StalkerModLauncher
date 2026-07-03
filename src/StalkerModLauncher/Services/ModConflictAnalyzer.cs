@@ -60,17 +60,6 @@ public sealed class ModConflictAnalyzer
             cancellationToken.ThrowIfCancellationRequested();
 
             var currentFiles = fileCache.GetValueOrDefault(mods[index].Id);
-            var hasEnabledBelow = false;
-            for (var belowIndex = index + 1; belowIndex < mods.Count; belowIndex++)
-            {
-                var lowerFiles = fileCache.GetValueOrDefault(mods[belowIndex].Id);
-                if (HasOverlap(currentFiles, lowerFiles))
-                {
-                    hasEnabledBelow = true;
-                    break;
-                }
-            }
-
             var overwrittenFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var overwrittenModNames = new List<string>();
             for (var aboveIndex = 0; aboveIndex < index; aboveIndex++)
@@ -90,7 +79,6 @@ public sealed class ModConflictAnalyzer
             }
 
             result[mods[index].Id] = new ModConflictState(
-                hasEnabledBelow,
                 overwrittenFiles.Count > 0,
                 overwrittenFiles.Count,
                 overwrittenModNames,
@@ -100,11 +88,6 @@ public sealed class ModConflictAnalyzer
         }
 
         return result;
-    }
-
-    private static bool HasOverlap(HashSet<string>? left, HashSet<string>? right)
-    {
-        return left is { Count: > 0 } && right is { Count: > 0 } && left.Overlaps(right);
     }
 
     private static string? FindPinnedExecutableProvider(
@@ -216,7 +199,6 @@ public sealed record ModConflictInput(string Id, string Name, string SourcePath,
 }
 
 public sealed record ModConflictState(
-    bool IsLocked,
     bool HasOverlapsAbove,
     int OverwrittenFileCount,
     IReadOnlyList<string> OverwrittenModNames,

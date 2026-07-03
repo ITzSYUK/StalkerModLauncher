@@ -9,7 +9,6 @@ public sealed class ModEntry : ObservableObject
     private string _name = "New mod";
     private string _sourcePath = string.Empty;
     private bool _isEnabled = true;
-    private bool _isLocked;
     private bool _hasOverlapsAbove;
     private int _overwrittenFileCount;
     private int _overwrittenModCount;
@@ -41,13 +40,6 @@ public sealed class ModEntry : ObservableObject
     {
         get => _isEnabled;
         set => SetProperty(ref _isEnabled, value);
-    }
-
-    [JsonIgnore]
-    public bool IsLocked
-    {
-        get => _isLocked;
-        set => SetProperty(ref _isLocked, value);
     }
 
     [JsonIgnore]

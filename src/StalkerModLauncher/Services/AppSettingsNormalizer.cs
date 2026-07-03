@@ -54,7 +54,6 @@ public static class AppSettingsNormalizer
                     ? GetFallbackModName(mod.SourcePath, order)
                     : mod.Name.Trim();
                 mod.Order = order++;
-                mod.IsLocked = false;
                 mod.HasOverlapsAbove = false;
             }
         }

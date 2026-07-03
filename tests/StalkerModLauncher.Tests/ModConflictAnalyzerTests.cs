@@ -11,7 +11,7 @@ public sealed class ModConflictAnalyzerTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public async Task AnalyzeAsync_MarksOverlappingModsAccordingToLoadOrder()
+    public async Task AnalyzeAsync_MarksModsThatOverwriteEarlierMods()
     {
         var first = CreateMod("first", "gamedata/config/shared.ltx", "gamedata/config/first.ltx");
         var second = CreateMod("second", "gamedata/config/shared.ltx");
@@ -23,9 +23,7 @@ public sealed class ModConflictAnalyzerTests : IDisposable
             new ModConflictInput("second", "Second", second, true)
         ]);
 
-        Assert.True(result["first"].IsLocked);
         Assert.False(result["first"].HasOverlapsAbove);
-        Assert.False(result["second"].IsLocked);
         Assert.True(result["second"].HasOverlapsAbove);
         Assert.Equal(1, result["second"].OverwrittenFileCount);
         Assert.Equal(["First"], result["second"].OverwrittenModNames);
@@ -44,7 +42,7 @@ public sealed class ModConflictAnalyzerTests : IDisposable
             new ModConflictInput("second", "Second", second, false)
         ]);
 
-        Assert.False(result["first"].IsLocked);
+        Assert.False(result["first"].HasOverlapsAbove);
         Assert.False(result["second"].HasOverlapsAbove);
     }
 

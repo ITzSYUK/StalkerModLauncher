@@ -139,16 +139,6 @@
                                                         <Setter Property="IsEnabled" Value="False"/>
                                                         <Setter Property="ToolTip" Value="Нельзя изменять моды, пока профиль запущен"/>
                                                     </DataTrigger>
-                                                    <MultiDataTrigger>
-                                                        <MultiDataTrigger.Conditions>
-                                                            <Condition Binding="{Binding IsLocked}" Value="True"/>
-                                                            <Condition Binding="{Binding IsEnabled}" Value="True"/>
-                                                        </MultiDataTrigger.Conditions>
-                                                        <MultiDataTrigger.Setters>
-                                                            <Setter Property="IsEnabled" Value="False"/>
-                                                            <Setter Property="ToolTip" Value="Сначала отключите моды ниже в списке"/>
-                                                        </MultiDataTrigger.Setters>
-                                                    </MultiDataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </CheckBox.Style>
