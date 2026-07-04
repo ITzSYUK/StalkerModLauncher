@@ -22,6 +22,7 @@ public sealed class LaunchPreflightService
     private LaunchPreflightReport Analyze(ModProfile profile, CancellationToken cancellationToken)
     {
         var checks = new List<ProfileHealthCheck>();
+        var fileLayerPlan = TryCreateLinkedFileLayerPlan(profile);
         if (!profile.IsEnabled)
         {
             checks.Add(Error("Профиль", "Профиль выключен."));
@@ -63,7 +64,7 @@ public sealed class LaunchPreflightService
         try
         {
             FileSystemSafety.EnsureRelativePath(profile.ExecutableRelativePath, "Бинарник запуска");
-            var executableSource = FindFinalExecutableSource(profile, profile.ExecutableRelativePath);
+            var executableSource = FindFinalExecutableSource(profile, profile.ExecutableRelativePath, fileLayerPlan);
             checks.Add(new ProfileHealthCheck(
                 executableSource is null || !executableSource.IsAvailable
                     ? ProfileHealthStatus.Error
@@ -75,7 +76,7 @@ public sealed class LaunchPreflightService
 
             if (executableSource is { IsAvailable: true })
             {
-                AddCompanionDllCheck(checks, profile, executableSource.FullPath, executableSource.RelativePath);
+                AddCompanionDllCheck(checks, profile, fileLayerPlan, executableSource.FullPath, executableSource.RelativePath);
             }
         }
         catch (Exception ex)
@@ -83,7 +84,7 @@ public sealed class LaunchPreflightService
             checks.Add(Error("Бинарник запуска", ex.Message));
         }
 
-        var fsgameSource = FindFinalSource(profile, "fsgame.ltx");
+        var fsgameSource = FindFinalSource(profile, "fsgame.ltx", fileLayerPlan);
         checks.Add(new ProfileHealthCheck(
             fsgameSource is null ? ProfileHealthStatus.Warning : ProfileHealthStatus.Healthy,
             "fsgame.ltx",
@@ -92,10 +93,26 @@ public sealed class LaunchPreflightService
         if (!profile.IsStandalone)
         {
             AddWorkspaceChecks(checks, profile);
-            AddLinkSupportCheck(checks, profile, enabledMods, cancellationToken);
+            AddLinkSupportCheck(checks, profile, fileLayerPlan, enabledMods, cancellationToken);
         }
 
         return new LaunchPreflightReport(checks);
+    }
+
+    private FileLayerPlan? TryCreateLinkedFileLayerPlan(ModProfile profile)
+    {
+        if (profile.IsStandalone || string.IsNullOrWhiteSpace(profile.GameInstallPath))
+        {
+            return null;
+        }
+
+        var workspace = _profileManager.GetProfileFolderPath(profile);
+        if (string.IsNullOrWhiteSpace(workspace))
+        {
+            return null;
+        }
+
+        return FileLayerPlan.CreateLinkedWorkspace(profile.GameInstallPath, profile, workspace);
     }
 
     private void AddWorkspaceChecks(List<ProfileHealthCheck> checks, ModProfile profile)
@@ -125,6 +142,7 @@ public sealed class LaunchPreflightService
     private void AddLinkSupportCheck(
         List<ProfileHealthCheck> checks,
         ModProfile profile,
+        FileLayerPlan? fileLayerPlan,
         IReadOnlyList<ModEntry> enabledMods,
         CancellationToken cancellationToken)
     {
@@ -137,8 +155,10 @@ public sealed class LaunchPreflightService
         try
         {
             var workspaceVolume = Path.GetPathRoot(Path.GetFullPath(workspace));
-            var source = enabledMods
-                .Select(mod => mod.SourcePath)
+            var sourcePaths = fileLayerPlan is null
+                ? enabledMods.Select(mod => mod.SourcePath)
+                : fileLayerPlan.Mods.Select(layer => layer.RootPath);
+            var source = sourcePaths
                 .Where(Directory.Exists)
                 .Where(path => !string.Equals(Path.GetPathRoot(Path.GetFullPath(path)), workspaceVolume, StringComparison.OrdinalIgnoreCase))
                 .SelectMany(path => Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories).Take(1))
@@ -175,6 +195,7 @@ public sealed class LaunchPreflightService
     private static void AddCompanionDllCheck(
         List<ProfileHealthCheck> checks,
         ModProfile profile,
+        FileLayerPlan? fileLayerPlan,
         string executableSource,
         string executableRelativePath)
     {
@@ -187,7 +208,7 @@ public sealed class LaunchPreflightService
 
         var relativeDirectory = Path.GetDirectoryName(executableRelativePath) ?? string.Empty;
         var hasEngineDll = new[] { "xrCore.dll", "xrGame.dll", "xrEngine.dll" }
-            .Any(name => FindFinalSource(profile, Path.Combine(relativeDirectory, name)) is not null);
+            .Any(name => FindFinalSource(profile, Path.Combine(relativeDirectory, name), fileLayerPlan) is not null);
         checks.Add(new ProfileHealthCheck(
             hasEngineDll ? ProfileHealthStatus.Healthy : ProfileHealthStatus.Warning,
             "Файлы движка",
@@ -218,8 +239,13 @@ public sealed class LaunchPreflightService
         return false;
     }
 
-    internal static string? FindFinalSource(ModProfile profile, string relativePath)
+    internal static string? FindFinalSource(ModProfile profile, string relativePath, FileLayerPlan? fileLayerPlan = null)
     {
+        if (fileLayerPlan is not null)
+        {
+            return FileLayerSourceResolver.FindFinalSource(fileLayerPlan, relativePath)?.FullPath;
+        }
+
         var roots = new List<string>();
         if (!profile.IsStandalone)
         {
@@ -237,9 +263,11 @@ public sealed class LaunchPreflightService
             .LastOrDefault(File.Exists);
     }
 
-    private static ExecutableSourceInfo? FindFinalExecutableSource(ModProfile profile, string requestedRelativePath)
+    private static ExecutableSourceInfo? FindFinalExecutableSource(ModProfile profile, string requestedRelativePath, FileLayerPlan? fileLayerPlan)
     {
-        var roots = CreateExecutableRoots(profile).ToArray();
+        var roots = fileLayerPlan is null
+            ? CreateExecutableRoots(profile).ToArray()
+            : FileLayerSourceResolver.CreateExecutableRoots(fileLayerPlan);
         if (!profile.IsStandalone && !string.IsNullOrWhiteSpace(profile.ExecutableSourcePath))
         {
             var pinnedSource = ProfileExecutableSourceResolver.FindPinnedSourceRoot(profile);

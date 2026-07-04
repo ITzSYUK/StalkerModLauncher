@@ -69,6 +69,36 @@ public sealed class LaunchPreflightServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AnalyzeAsync_ReportsFsgameFromHighestPriorityLayer()
+    {
+        var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
+        var builder = new WorkspaceBuilder(paths);
+        var service = new LaunchPreflightService(
+            new GameInstallationValidator(),
+            new ProfileManager(paths, builder));
+        var game = Path.Combine(_root, "game-layered");
+        CreateFile("game-layered/fsgame.ltx");
+        CreateFile("game-layered/bin/xr_3da.exe");
+        CreateFile("main/fsgame.ltx");
+        var patchFsgame = CreateFile("patch/fsgame.ltx");
+        var profile = new ModProfile
+        {
+            GameInstallPath = game,
+            ExecutableRelativePath = @"bin\xr_3da.exe"
+        };
+        profile.Mods.Add(new ModEntry { Name = "Patch", SourcePath = Path.Combine(_root, "patch"), Order = 2 });
+        profile.Mods.Add(new ModEntry { Name = "Main", SourcePath = Path.Combine(_root, "main"), Order = 1 });
+
+        var report = await service.AnalyzeAsync(profile);
+
+        Assert.Contains(
+            report.Checks,
+            check => check.Title == "fsgame.ltx" &&
+                     check.Status == ProfileHealthStatus.Healthy &&
+                     check.Details == patchFsgame);
+    }
+
+    [Fact]
     public async Task AnalyzeAsync_WarnsAndFallsBackWhenRequestedExecutableIsMissing()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);

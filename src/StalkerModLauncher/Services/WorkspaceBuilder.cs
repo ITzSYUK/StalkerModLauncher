@@ -22,6 +22,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
     private readonly WorkspaceMaterializer _materializer = new();
     private readonly WorkspaceExecutableResolver _executableResolver = new();
     private readonly ProfileDataConfigurator _dataConfigurator = new();
+    private readonly ProfileWritableGameFileStore _writableGameFileStore = new();
     private static EnumerationOptions SafeEnumerationOptions { get; } = new()
     {
         RecurseSubdirectories = true,
@@ -80,6 +81,8 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var cachedExecutable = _manifestStore.TryGetCachedExecutable(workspaceRoot, currentWorkspace, profile, buildSignature, progress);
         if (cachedExecutable is not null)
         {
+            _writableGameFileStore.EnsureWorkspaceDirectories(currentWorkspace);
+            _writableGameFileStore.RestoreToCachedWorkspace(currentWorkspace, workspaceRoot, progress);
             progress.Report($"Проверка источников: {FormatElapsed(scanTimer.Elapsed)}. Пересборка не требуется.");
             return new WorkspaceBuildResult(
                 currentWorkspace,
@@ -93,6 +96,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
 
         progress.Report("Подготовка чистой рабочей среды профиля...");
         var cleanupTimer = Stopwatch.StartNew();
+        _writableGameFileStore.CaptureFromWorkspace(currentWorkspace, workspaceRoot, progress);
         _materializer.DeleteWorkspaceContents(currentWorkspace, workspaceRoot, () => sourceSnapshot, progress);
         Directory.CreateDirectory(currentWorkspace);
         cleanupTimer.Stop();
@@ -115,6 +119,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
 
         var configurationTimer = Stopwatch.StartNew();
         var workingDirectoryRelative = _dataConfigurator.Configure(gamePath, currentWorkspace, workspaceRoot, progress);
+        _writableGameFileStore.RestoreToWorkspace(currentWorkspace, workspaceRoot, stats, progress);
         ApplyPinnedExecutableSource(profile, currentWorkspace, progress, stats);
         configurationTimer.Stop();
 
@@ -277,6 +282,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var current = Path.Combine(workspacePath, "current");
         if (Directory.Exists(current))
         {
+            _writableGameFileStore.CaptureFromWorkspace(current, workspacePath, progress);
             _materializer.DeleteWorkspaceContents(
                 current,
                 workspacePath,

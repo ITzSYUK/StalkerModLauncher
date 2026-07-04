@@ -1,5 +1,6 @@
 using StalkerModLauncher.Models;
 using StalkerModLauncher.Services;
+using System.Text;
 using Xunit;
 
 namespace StalkerModLauncher.Tests;
@@ -139,6 +140,58 @@ public sealed class WorkspaceBuilderTests : IDisposable
         Assert.Equal("profile settings", File.ReadAllText(Path.Combine(first.ProfileWorkspacePath, "userdata", "user.ltx")));
         Assert.Equal("$app_data_root$ = true | false | appdata", File.ReadAllText(Path.Combine(_gamePath, "fsgame.ltx")));
         Assert.Contains(Path.Combine(first.ProfileWorkspacePath, "userdata"), File.ReadAllText(Path.Combine(first.WorkspaceRoot, "fsgame.ltx")));
+    }
+
+    [Fact]
+    public async Task BuildAsync_WritesFsgameWithWindows1251ForCyrillicWorkspacePath()
+    {
+        var profile = CreateProfile(CreateMod("mod", "mod"));
+        profile.Name = "Аномали";
+
+        var result = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var fsgameBytes = File.ReadAllBytes(Path.Combine(result.WorkspaceRoot, "fsgame.ltx"));
+        var fsgameText = Encoding.GetEncoding(1251).GetString(fsgameBytes);
+        Assert.Contains(Path.Combine(result.ProfileWorkspacePath, "userdata"), fsgameText);
+        Assert.Contains("Аномали-", fsgameText);
+    }
+
+    [Fact]
+    public async Task BuildAsync_PreservesGeneratedAnomalyLocalizationFileAcrossRebuild()
+    {
+        var modPath = CreateMod("mod", "mod");
+        var profile = CreateProfile(modPath);
+        profile.Name = "Аномали";
+        var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+        var localizationPath = Path.Combine(first.WorkspaceRoot, "gamedata", "configs", "localization.ltx");
+
+        Assert.True(Directory.Exists(Path.GetDirectoryName(localizationPath)));
+        File.WriteAllText(localizationPath, "language = rus");
+        CreateFile(modPath, "gamedata/config/rebuild-marker.ltx", "changed");
+
+        var rebuilt = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+        Assert.Equal("language = rus", File.ReadAllText(Path.Combine(
+            rebuilt.WorkspaceRoot,
+            "gamedata",
+            "configs",
+            "localization.ltx")));
+        var storedLocalizationPath = Path.Combine(
+            rebuilt.ProfileWorkspacePath,
+            "userdata",
+            "writable-game-files",
+            "gamedata",
+            "configs",
+            "localization.ltx");
+        Assert.Equal("language = rus", File.ReadAllText(storedLocalizationPath));
+        File.WriteAllText(Path.Combine(
+            rebuilt.WorkspaceRoot,
+            "gamedata",
+            "configs",
+            "localization.ltx"), "language = eng");
+        Assert.Equal("language = rus", File.ReadAllText(storedLocalizationPath));
+        Assert.False(File.Exists(Path.Combine(_gamePath, "gamedata", "configs", "localization.ltx")));
     }
 
     [Fact]

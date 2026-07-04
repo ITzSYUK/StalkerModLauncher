@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace StalkerModLauncher.Services;
 
 internal sealed class ProfileDataConfigurator
@@ -25,7 +23,7 @@ internal sealed class ProfileDataConfigurator
         CopyUserLtxFromGame(gamePath, profileDataPath, progress);
 
         var fsgamePath = Path.Combine(fsgameDir, "fsgame.ltx");
-        var lines = File.ReadAllLines(fsgamePath, Encoding.Default);
+        var lines = File.ReadAllLines(fsgamePath, XRayTextEncoding.Config);
         for (var index = 0; index < lines.Length; index++)
         {
             if (lines[index].TrimStart().StartsWith("$app_data_root$", StringComparison.OrdinalIgnoreCase))
@@ -36,7 +34,7 @@ internal sealed class ProfileDataConfigurator
         }
 
         File.Delete(fsgamePath);
-        File.WriteAllLines(fsgamePath, lines, Encoding.Default);
+        File.WriteAllLines(fsgamePath, lines, XRayTextEncoding.Config);
         progress.Report("fsgame.ltx rewritten for profile-local saves and logs.");
         return workingDirectoryRelative;
     }
@@ -63,7 +61,7 @@ internal sealed class ProfileDataConfigurator
         var gameFsgame = FindFileDirectory(gamePath, "fsgame.ltx");
         if (gameFsgame is not null)
         {
-            foreach (var line in File.ReadAllLines(Path.Combine(gameFsgame, "fsgame.ltx"), Encoding.Default))
+            foreach (var line in File.ReadAllLines(Path.Combine(gameFsgame, "fsgame.ltx"), XRayTextEncoding.Config))
             {
                 if (!line.TrimStart().StartsWith("$app_data_root$", StringComparison.OrdinalIgnoreCase)) continue;
                 var parts = line.Split('|', StringSplitOptions.TrimEntries);

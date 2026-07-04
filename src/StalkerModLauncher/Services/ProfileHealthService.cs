@@ -39,6 +39,8 @@ public sealed class ProfileHealthService
     {
         var checks = new List<ProfileHealthCheck>();
         var gamePath = profile.GameInstallPath;
+        var profileFolderPath = _profileManager.GetProfileFolderPath(profile) ?? string.Empty;
+        var fileLayerPlan = TryCreateLinkedFileLayerPlan(profile, profileFolderPath);
 
         if (profile.IsStandalone)
         {
@@ -76,7 +78,7 @@ public sealed class ProfileHealthService
                 profile.IsStandalone ? "Для автономного профиля требуется папка мода." : "Профиль не содержит модов."));
         }
 
-        var executableSource = FindExecutableSource(profile, gamePath);
+        var executableSource = FindExecutableSource(profile, gamePath, fileLayerPlan);
         checks.Add(new ProfileHealthCheck(
             executableSource is null || !executableSource.IsAvailable
                 ? ProfileHealthStatus.Error
@@ -86,7 +88,6 @@ public sealed class ProfileHealthService
                 ? $"Не найден: {profile.ExecutableRelativePath}"
                 : FormatExecutableSource(executableSource, profile.ExecutableRelativePath)));
 
-        var profileFolderPath = _profileManager.GetProfileFolderPath(profile) ?? string.Empty;
         var savedGamePaths = _dataPathResolver.GetSavedGameDirectories(profile);
         var savedGamesPath = savedGamePaths.FirstOrDefault(Directory.Exists)
             ?? savedGamePaths.FirstOrDefault()
@@ -149,9 +150,23 @@ public sealed class ProfileHealthService
             currentExists && manifestExists ? "Подготовленный workspace и manifest присутствуют." : "Workspace будет подготовлен или пересобран при следующем запуске."));
     }
 
-    private static ExecutableSourceInfo? FindExecutableSource(ModProfile profile, string gamePath)
+    private static FileLayerPlan? TryCreateLinkedFileLayerPlan(ModProfile profile, string profileFolderPath)
     {
-        var roots = CreateExecutableRoots(profile, gamePath).ToArray();
+        if (profile.IsStandalone ||
+            string.IsNullOrWhiteSpace(profile.GameInstallPath) ||
+            string.IsNullOrWhiteSpace(profileFolderPath))
+        {
+            return null;
+        }
+
+        return FileLayerPlan.CreateLinkedWorkspace(profile.GameInstallPath, profile, profileFolderPath);
+    }
+
+    private static ExecutableSourceInfo? FindExecutableSource(ModProfile profile, string gamePath, FileLayerPlan? fileLayerPlan)
+    {
+        var roots = fileLayerPlan is null
+            ? CreateExecutableRoots(profile, gamePath).ToArray()
+            : FileLayerSourceResolver.CreateExecutableRoots(fileLayerPlan);
         try
         {
             FileSystemSafety.EnsureRelativePath(profile.ExecutableRelativePath, "Бинарник запуска");
