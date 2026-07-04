@@ -18,7 +18,9 @@ public sealed record ProfileHealthReport(
     string SavedGamesPath,
     string? LatestLogPath,
     string? LatestCrashDumpPath,
-    WorkspaceStatus? Workspace = null)
+    WorkspaceStatus? Workspace = null,
+    LaunchPlan? LaunchPlan = null,
+    OverlayManifest? OverlayManifest = null)
 {
     public int ErrorCount => Checks.Count(check => check.Status == ProfileHealthStatus.Error);
     public int WarningCount => Checks.Count(check => check.Status == ProfileHealthStatus.Warning);

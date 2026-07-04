@@ -32,7 +32,10 @@ public sealed class LinkedWorkspaceLaunchBackendTests : IDisposable
         CreateFile(game, "fsgame.ltx", "$app_data_root$ = true | false | appdata");
         CreateFile(mod, "bin/xr_3da.exe", "mod executable");
 
-        var plan = await backend.PrepareAsync(game, profile, new ProgressLog());
+        var fileLayerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, Path.Combine(workspaceRoot, $"Backend profile-{profile.Id[..8]}"));
+        var launchContext = new ProfileLaunchBackendContext(game, profile, fileLayerPlan);
+
+        var plan = await backend.PrepareAsync(launchContext, new ProgressLog());
 
         Assert.Equal(LaunchBackendKind.LinkedWorkspace, plan.BackendKind);
         Assert.Equal("-nointro -dbg", plan.Arguments);

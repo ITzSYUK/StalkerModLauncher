@@ -7,8 +7,7 @@ public interface IProfileLaunchBackend
     LaunchBackendKind Kind { get; }
 
     Task<LaunchPlan> PrepareAsync(
-        string gamePath,
-        ModProfile profile,
+        ProfileLaunchBackendContext context,
         IProgress<string> progress,
         CancellationToken cancellationToken = default);
 }

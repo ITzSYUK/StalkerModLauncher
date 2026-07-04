@@ -39,16 +39,18 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         string gamePath,
         ModProfile profile,
         IProgress<string> progress,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        FileLayerPlan? fileLayerPlan = null)
     {
-        return Task.Run(() => Build(gamePath, profile, progress, cancellationToken), cancellationToken);
+        return Task.Run(() => Build(gamePath, profile, progress, cancellationToken, fileLayerPlan), cancellationToken);
     }
 
     private WorkspaceBuildResult Build(
         string gamePath,
         ModProfile profile,
         IProgress<string> progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        FileLayerPlan? providedFileLayerPlan)
     {
         FileSystemSafety.EnsureRelativePath(profile.ExecutableRelativePath, "Launch executable");
 
@@ -72,7 +74,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var workspaceRoot = EnsureProfileWorkspace(profile, gamePath, progress);
         var currentWorkspace = Path.Combine(workspaceRoot, "current");
         FileSystemSafety.EnsureDirectoryInside(currentWorkspace, workspaceRoot);
-        var fileLayerPlan = FileLayerPlan.CreateLinkedWorkspace(gamePath, profile, workspaceRoot);
+        var fileLayerPlan = providedFileLayerPlan ?? FileLayerPlan.CreateLinkedWorkspace(gamePath, profile, workspaceRoot);
         progress.Report("Проверка файлов игры и модов...");
         var scanTimer = Stopwatch.StartNew();
         var sourceSnapshot = _sourceScanner.Capture(fileLayerPlan, cancellationToken);

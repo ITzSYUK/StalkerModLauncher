@@ -177,6 +177,34 @@ public sealed class ProfileHealthServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AnalyzeAsync_CreatesLaunchPlanPreviewWithDetectedWorkingDirectory()
+    {
+        var game = CreateGame();
+        var mod = Path.Combine(_root, "ogsr-mod");
+        CreateFileAtPath(Path.Combine(mod, "bin_x64", "xrEngine.exe"));
+        CreateFileAtPath(Path.Combine(mod, "bin_x64", "fsgame.ltx"));
+        var profile = new ModProfile
+        {
+            Name = "OGSR",
+            GameInstallPath = game,
+            ExecutableRelativePath = @"bin_x64\xrEngine.exe",
+            LaunchArguments = "  -nointro  "
+        };
+        profile.Mods.Add(new ModEntry { Name = "OGSR", SourcePath = mod, Order = 1 });
+
+        var report = await _service.AnalyzeAsync(profile);
+
+        Assert.True(report.IsReady);
+        Assert.NotNull(report.LaunchPlan);
+        Assert.NotNull(report.OverlayManifest);
+        Assert.Equal(LaunchBackendKind.LinkedWorkspace, report.LaunchPlan.BackendKind);
+        Assert.Equal("-nointro", report.LaunchPlan.Arguments);
+        Assert.Equal(report.LaunchPlan.WorkingDirectory, report.OverlayManifest.LaunchPlan?.WorkingDirectory);
+        Assert.EndsWith(Path.Combine("current", "bin_x64", "xrEngine.exe"), report.LaunchPlan.ExecutablePath);
+        Assert.EndsWith(Path.Combine("current", "bin_x64"), report.LaunchPlan.WorkingDirectory);
+    }
+
+    [Fact]
     public async Task AnalyzeAsync_IgnoresDisabledLaterExecutableProvider()
     {
         var game = CreateGame();

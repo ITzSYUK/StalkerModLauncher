@@ -37,6 +37,43 @@ public sealed class LaunchPreflightServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AnalyzeAsync_CreatesLaunchPlanPreviewFromFileLayers()
+    {
+        var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
+        var builder = new WorkspaceBuilder(paths);
+        var service = new LaunchPreflightService(
+            new GameInstallationValidator(),
+            new ProfileManager(paths, builder));
+        var game = CreateFile("layered-game/fsgame.ltx");
+        CreateFile("layered-game/bin/xr_3da.exe");
+        var patchExecutable = CreateFile("layered-patch/bin_x64/xrEngine.exe");
+        var profile = new ModProfile
+        {
+            Name = "Layered launch",
+            GameInstallPath = Path.GetDirectoryName(game)!,
+            ExecutableRelativePath = @"bin\missing.exe",
+            LaunchArguments = "  -nointro  "
+        };
+        profile.Mods.Add(new ModEntry { Name = "Patch", SourcePath = Path.Combine(_root, "layered-patch"), Order = 1 });
+
+        var report = await service.AnalyzeAsync(profile);
+
+        Assert.True(report.CanLaunch);
+        Assert.NotNull(report.LaunchPlan);
+        Assert.NotNull(report.OverlayManifest);
+        Assert.Equal(LaunchBackendKind.LinkedWorkspace, report.LaunchPlan.BackendKind);
+        Assert.Equal("-nointro", report.LaunchPlan.Arguments);
+        Assert.Equal(report.LaunchPlan.ExecutablePath, report.OverlayManifest.LaunchPlan?.ExecutablePath);
+        Assert.EndsWith(Path.Combine("current", "bin_x64", "xrEngine.exe"), report.LaunchPlan.ExecutablePath);
+        Assert.EndsWith("current", report.LaunchPlan.WorkingDirectory);
+        Assert.Contains(
+            report.Checks,
+            check => check.Title == "Итоговый бинарник" &&
+                     check.Status == ProfileHealthStatus.Warning &&
+                     check.Details.Contains(patchExecutable));
+    }
+
+    [Fact]
     public async Task AnalyzeAsync_UsesPinnedExecutableSource()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);

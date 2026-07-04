@@ -4,11 +4,6 @@ internal sealed class ProfileWritableGameFileStore
 {
     private const string StoreDirectoryName = "writable-game-files";
 
-    private static readonly string[] KnownWritableFiles =
-    [
-        Path.Combine("gamedata", "configs", "localization.ltx")
-    ];
-
     public void CaptureFromWorkspace(string currentWorkspace, string profileWorkspace, IProgress<string>? progress = null)
     {
         if (!Directory.Exists(currentWorkspace))
@@ -17,8 +12,9 @@ internal sealed class ProfileWritableGameFileStore
         }
 
         var captured = 0;
-        foreach (var relativePath in KnownWritableFiles)
+        foreach (var rule in ProfileWritableGameFiles.Rules)
         {
+            var relativePath = rule.RelativePath;
             var workspaceFile = Path.Combine(currentWorkspace, relativePath);
             if (!File.Exists(workspaceFile))
             {
@@ -39,8 +35,9 @@ internal sealed class ProfileWritableGameFileStore
 
     public void EnsureWorkspaceDirectories(string currentWorkspace)
     {
-        foreach (var relativePath in KnownWritableFiles)
+        foreach (var rule in ProfileWritableGameFiles.Rules)
         {
+            var relativePath = rule.RelativePath;
             var workspaceFile = Path.Combine(currentWorkspace, relativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(workspaceFile)!);
         }
@@ -54,8 +51,9 @@ internal sealed class ProfileWritableGameFileStore
         EnsureWorkspaceDirectories(currentWorkspace);
 
         var restored = 0;
-        foreach (var relativePath in KnownWritableFiles)
+        foreach (var rule in ProfileWritableGameFiles.Rules)
         {
+            var relativePath = rule.RelativePath;
             var storedFile = GetStoredFilePath(profileWorkspace, relativePath);
             if (!File.Exists(storedFile))
             {
@@ -70,7 +68,7 @@ internal sealed class ProfileWritableGameFileStore
 
         if (restored > 0)
         {
-            progress?.Report($"РџСЂРѕС„РёР»СЊРЅС‹Рµ РёРіСЂРѕРІС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё РїРѕРґРіРѕС‚РѕРІР»РµРЅС‹ Рє Р·Р°РїСѓСЃРєСѓ: {restored:N0}.");
+            progress?.Report($"Профильные игровые настройки подготовлены к запуску: {restored:N0}.");
         }
     }
 
@@ -83,8 +81,9 @@ internal sealed class ProfileWritableGameFileStore
         EnsureWorkspaceDirectories(currentWorkspace);
 
         var restored = 0;
-        foreach (var relativePath in KnownWritableFiles)
+        foreach (var rule in ProfileWritableGameFiles.Rules)
         {
+            var relativePath = rule.RelativePath;
             var workspaceFile = Path.Combine(currentWorkspace, relativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(workspaceFile)!);
 

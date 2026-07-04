@@ -8,6 +8,8 @@ public sealed class ProfileHealthService
     private readonly ProfileManager _profileManager;
     private readonly ProfileDataPathResolver _dataPathResolver;
     private readonly WorkspaceManagementService _workspaceManagementService;
+    private readonly ProfileLaunchPlanResolver _launchPlanResolver = new();
+    private readonly OverlayManifestBuilder _overlayManifestBuilder = new();
 
     public ProfileHealthService(
         GameInstallationValidator gameValidator,
@@ -41,6 +43,8 @@ public sealed class ProfileHealthService
         var gamePath = profile.GameInstallPath;
         var profileFolderPath = _profileManager.GetProfileFolderPath(profile) ?? string.Empty;
         var fileLayerPlan = TryCreateLinkedFileLayerPlan(profile, profileFolderPath);
+        var launchPlan = TryCreateLaunchPlan(profile, fileLayerPlan, profileFolderPath, cancellationToken);
+        var overlayManifest = TryCreateOverlayManifest(profile, fileLayerPlan, profileFolderPath, cancellationToken);
 
         if (profile.IsStandalone)
         {
@@ -78,7 +82,7 @@ public sealed class ProfileHealthService
                 profile.IsStandalone ? "Для автономного профиля требуется папка мода." : "Профиль не содержит модов."));
         }
 
-        var executableSource = FindExecutableSource(profile, gamePath, fileLayerPlan);
+        var executableSource = launchPlan?.Executable ?? FindExecutableSource(profile, gamePath, fileLayerPlan, cancellationToken);
         checks.Add(new ProfileHealthCheck(
             executableSource is null || !executableSource.IsAvailable
                 ? ProfileHealthStatus.Error
@@ -119,7 +123,41 @@ public sealed class ProfileHealthService
                 ? $"Найден файл аварийного дампа: {latestDump}"
                 : "Файлы аварийного дампа не найдены."));
 
-        return new ProfileHealthReport(checks, profileFolderPath, savedGamesPath, latestLog, latestDump);
+        return new ProfileHealthReport(
+            checks,
+            profileFolderPath,
+            savedGamesPath,
+            latestLog,
+            latestDump,
+            LaunchPlan: launchPlan?.Plan,
+            OverlayManifest: overlayManifest);
+    }
+
+    private LaunchPlanResolution? TryCreateLaunchPlan(
+        ModProfile profile,
+        FileLayerPlan? fileLayerPlan,
+        string profileFolderPath,
+        CancellationToken cancellationToken)
+    {
+        if (profile.IsStandalone)
+        {
+            return _launchPlanResolver.PreviewStandalone(profile, cancellationToken);
+        }
+
+        return fileLayerPlan is null || string.IsNullOrWhiteSpace(profileFolderPath)
+            ? null
+            : _launchPlanResolver.PreviewLinkedWorkspace(profile, fileLayerPlan, profileFolderPath);
+    }
+
+    private OverlayManifest? TryCreateOverlayManifest(
+        ModProfile profile,
+        FileLayerPlan? fileLayerPlan,
+        string profileFolderPath,
+        CancellationToken cancellationToken)
+    {
+        return fileLayerPlan is null || string.IsNullOrWhiteSpace(profileFolderPath)
+            ? null
+            : _overlayManifestBuilder.BuildLinkedWorkspace(profile, fileLayerPlan, profileFolderPath, cancellationToken: cancellationToken);
     }
 
     private static void AddWorkspaceChecks(List<ProfileHealthCheck> checks, string workspacePath)
@@ -162,7 +200,11 @@ public sealed class ProfileHealthService
         return FileLayerPlan.CreateLinkedWorkspace(profile.GameInstallPath, profile, profileFolderPath);
     }
 
-    private static ExecutableSourceInfo? FindExecutableSource(ModProfile profile, string gamePath, FileLayerPlan? fileLayerPlan)
+    private LaunchExecutableResolution? FindExecutableSource(
+        ModProfile profile,
+        string gamePath,
+        FileLayerPlan? fileLayerPlan,
+        CancellationToken cancellationToken)
     {
         var roots = fileLayerPlan is null
             ? CreateExecutableRoots(profile, gamePath).ToArray()
@@ -176,81 +218,13 @@ public sealed class ProfileHealthService
             return null;
         }
 
-        if (!profile.IsStandalone && !string.IsNullOrWhiteSpace(profile.ExecutableSourcePath))
-        {
-            var pinnedSource = ProfileExecutableSourceResolver.FindPinnedSourceRoot(profile);
-            if (pinnedSource is null)
-            {
-                return new ExecutableSourceInfo(
-                    profile.ExecutableSourcePath,
-                    profile.ExecutableRelativePath,
-                    "ручной источник",
-                    "папка ручного источника недоступна или мод выключен",
-                    true,
-                    true,
-                    false);
-            }
-
-            var pinnedExecutable = FileSystemSafety.ResolvePathInside(
-                pinnedSource.RootPath,
-                profile.ExecutableRelativePath,
-                "Бинарник запуска");
-            return File.Exists(pinnedExecutable)
-                ? new ExecutableSourceInfo(
-                    pinnedExecutable,
-                    profile.ExecutableRelativePath,
-                    pinnedSource.DisplayName,
-                    "выбран пользователем вручную",
-                    true,
-                    true)
-                : new ExecutableSourceInfo(
-                    pinnedExecutable,
-                    profile.ExecutableRelativePath,
-                    pinnedSource.DisplayName,
-                    "ручной источник найден, но файл отсутствует",
-                    true,
-                    true,
-                    false);
-        }
-
-        var exact = roots
-            .Where(root => Directory.Exists(root.RootPath))
-            .Select(root => new
-            {
-                FullPath = Path.Combine(root.RootPath, profile.ExecutableRelativePath),
-                root.DisplayName,
-                root.Order
-            })
-            .Where(candidate => File.Exists(candidate.FullPath))
-            .OrderByDescending(candidate => candidate.Order)
-            .FirstOrDefault();
-        if (exact is not null)
-        {
-            return new ExecutableSourceInfo(
-                exact.FullPath,
-                profile.ExecutableRelativePath,
-                exact.DisplayName,
-                "найден выбранный путь",
-                true,
-                false);
-        }
-
-        var detected = LaunchExecutableDetector.DetectBest(
+        return _launchPlanResolver.ResolveExecutableSource(
+            profile,
             roots,
-            requestedRelativePath: profile.ExecutableRelativePath,
-            allowDedicated: LaunchExecutableDetector.IsDedicatedExecutable(profile.ExecutableRelativePath));
-        if (detected is null || detected.Score > 50 && detected.CandidateCount != 1)
-        {
-            return null;
-        }
-
-        return new ExecutableSourceInfo(
-            detected.FullPath,
-            detected.RelativePath,
-            detected.SourceName,
-            detected.Reason,
-            false,
-            false);
+            profile.ExecutableRelativePath,
+            allowPinnedSource: true,
+            allowDedicatedFallback: LaunchExecutableDetector.IsDedicatedExecutable(profile.ExecutableRelativePath),
+            cancellationToken);
     }
 
     private static IEnumerable<LaunchExecutableSearchRoot> CreateExecutableRoots(ModProfile profile, string gamePath)
@@ -268,7 +242,7 @@ public sealed class ProfileHealthService
         }
     }
 
-    private static string FormatExecutableSource(ExecutableSourceInfo source, string requestedRelativePath)
+    private static string FormatExecutableSource(LaunchExecutableResolution source, string requestedRelativePath)
     {
         if (!source.IsAvailable)
         {
@@ -341,12 +315,4 @@ public sealed class ProfileHealthService
         }
     }
 
-    private sealed record ExecutableSourceInfo(
-        string FullPath,
-        string RelativePath,
-        string SourceName,
-        string Reason,
-        bool UsedRequestedRelativePath,
-        bool IsPinned,
-        bool IsAvailable = true);
 }

@@ -7,12 +7,12 @@ public sealed class VirtualFileSystemLaunchBackend : IProfileLaunchBackend
     public LaunchBackendKind Kind => LaunchBackendKind.VirtualFileSystem;
 
     public Task<LaunchPlan> PrepareAsync(
-        string gamePath,
-        ModProfile profile,
+        ProfileLaunchBackendContext context,
         IProgress<string> progress,
         CancellationToken cancellationToken = default)
     {
-        progress.Report("Virtual file system launch backend is reserved for future USVFS-style integration.");
+        var layerCount = context.OverlayManifest?.Layers.Count ?? context.FileLayerPlan?.Layers.Count ?? 0;
+        progress.Report($"Virtual file system launch backend is reserved for future USVFS-style integration. Overlay layers: {layerCount:N0}.");
         throw new NotSupportedException("Virtual file system launch mode is not implemented yet. Use the workspace launch mode.");
     }
 }

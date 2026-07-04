@@ -12,32 +12,19 @@ internal static class FileLayerSourceResolver
 {
     public static IReadOnlyList<LaunchExecutableSearchRoot> CreateExecutableRoots(FileLayerPlan plan)
     {
-        return plan.SourceLayers
-            .Select(layer => new LaunchExecutableSearchRoot(layer.RootPath, GetDisplayName(layer), layer.Order))
-            .ToArray();
+        return plan.CreateExecutableRoots();
     }
 
     public static FileLayerSource? FindFinalSource(FileLayerPlan plan, string relativePath)
     {
-        FileSystemSafety.EnsureRelativePath(relativePath, "Layer file");
-        return plan.SourceLayers
-            .Where(layer => Directory.Exists(layer.RootPath))
-            .Select(layer => new FileLayerSource(
-                Path.Combine(layer.RootPath, relativePath),
-                relativePath,
-                GetDisplayName(layer),
-                layer))
-            .LastOrDefault(source => File.Exists(source.FullPath));
+        var source = plan.FindFinalFile(relativePath);
+        return source is null
+            ? null
+            : new FileLayerSource(source.FullPath, source.RelativePath, source.SourceName, source.Layer);
     }
 
     public static string GetDisplayName(FileLayer layer)
     {
-        return layer.Kind switch
-        {
-            FileLayerKind.BaseGame => "базовая игра",
-            FileLayerKind.Mod => $"мод: {layer.Name}",
-            FileLayerKind.UserData => "данные профиля",
-            _ => layer.Name
-        };
+        return FileLayerPlan.GetDisplayName(layer);
     }
 }

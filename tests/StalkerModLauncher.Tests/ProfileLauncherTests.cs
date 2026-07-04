@@ -26,13 +26,16 @@ public sealed class ProfileLauncherTests
     }
 
     [Fact]
-    public async Task LaunchAsync_UsesProfileSelectedBackend()
+    public async Task LaunchAsync_UsesProfileSelectedBackendWhenExperimentalVirtualFileSystemIsEnabled()
     {
         using var process = Process.GetCurrentProcess();
         var linkedBackend = new RecordingLaunchBackend(LaunchBackendKind.LinkedWorkspace);
         var virtualBackend = new RecordingLaunchBackend(LaunchBackendKind.VirtualFileSystem);
         var executor = new RecordingLaunchPlanExecutor(process);
-        var launcher = new ProfileLauncher([linkedBackend, virtualBackend], executor);
+        var launcher = new ProfileLauncher(
+            [linkedBackend, virtualBackend],
+            executor,
+            allowExperimentalVirtualFileSystem: true);
         var profile = new ModProfile { LaunchBackendKind = LaunchBackendKind.VirtualFileSystem };
 
         await launcher.LaunchAsync("game", profile, new Progress<string>());
@@ -58,12 +61,72 @@ public sealed class ProfileLauncherTests
     }
 
     [Fact]
+    public async Task LaunchAsync_PassesFileLayerPlanAndOverlayManifestToBackend()
+    {
+        using var process = Process.GetCurrentProcess();
+        var root = Path.Combine(Path.GetTempPath(), "StalkerModLauncherProfileLauncherTests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var game = Path.Combine(root, "game");
+            var mod = Path.Combine(root, "mod");
+            Directory.CreateDirectory(game);
+            Directory.CreateDirectory(mod);
+            var paths = new AppPaths(Path.Combine(root, "config"), Path.Combine(root, "workspaces"), false);
+            var profileManager = new ProfileManager(paths, new NoopWorkspaceManager());
+            var linkedBackend = new RecordingLaunchBackend(LaunchBackendKind.LinkedWorkspace);
+            var launcher = new ProfileLauncher(
+                [linkedBackend],
+                new RecordingLaunchPlanExecutor(process),
+                profileManager);
+            var profile = new ModProfile
+            {
+                Name = "Layered profile",
+                GameInstallPath = game
+            };
+            profile.Mods.Add(new ModEntry { Id = "mod", Name = "Patch", SourcePath = mod, Order = 1 });
+
+            await launcher.LaunchAsync(game, profile, new Progress<string>());
+
+            Assert.NotNull(linkedBackend.Context?.FileLayerPlan);
+            Assert.NotNull(linkedBackend.Context?.OverlayManifest);
+            Assert.Equal(["__base_game", "mod", "__userdata"], linkedBackend.Context.FileLayerPlan.Layers.Select(layer => layer.Id));
+            Assert.Equal(3, linkedBackend.Context.OverlayManifest.Layers.Count);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task LaunchAsync_RejectsVirtualFileSystemWhenFeatureFlagIsDisabled()
+    {
+        using var process = Process.GetCurrentProcess();
+        var launcher = new ProfileLauncher(
+            [
+                new RecordingLaunchBackend(LaunchBackendKind.LinkedWorkspace),
+                new RecordingLaunchBackend(LaunchBackendKind.VirtualFileSystem)
+            ],
+            new RecordingLaunchPlanExecutor(process));
+        var profile = new ModProfile { LaunchBackendKind = LaunchBackendKind.VirtualFileSystem };
+
+        var exception = await Assert.ThrowsAsync<NotSupportedException>(
+            () => launcher.LaunchAsync("game", profile, new Progress<string>()));
+
+        Assert.Contains("experimental and disabled", exception.Message);
+    }
+
+    [Fact]
     public async Task LaunchAsync_RejectsVirtualFileSystemWhenBackendIsNotRegistered()
     {
         using var process = Process.GetCurrentProcess();
         var launcher = new ProfileLauncher(
             [new RecordingLaunchBackend(LaunchBackendKind.LinkedWorkspace)],
-            new RecordingLaunchPlanExecutor(process));
+            new RecordingLaunchPlanExecutor(process),
+            allowExperimentalVirtualFileSystem: true);
         var profile = new ModProfile { LaunchBackendKind = LaunchBackendKind.VirtualFileSystem };
 
         var exception = await Assert.ThrowsAsync<NotSupportedException>(
@@ -77,15 +140,16 @@ public sealed class ProfileLauncherTests
         public LaunchBackendKind Kind { get; } = kind;
         public string? GamePath { get; private set; }
         public ModProfile? Profile { get; private set; }
+        public ProfileLaunchBackendContext? Context { get; private set; }
 
         public Task<LaunchPlan> PrepareAsync(
-            string gamePath,
-            ModProfile profile,
+            ProfileLaunchBackendContext context,
             IProgress<string> progress,
             CancellationToken cancellationToken = default)
         {
-            GamePath = gamePath;
-            Profile = profile;
+            Context = context;
+            GamePath = context.GamePath;
+            Profile = context.Profile;
             return Task.FromResult(new LaunchPlan(
                 Kind,
                 $"C:\\Game\\{Kind}.exe",
@@ -112,6 +176,17 @@ public sealed class ProfileLauncherTests
         public void Report(string value)
         {
             Messages.Add(value);
+        }
+    }
+
+    private sealed class NoopWorkspaceManager : IProfileWorkspaceManager
+    {
+        public void DeleteProfileWorkspace(ModProfile profile, string gamePath)
+        {
+        }
+
+        public void ClearProfileWorkspaceCache(ModProfile profile, string gamePath)
+        {
         }
     }
 }

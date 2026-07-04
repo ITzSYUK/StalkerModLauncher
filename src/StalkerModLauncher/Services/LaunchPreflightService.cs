@@ -7,6 +7,8 @@ public sealed class LaunchPreflightService
     private const long LowDiskSpaceBytes = 512L * 1024 * 1024;
     private readonly GameInstallationValidator _gameValidator;
     private readonly ProfileManager _profileManager;
+    private readonly ProfileLaunchPlanResolver _launchPlanResolver = new();
+    private readonly OverlayManifestBuilder _overlayManifestBuilder = new();
 
     public LaunchPreflightService(GameInstallationValidator gameValidator, ProfileManager profileManager)
     {
@@ -23,6 +25,8 @@ public sealed class LaunchPreflightService
     {
         var checks = new List<ProfileHealthCheck>();
         var fileLayerPlan = TryCreateLinkedFileLayerPlan(profile);
+        var launchPlan = TryCreateLaunchPlan(profile, fileLayerPlan, cancellationToken);
+        var overlayManifest = TryCreateOverlayManifest(profile, fileLayerPlan, cancellationToken);
         if (!profile.IsEnabled)
         {
             checks.Add(Error("Профиль", "Профиль выключен."));
@@ -64,7 +68,8 @@ public sealed class LaunchPreflightService
         try
         {
             FileSystemSafety.EnsureRelativePath(profile.ExecutableRelativePath, "Бинарник запуска");
-            var executableSource = FindFinalExecutableSource(profile, profile.ExecutableRelativePath, fileLayerPlan);
+            var executableSource = launchPlan?.Executable ??
+                                   FindFinalExecutableSource(profile, profile.ExecutableRelativePath, fileLayerPlan, cancellationToken);
             checks.Add(new ProfileHealthCheck(
                 executableSource is null || !executableSource.IsAvailable
                     ? ProfileHealthStatus.Error
@@ -96,7 +101,44 @@ public sealed class LaunchPreflightService
             AddLinkSupportCheck(checks, profile, fileLayerPlan, enabledMods, cancellationToken);
         }
 
-        return new LaunchPreflightReport(checks);
+        return new LaunchPreflightReport(checks, launchPlan?.Plan, overlayManifest);
+    }
+
+    private LaunchPlanResolution? TryCreateLaunchPlan(
+        ModProfile profile,
+        FileLayerPlan? fileLayerPlan,
+        CancellationToken cancellationToken)
+    {
+        if (profile.IsStandalone)
+        {
+            return _launchPlanResolver.PreviewStandalone(profile, cancellationToken);
+        }
+
+        if (fileLayerPlan is null)
+        {
+            return null;
+        }
+
+        var workspace = _profileManager.GetProfileFolderPath(profile);
+        return string.IsNullOrWhiteSpace(workspace)
+            ? null
+            : _launchPlanResolver.PreviewLinkedWorkspace(profile, fileLayerPlan, workspace);
+    }
+
+    private OverlayManifest? TryCreateOverlayManifest(
+        ModProfile profile,
+        FileLayerPlan? fileLayerPlan,
+        CancellationToken cancellationToken)
+    {
+        if (fileLayerPlan is null)
+        {
+            return null;
+        }
+
+        var workspace = _profileManager.GetProfileFolderPath(profile);
+        return string.IsNullOrWhiteSpace(workspace)
+            ? null
+            : _overlayManifestBuilder.BuildLinkedWorkspace(profile, fileLayerPlan, workspace, cancellationToken: cancellationToken);
     }
 
     private FileLayerPlan? TryCreateLinkedFileLayerPlan(ModProfile profile)
@@ -263,86 +305,22 @@ public sealed class LaunchPreflightService
             .LastOrDefault(File.Exists);
     }
 
-    private static ExecutableSourceInfo? FindFinalExecutableSource(ModProfile profile, string requestedRelativePath, FileLayerPlan? fileLayerPlan)
+    private LaunchExecutableResolution? FindFinalExecutableSource(
+        ModProfile profile,
+        string requestedRelativePath,
+        FileLayerPlan? fileLayerPlan,
+        CancellationToken cancellationToken)
     {
         var roots = fileLayerPlan is null
             ? CreateExecutableRoots(profile).ToArray()
             : FileLayerSourceResolver.CreateExecutableRoots(fileLayerPlan);
-        if (!profile.IsStandalone && !string.IsNullOrWhiteSpace(profile.ExecutableSourcePath))
-        {
-            var pinnedSource = ProfileExecutableSourceResolver.FindPinnedSourceRoot(profile);
-            if (pinnedSource is null)
-            {
-                return new ExecutableSourceInfo(
-                    profile.ExecutableSourcePath,
-                    requestedRelativePath,
-                    "ручной источник",
-                    "папка ручного источника недоступна или мод выключен",
-                    true,
-                    true,
-                    false);
-            }
-
-            var pinnedExecutable = FileSystemSafety.ResolvePathInside(
-                pinnedSource.RootPath,
-                requestedRelativePath,
-                "Бинарник запуска");
-            return File.Exists(pinnedExecutable)
-                ? new ExecutableSourceInfo(
-                    pinnedExecutable,
-                    requestedRelativePath,
-                    pinnedSource.DisplayName,
-                    "выбран пользователем вручную",
-                    true,
-                    true)
-                : new ExecutableSourceInfo(
-                    pinnedExecutable,
-                    requestedRelativePath,
-                    pinnedSource.DisplayName,
-                    "ручной источник найден, но файл отсутствует",
-                    true,
-                    true,
-                    false);
-        }
-
-        var exact = roots
-            .Where(root => Directory.Exists(root.RootPath))
-            .Select(root => new
-            {
-                FullPath = Path.Combine(root.RootPath, requestedRelativePath),
-                root.DisplayName,
-                root.Order
-            })
-            .Where(candidate => File.Exists(candidate.FullPath))
-            .OrderByDescending(candidate => candidate.Order)
-            .FirstOrDefault();
-        if (exact is not null)
-        {
-            return new ExecutableSourceInfo(
-                exact.FullPath,
-                requestedRelativePath,
-                exact.DisplayName,
-                "найден выбранный путь",
-                true,
-                false);
-        }
-
-        var detected = LaunchExecutableDetector.DetectBest(
+        return _launchPlanResolver.ResolveExecutableSource(
+            profile,
             roots,
             requestedRelativePath,
-            allowDedicated: LaunchExecutableDetector.IsDedicatedExecutable(requestedRelativePath));
-        if (detected is null || detected.Score > 50 && detected.CandidateCount != 1)
-        {
-            return null;
-        }
-
-        return new ExecutableSourceInfo(
-            detected.FullPath,
-            detected.RelativePath,
-            detected.SourceName,
-            detected.Reason,
-            false,
-            false);
+            allowPinnedSource: true,
+            allowDedicatedFallback: LaunchExecutableDetector.IsDedicatedExecutable(requestedRelativePath),
+            cancellationToken);
     }
 
     private static IEnumerable<LaunchExecutableSearchRoot> CreateExecutableRoots(ModProfile profile)
@@ -360,7 +338,7 @@ public sealed class LaunchPreflightService
         }
     }
 
-    private static string FormatExecutableSource(ExecutableSourceInfo source, string requestedRelativePath)
+    private static string FormatExecutableSource(LaunchExecutableResolution source, string requestedRelativePath)
     {
         if (!source.IsAvailable)
         {
@@ -393,12 +371,4 @@ public sealed class LaunchPreflightService
         AttributesToSkip = FileAttributes.ReparsePoint
     };
 
-    private sealed record ExecutableSourceInfo(
-        string FullPath,
-        string RelativePath,
-        string SourceName,
-        string Reason,
-        bool UsedRequestedRelativePath,
-        bool IsPinned,
-        bool IsAvailable = true);
 }

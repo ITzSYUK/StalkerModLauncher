@@ -19,7 +19,8 @@ public sealed class AppServices
                 [
                     new LinkedWorkspaceLaunchBackend(workspaceBuilder),
                     new VirtualFileSystemLaunchBackend()
-                ]),
+                ],
+                profileManager: ProfileManager),
             new GameSessionTracker());
         GameValidator = new GameInstallationValidator();
         ProfileReadinessService = new ProfileReadinessService(GameValidator);

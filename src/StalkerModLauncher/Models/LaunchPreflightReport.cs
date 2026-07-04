@@ -1,6 +1,9 @@
 namespace StalkerModLauncher.Models;
 
-public sealed record LaunchPreflightReport(IReadOnlyList<ProfileHealthCheck> Checks)
+public sealed record LaunchPreflightReport(
+    IReadOnlyList<ProfileHealthCheck> Checks,
+    LaunchPlan? LaunchPlan = null,
+    OverlayManifest? OverlayManifest = null)
 {
     public int ErrorCount => Checks.Count(check => check.Status == ProfileHealthStatus.Error);
     public int WarningCount => Checks.Count(check => check.Status == ProfileHealthStatus.Warning);

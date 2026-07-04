@@ -8,6 +8,7 @@ public sealed class LinkedWorkspaceLaunchBackend : IProfileLaunchBackend
     private const string AutoLoadBeginMarker = "-- STALKER_MOD_LAUNCHER_AUTOLOAD_BEGIN";
     private const string AutoLoadEndMarker = "-- STALKER_MOD_LAUNCHER_AUTOLOAD_END";
     private readonly WorkspaceBuilder _workspaceBuilder;
+    private readonly ProfileLaunchPlanResolver _launchPlanResolver = new();
 
     public LinkedWorkspaceLaunchBackend(WorkspaceBuilder workspaceBuilder)
     {
@@ -17,29 +18,23 @@ public sealed class LinkedWorkspaceLaunchBackend : IProfileLaunchBackend
     public LaunchBackendKind Kind => LaunchBackendKind.LinkedWorkspace;
 
     public async Task<LaunchPlan> PrepareAsync(
-        string gamePath,
-        ModProfile profile,
+        ProfileLaunchBackendContext context,
         IProgress<string> progress,
         CancellationToken cancellationToken = default)
     {
-        var workspace = await _workspaceBuilder.BuildAsync(gamePath, profile, progress, cancellationToken);
+        var profile = context.Profile;
+        var workspace = await _workspaceBuilder.BuildAsync(
+            context.GamePath,
+            profile,
+            progress,
+            cancellationToken,
+            context.FileLayerPlan);
         profile.WorkspacePath = workspace.ProfileWorkspacePath;
         profile.ExecutableRelativePath = workspace.ExecutableRelativePath;
         profile.WorkingDirectoryRelative = workspace.WorkingDirectoryRelative;
         RemoveLegacyScriptAutoloadPatch(workspace, profile, progress);
 
-        var workingDir = string.IsNullOrWhiteSpace(profile.WorkingDirectoryRelative)
-            ? workspace.WorkspaceRoot
-            : FileSystemSafety.ResolvePathInside(
-                workspace.WorkspaceRoot,
-                profile.WorkingDirectoryRelative,
-                "Working directory");
-
-        return new LaunchPlan(
-            LaunchBackendKind.LinkedWorkspace,
-            workspace.ExecutablePath,
-            profile.LaunchArguments,
-            workingDir);
+        return _launchPlanResolver.CreatePreparedPlan(LaunchBackendKind.LinkedWorkspace, profile, workspace);
     }
 
     private static void RemoveLegacyScriptAutoloadPatch(WorkspaceBuildResult workspace, ModProfile profile, IProgress<string> progress)
