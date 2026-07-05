@@ -172,6 +172,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         _profile.IsEnabled = IsEnabled;
         _profile.IsDiscordStatusEnabled = IsDiscordStatusEnabled;
         _profile.IsStandalone = IsStandalone;
+        _profile.LaunchBackendKind = LaunchBackendKind.LinkedWorkspace;
     }
 
     private void BrowseExecutable()

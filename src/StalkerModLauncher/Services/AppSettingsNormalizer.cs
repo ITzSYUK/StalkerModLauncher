@@ -39,6 +39,11 @@ public static class AppSettingsNormalizer
                 profile.LaunchBackendKind = LaunchBackendKind.LinkedWorkspace;
             }
 
+            if (profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem)
+            {
+                profile.LaunchBackendKind = LaunchBackendKind.LinkedWorkspace;
+            }
+
             profile.IsRunning = false;
             profile.Mods ??= [];
             profile.Mods = new System.Collections.ObjectModel.ObservableCollection<ModEntry>(

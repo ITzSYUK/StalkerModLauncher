@@ -16,4 +16,18 @@ public sealed class AppSettingsNormalizerTests
 
         Assert.Equal(LaunchBackendKind.LinkedWorkspace, normalized.Profiles[0].LaunchBackendKind);
     }
+
+    [Fact]
+    public void Normalize_ResetsLegacyVirtualFileSystemProfiles()
+    {
+        var profile = new ModProfile
+        {
+            LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
+        };
+        var settings = new AppSettings { Profiles = [profile] };
+
+        var normalized = AppSettingsNormalizer.Normalize(settings);
+
+        Assert.Equal(LaunchBackendKind.LinkedWorkspace, normalized.Profiles[0].LaunchBackendKind);
+    }
 }

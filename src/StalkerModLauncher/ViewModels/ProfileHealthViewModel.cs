@@ -10,6 +10,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
 {
     private readonly ModProfile _profile;
     private readonly ProfileHealthService _healthService;
+    private readonly ProfileVirtualFileDiagnosticsService _virtualFileDiagnosticsService;
     private readonly DialogService _dialogService;
     private readonly WorkspaceManagementService _workspaceManagementService;
     private readonly Action<string>? _log;
@@ -18,16 +19,20 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
     private bool _isChecking;
     private WorkspaceStatus? _workspace;
     private CancellationTokenSource? _refreshCancellation;
+    private string _virtualFilePath = "fsgame.ltx";
+    private string _virtualFileStatus = "Введите путь внутри игры и нажмите «Проверить».";
 
     public ProfileHealthViewModel(
         ModProfile profile,
         ProfileHealthService healthService,
+        ProfileVirtualFileDiagnosticsService virtualFileDiagnosticsService,
         DialogService dialogService,
         WorkspaceManagementService workspaceManagementService,
         Action<string>? log = null)
     {
         _profile = profile;
         _healthService = healthService;
+        _virtualFileDiagnosticsService = virtualFileDiagnosticsService;
         _dialogService = dialogService;
         _workspaceManagementService = workspaceManagementService;
         _log = log;
@@ -41,6 +46,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         ClearWorkspaceCommand = new RelayCommand(ClearWorkspace, () => CanManageWorkspace);
         RebuildWorkspaceCommand = new AsyncRelayCommand(RebuildWorkspaceAsync, () => CanManageWorkspace && !IsChecking);
         MoveWorkspaceCommand = new AsyncRelayCommand(MoveWorkspaceAsync, () => CanManageWorkspace && !IsChecking);
+        InspectVirtualFileCommand = new RelayCommand(InspectVirtualFile, () => CanInspectVirtualFiles);
 
         _ = RefreshAsync();
     }
@@ -68,6 +74,20 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
     }
 
     public bool CanManageWorkspace => !_profile.IsStandalone && !string.IsNullOrWhiteSpace(_profile.WorkspacePath);
+
+    public bool CanInspectVirtualFiles => !_profile.IsStandalone && _report?.OverlayManifest is not null;
+
+    public string VirtualFilePath
+    {
+        get => _virtualFilePath;
+        set => SetProperty(ref _virtualFilePath, value);
+    }
+
+    public string VirtualFileStatus
+    {
+        get => _virtualFileStatus;
+        private set => SetProperty(ref _virtualFileStatus, value);
+    }
 
     public string Summary
     {
@@ -98,6 +118,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
     public ICommand ClearWorkspaceCommand { get; }
     public ICommand RebuildWorkspaceCommand { get; }
     public ICommand MoveWorkspaceCommand { get; }
+    public ICommand InspectVirtualFileCommand { get; }
 
     private async Task RefreshAsync()
     {
@@ -112,6 +133,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
             var report = await _healthService.AnalyzeAsync(_profile, _refreshCancellation.Token);
             _report = report;
             Workspace = report.Workspace;
+            OnPropertyChanged(nameof(CanInspectVirtualFiles));
             Checks.Clear();
             foreach (var check in report.Checks)
             {
@@ -164,6 +186,23 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
     private void CopyReport()
     {
         RunAction(() => _dialogService.CopyText(_report!.ToText(_profile.Name)));
+    }
+
+    private void InspectVirtualFile()
+    {
+        try
+        {
+            var inspection = _virtualFileDiagnosticsService.InspectLinkedWorkspaceFile(_profile, VirtualFilePath);
+            VirtualFilePath = inspection.RelativePath;
+            VirtualFileStatus =
+                $"{inspection.ReadSourceDisplay}{Environment.NewLine}" +
+                $"{inspection.WriteTargetDisplay}{Environment.NewLine}" +
+                inspection.ProvidersDisplay;
+        }
+        catch (Exception ex)
+        {
+            VirtualFileStatus = $"Не удалось проверить файл: {ex.Message}";
+        }
     }
 
     private void ClearWorkspace()
@@ -276,6 +315,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         ((RelayCommand)OpenCrashDumpCommand).RaiseCanExecuteChanged();
         ((RelayCommand)CopyReportCommand).RaiseCanExecuteChanged();
         ((RelayCommand)ClearWorkspaceCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)InspectVirtualFileCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)RebuildWorkspaceCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)MoveWorkspaceCommand).RaiseCanExecuteChanged();
     }

@@ -15,6 +15,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -135,6 +136,56 @@
         </Border>
 
         <Border Grid.Row="3"
+                Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource StrokeBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10,8"
+                Margin="0,0,0,10">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding CanInspectVirtualFiles}" Value="False">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="260"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel>
+                    <TextBlock Text="Виртуальный файл"
+                               FontSize="14"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Text="Какой файл увидит будущий VFS"
+                               Foreground="{StaticResource MutedTextBrush}"
+                               FontSize="11"
+                               Margin="0,1,0,6"/>
+                    <TextBox Text="{Binding VirtualFilePath, UpdateSourceTrigger=PropertyChanged}"
+                             Height="30"/>
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        Content="Проверить"
+                        Command="{Binding InspectVirtualFileCommand}"
+                        VerticalAlignment="Bottom"
+                        Margin="10,0,14,0"/>
+
+                <TextBlock Grid.Column="2"
+                           Text="{Binding VirtualFileStatus}"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="4"
                 Background="{StaticResource FieldBackgroundBrush}"
                 BorderBrush="{StaticResource StrokeBrush}"
                 BorderThickness="1"
@@ -205,7 +256,7 @@
             </Grid>
         </Border>
 
-        <WrapPanel Grid.Row="4"
+        <WrapPanel Grid.Row="5"
                    HorizontalAlignment="Right"
                    Margin="0,14,0,0">
             <Button Content="Обновить"

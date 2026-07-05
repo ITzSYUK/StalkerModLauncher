@@ -6,12 +6,12 @@ namespace StalkerModLauncher.Services;
 
 public interface ILaunchPlanExecutor
 {
-    Process Start(LaunchPlan plan);
+    Process Start(LaunchPlan plan, IProgress<string>? progress = null);
 }
 
 public sealed class LaunchPlanExecutor : ILaunchPlanExecutor
 {
-    public Process Start(LaunchPlan plan)
+    public Process Start(LaunchPlan plan, IProgress<string>? progress = null)
     {
         return ProcessLauncher.Start(plan);
     }

@@ -32,6 +32,7 @@ public sealed class ProfileManager
             IsEnabled = source.IsEnabled,
             IsDiscordStatusEnabled = source.IsDiscordStatusEnabled,
             IsStandalone = source.IsStandalone,
+            LaunchBackendKind = source.LaunchBackendKind,
             LaunchArguments = source.LaunchArguments,
             ExecutableRelativePath = source.ExecutableRelativePath,
             ExecutableSourcePath = source.ExecutableSourcePath,

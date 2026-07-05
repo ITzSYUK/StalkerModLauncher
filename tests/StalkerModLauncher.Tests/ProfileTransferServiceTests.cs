@@ -72,6 +72,25 @@ public sealed class ProfileTransferServiceTests : IDisposable
         Assert.Throws<InvalidDataException>(() => service.Import(filePath));
     }
 
+    [Fact]
+    public void ExportThenImport_NormalizesLegacyVirtualFileSystemBackend()
+    {
+        Directory.CreateDirectory(_root);
+        var filePath = Path.Combine(_root, "vfs.stalkerprofile");
+        var source = new ModProfile
+        {
+            Name = "VFS profile",
+            LaunchBackendKind = LaunchBackendKind.VirtualFileSystem,
+            ExecutableRelativePath = @"bin\xrEngine.exe"
+        };
+        var service = new ProfileTransferService();
+
+        service.Export(filePath, source);
+        var imported = service.Import(filePath);
+
+        Assert.Equal(LaunchBackendKind.LinkedWorkspace, imported.LaunchBackendKind);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

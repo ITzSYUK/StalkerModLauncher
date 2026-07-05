@@ -76,7 +76,7 @@
                         <TextBlock TextWrapping="Wrap">
                             <Run Text="Автономный мод"/>
                             <Run Foreground="{StaticResource MutedTextBrush}" FontSize="11"
-                                 Text="—  мод имеет свой движок и все файлы игры, запускается из своей папки"/>
+                                 Text=" - мод имеет свой движок и все файлы игры, запускается из своей папки"/>
                         </TextBlock>
                     </CheckBox>
 
@@ -171,7 +171,6 @@
                                       HorizontalAlignment="Left"
                                       ToolTip="Статус отображается только во время запуска этого профиля. Отключите его, если мод уже публикует собственный Discord Rich Presence."/>
                     </StackPanel>
-
                 </Grid>
             </ScrollViewer>
         </Border>

@@ -17,14 +17,12 @@ public sealed class ProfileLauncher : IProfileLauncher
     private readonly IReadOnlyDictionary<LaunchBackendKind, IProfileLaunchBackend> _backends;
     private readonly ILaunchPlanExecutor _launchPlanExecutor;
     private readonly ProfileManager? _profileManager;
-    private readonly bool _allowExperimentalVirtualFileSystem;
     private readonly OverlayManifestBuilder _overlayManifestBuilder = new();
 
     public ProfileLauncher(
         IEnumerable<IProfileLaunchBackend> backends,
         ILaunchPlanExecutor? launchPlanExecutor = null,
-        ProfileManager? profileManager = null,
-        bool allowExperimentalVirtualFileSystem = false)
+        ProfileManager? profileManager = null)
     {
         _backends = backends.ToDictionary(backend => backend.Kind);
         if (!_backends.ContainsKey(LaunchBackendKind.LinkedWorkspace))
@@ -34,7 +32,6 @@ public sealed class ProfileLauncher : IProfileLauncher
 
         _launchPlanExecutor = launchPlanExecutor ?? new LaunchPlanExecutor();
         _profileManager = profileManager;
-        _allowExperimentalVirtualFileSystem = allowExperimentalVirtualFileSystem;
     }
 
     public async Task<Process> LaunchAsync(
@@ -44,11 +41,31 @@ public sealed class ProfileLauncher : IProfileLauncher
         CancellationToken cancellationToken = default)
     {
         var backend = ResolveBackend(profile.LaunchBackendKind);
+        if (backend.Kind != profile.LaunchBackendKind)
+        {
+            progress.Report($"Launch backend '{profile.LaunchBackendKind}' is no longer available. Using {backend.Kind}.");
+            profile.LaunchBackendKind = backend.Kind;
+        }
+
         progress.Report($"Launch backend: {backend.Kind}.");
         var context = CreateBackendContext(gamePath, profile);
         var plan = await backend.PrepareAsync(context, progress, cancellationToken);
         progress.Report($"Starting: {plan.ExecutablePath}");
-        return _launchPlanExecutor.Start(plan);
+        try
+        {
+            var process = _launchPlanExecutor.Start(plan, progress);
+            AttachRuntimeLease(process, plan.RuntimeLease);
+            return process;
+        }
+        catch
+        {
+            if (plan.RuntimeLease is not null)
+            {
+                await plan.RuntimeLease.DisposeAsync();
+            }
+
+            throw;
+        }
     }
 
     private ProfileLaunchBackendContext CreateBackendContext(string gamePath, ModProfile profile)
@@ -71,22 +88,44 @@ public sealed class ProfileLauncher : IProfileLauncher
 
     private IProfileLaunchBackend ResolveBackend(LaunchBackendKind kind)
     {
-        if (kind == LaunchBackendKind.VirtualFileSystem && !_allowExperimentalVirtualFileSystem)
-        {
-            throw new NotSupportedException(
-                "Virtual file system launch mode is experimental and disabled. Use the linked workspace launch mode.");
-        }
-
         if (_backends.TryGetValue(kind, out var backend))
         {
             return backend;
         }
 
-        if (kind == LaunchBackendKind.VirtualFileSystem)
+        return _backends[LaunchBackendKind.LinkedWorkspace];
+    }
+
+    private static void AttachRuntimeLease(Process process, IAsyncDisposable? runtimeLease)
+    {
+        if (runtimeLease is null)
         {
-            throw new NotSupportedException("Virtual file system launch mode is not implemented yet. Use the workspace launch mode.");
+            return;
         }
 
-        return _backends[LaunchBackendKind.LinkedWorkspace];
+        var disposed = 0;
+        async void DisposeRuntime(object? sender, EventArgs args)
+        {
+            if (Interlocked.Exchange(ref disposed, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                await runtimeLease.DisposeAsync();
+            }
+            catch
+            {
+                // Runtime cleanup must not crash the launcher after the game exits.
+            }
+        }
+
+        process.EnableRaisingEvents = true;
+        process.Exited += DisposeRuntime;
+        if (process.HasExited)
+        {
+            DisposeRuntime(process, EventArgs.Empty);
+        }
     }
 }

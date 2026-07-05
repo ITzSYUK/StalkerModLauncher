@@ -24,8 +24,8 @@ public sealed class VirtualFileResolver
                     ? VirtualFileSourceKind.KnownWritableFile
                     : VirtualFileSourceKind.Overwrite,
                 writeTarget.Kind == OverlayWriteTargetKind.KnownWritableFile
-                    ? "профильные writable-файлы"
-                    : "профильный overwrite");
+                    ? "profile writable files"
+                    : "profile overwrite");
         }
 
         var finalFile = layerPlan.FindFinalFile(normalizedRelativePath);
@@ -35,7 +35,7 @@ public sealed class VirtualFileResolver
                 normalizedRelativePath,
                 null,
                 VirtualFileSourceKind.Missing,
-                "файл не найден");
+                "file not found");
         }
 
         return new VirtualFileResolution(
@@ -77,7 +77,7 @@ public sealed class VirtualFileResolver
             manifest.WriteOverlayRoot,
             normalizedRelativeDirectory,
             VirtualFileSourceKind.Overwrite,
-            "профильный overwrite");
+            "profile overwrite");
 
         foreach (var writableFile in manifest.WritableFiles)
         {
@@ -183,7 +183,7 @@ public sealed class VirtualFileResolver
             NormalizeRelativePath(writableFile.RelativePath),
             IsDirectory: false,
             VirtualFileSourceKind.KnownWritableFile,
-            "профильные writable-файлы"));
+            "profile writable files"));
     }
 
     private static void AddOrReplace(

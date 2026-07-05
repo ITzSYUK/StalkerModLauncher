@@ -43,7 +43,7 @@ public sealed class OverlayDiagnosticsService
             OverlayWriteTargetKind.DefaultOverwrite,
             normalizedRelativePath,
             Path.Combine(manifest.WriteOverlayRoot, normalizedRelativePath),
-            "Future VFS writes for unknown game files should go to the profile overwrite area.");
+            "Future overlay-backed writes for unknown game files should go to the profile overwrite area.");
     }
 
     private static OverlayFileProviderSnapshot ToSnapshot(FileLayerFile file)

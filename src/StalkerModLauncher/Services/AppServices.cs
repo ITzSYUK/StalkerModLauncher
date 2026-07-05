@@ -17,8 +17,7 @@ public sealed class AppServices
         LaunchCoordinator = new LaunchCoordinator(
             new ProfileLauncher(
                 [
-                    new LinkedWorkspaceLaunchBackend(workspaceBuilder),
-                    new VirtualFileSystemLaunchBackend()
+                    new LinkedWorkspaceLaunchBackend(workspaceBuilder)
                 ],
                 profileManager: ProfileManager),
             new GameSessionTracker());
@@ -36,10 +35,12 @@ public sealed class AppServices
         ApProCatalogService = new ApProCatalogService();
         GameExitDiagnosticsService = new GameExitDiagnosticsService(ProfileDataPathResolver);
         ProfileHealthService = new ProfileHealthService(GameValidator, ProfileManager, ProfileDataPathResolver, WorkspaceManagementService);
+        ProfileVirtualFileDiagnosticsService = new ProfileVirtualFileDiagnosticsService(ProfileManager);
         WindowNavigationService = new WindowNavigationService(
             DialogService,
             SettingsStore,
             ProfileHealthService,
+            ProfileVirtualFileDiagnosticsService,
             WorkspaceManagementService,
             ScreenshotScannerService,
             ScreenshotClipboardService,
@@ -64,6 +65,7 @@ public sealed class AppServices
     public ModListEditor ModListEditor { get; }
     public GameExitDiagnosticsService GameExitDiagnosticsService { get; }
     public ProfileHealthService ProfileHealthService { get; }
+    public ProfileVirtualFileDiagnosticsService ProfileVirtualFileDiagnosticsService { get; }
     public ProfileDataPathResolver ProfileDataPathResolver { get; }
     public ScreenshotScannerService ScreenshotScannerService { get; }
     public ScreenshotClipboardService ScreenshotClipboardService { get; }

@@ -10,6 +10,7 @@ public sealed class WindowNavigationService
     private readonly DialogService _dialogService;
     private readonly SettingsStore _settingsStore;
     private readonly ProfileHealthService _profileHealthService;
+    private readonly ProfileVirtualFileDiagnosticsService _profileVirtualFileDiagnosticsService;
     private readonly WorkspaceManagementService _workspaceManagementService;
     private readonly ScreenshotScannerService _screenshotScannerService;
     private readonly IScreenshotClipboardService _screenshotClipboardService;
@@ -20,6 +21,7 @@ public sealed class WindowNavigationService
         DialogService dialogService,
         SettingsStore settingsStore,
         ProfileHealthService profileHealthService,
+        ProfileVirtualFileDiagnosticsService profileVirtualFileDiagnosticsService,
         WorkspaceManagementService workspaceManagementService,
         ScreenshotScannerService screenshotScannerService,
         IScreenshotClipboardService screenshotClipboardService,
@@ -29,6 +31,7 @@ public sealed class WindowNavigationService
         _dialogService = dialogService;
         _settingsStore = settingsStore;
         _profileHealthService = profileHealthService;
+        _profileVirtualFileDiagnosticsService = profileVirtualFileDiagnosticsService;
         _workspaceManagementService = workspaceManagementService;
         _screenshotScannerService = screenshotScannerService;
         _screenshotClipboardService = screenshotClipboardService;
@@ -67,6 +70,7 @@ public sealed class WindowNavigationService
         var viewModel = new ProfileHealthViewModel(
             profile,
             _profileHealthService,
+            _profileVirtualFileDiagnosticsService,
             _dialogService,
             _workspaceManagementService,
             log);

@@ -12,37 +12,35 @@ public sealed class ProfileLauncherTests
     {
         using var process = Process.GetCurrentProcess();
         var linkedBackend = new RecordingLaunchBackend(LaunchBackendKind.LinkedWorkspace);
-        var virtualBackend = new RecordingLaunchBackend(LaunchBackendKind.VirtualFileSystem);
         var executor = new RecordingLaunchPlanExecutor(process);
-        var launcher = new ProfileLauncher([linkedBackend, virtualBackend], executor);
+        var launcher = new ProfileLauncher([linkedBackend], executor);
         var profile = new ModProfile();
 
         var launchedProcess = await launcher.LaunchAsync("game", profile, new Progress<string>());
 
         Assert.Same(process, launchedProcess);
         Assert.Same(profile, linkedBackend.Profile);
-        Assert.Null(virtualBackend.Profile);
         Assert.Equal(LaunchBackendKind.LinkedWorkspace, executor.Plan?.BackendKind);
     }
 
     [Fact]
-    public async Task LaunchAsync_UsesProfileSelectedBackendWhenExperimentalVirtualFileSystemIsEnabled()
+    public async Task LaunchAsync_FallsBackToLinkedWorkspaceForLegacyVirtualFileSystemProfiles()
     {
         using var process = Process.GetCurrentProcess();
         var linkedBackend = new RecordingLaunchBackend(LaunchBackendKind.LinkedWorkspace);
-        var virtualBackend = new RecordingLaunchBackend(LaunchBackendKind.VirtualFileSystem);
         var executor = new RecordingLaunchPlanExecutor(process);
-        var launcher = new ProfileLauncher(
-            [linkedBackend, virtualBackend],
-            executor,
-            allowExperimentalVirtualFileSystem: true);
+        var launcher = new ProfileLauncher([linkedBackend], executor);
         var profile = new ModProfile { LaunchBackendKind = LaunchBackendKind.VirtualFileSystem };
+        var progress = new ListProgress();
 
-        await launcher.LaunchAsync("game", profile, new Progress<string>());
+        await launcher.LaunchAsync("game", profile, progress);
 
-        Assert.Null(linkedBackend.Profile);
-        Assert.Same(profile, virtualBackend.Profile);
-        Assert.Equal(LaunchBackendKind.VirtualFileSystem, executor.Plan?.BackendKind);
+        Assert.Same(profile, linkedBackend.Profile);
+        Assert.Equal(LaunchBackendKind.LinkedWorkspace, profile.LaunchBackendKind);
+        Assert.Equal(LaunchBackendKind.LinkedWorkspace, executor.Plan?.BackendKind);
+        Assert.Contains(
+            progress.Messages,
+            message => message.Contains("no longer available", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -102,37 +100,18 @@ public sealed class ProfileLauncherTests
     }
 
     [Fact]
-    public async Task LaunchAsync_RejectsVirtualFileSystemWhenFeatureFlagIsDisabled()
+    public async Task LaunchAsync_DisposesRuntimeLeaseWhenProcessStartFails()
     {
-        using var process = Process.GetCurrentProcess();
+        var runtimeLease = new RecordingRuntimeLease();
+        var backend = new RuntimeLeaseLaunchBackend(runtimeLease);
         var launcher = new ProfileLauncher(
-            [
-                new RecordingLaunchBackend(LaunchBackendKind.LinkedWorkspace),
-                new RecordingLaunchBackend(LaunchBackendKind.VirtualFileSystem)
-            ],
-            new RecordingLaunchPlanExecutor(process));
-        var profile = new ModProfile { LaunchBackendKind = LaunchBackendKind.VirtualFileSystem };
+            [backend],
+            new ThrowingLaunchPlanExecutor());
 
-        var exception = await Assert.ThrowsAsync<NotSupportedException>(
-            () => launcher.LaunchAsync("game", profile, new Progress<string>()));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            launcher.LaunchAsync("game", new ModProfile(), new Progress<string>()));
 
-        Assert.Contains("experimental and disabled", exception.Message);
-    }
-
-    [Fact]
-    public async Task LaunchAsync_RejectsVirtualFileSystemWhenBackendIsNotRegistered()
-    {
-        using var process = Process.GetCurrentProcess();
-        var launcher = new ProfileLauncher(
-            [new RecordingLaunchBackend(LaunchBackendKind.LinkedWorkspace)],
-            new RecordingLaunchPlanExecutor(process),
-            allowExperimentalVirtualFileSystem: true);
-        var profile = new ModProfile { LaunchBackendKind = LaunchBackendKind.VirtualFileSystem };
-
-        var exception = await Assert.ThrowsAsync<NotSupportedException>(
-            () => launcher.LaunchAsync("game", profile, new Progress<string>()));
-
-        Assert.Contains("Virtual file system", exception.Message);
+        Assert.True(runtimeLease.IsDisposed);
     }
 
     private sealed class RecordingLaunchBackend(LaunchBackendKind kind) : IProfileLaunchBackend
@@ -162,7 +141,7 @@ public sealed class ProfileLauncherTests
     {
         public LaunchPlan? Plan { get; private set; }
 
-        public Process Start(LaunchPlan plan)
+        public Process Start(LaunchPlan plan, IProgress<string>? progress = null)
         {
             Plan = plan;
             return process;
@@ -176,6 +155,43 @@ public sealed class ProfileLauncherTests
         public void Report(string value)
         {
             Messages.Add(value);
+        }
+    }
+
+    private sealed class RuntimeLeaseLaunchBackend(IAsyncDisposable runtimeLease) : IProfileLaunchBackend
+    {
+        public LaunchBackendKind Kind => LaunchBackendKind.LinkedWorkspace;
+
+        public Task<LaunchPlan> PrepareAsync(
+            ProfileLaunchBackendContext context,
+            IProgress<string> progress,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new LaunchPlan(
+                Kind,
+                "C:\\Game\\LinkedWorkspace.exe",
+                "-nointro",
+                "C:\\Game",
+                runtimeLease));
+        }
+    }
+
+    private sealed class ThrowingLaunchPlanExecutor : ILaunchPlanExecutor
+    {
+        public Process Start(LaunchPlan plan, IProgress<string>? progress = null)
+        {
+            throw new InvalidOperationException("Start failed.");
+        }
+    }
+
+    private sealed class RecordingRuntimeLease : IAsyncDisposable
+    {
+        public bool IsDisposed { get; private set; }
+
+        public ValueTask DisposeAsync()
+        {
+            IsDisposed = true;
+            return ValueTask.CompletedTask;
         }
     }
 
