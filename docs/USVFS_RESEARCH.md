@@ -56,6 +56,20 @@ nested=mod-system
 USVFS overlay PoC passed.
 ```
 
+The next bridge is also verified: `research/usvfs-managed-poc` uses the
+launcher-side `UsvfsRuntime` managed adapter, loads the same official
+`usvfs_x64.dll` via P/Invoke and starts a hooked child process from C#.
+
+Verified result:
+
+```text
+shared=mod
+base-only=base
+mod-only=mod
+nested=mod-system
+Managed USVFS PoC passed.
+```
+
 ## Current safe bridge
 
 The branch adds `UsvfsMappingPlanBuilder`. It does not load USVFS, does not
@@ -94,11 +108,10 @@ The new direction is narrower:
 
 ## Next steps
 
-1. Add a narrow adapter boundary around the official USVFS API.
-2. Feed that adapter from the existing `UsvfsMappingPlanBuilder`.
-3. Run the same PoC shape from managed code before involving game profiles.
-4. Keep the UI disabled until the adapter can pass a simple integration test.
-5. Only then try one non-critical game profile behind an explicit experimental
+1. Add a dedicated experimental launch backend around the managed USVFS adapter.
+2. Feed that backend from the existing `UsvfsMappingPlanBuilder`.
+3. Keep the UI disabled until the backend can pass a simple integration test.
+4. Only then try one non-critical game profile behind an explicit experimental
    flag.
 
 ## Important constraints
