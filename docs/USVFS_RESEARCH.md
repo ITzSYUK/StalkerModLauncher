@@ -30,6 +30,32 @@ That shape fits our launcher better than the removed custom hook experiment:
 our managed code should prepare a mapping plan, while the native library owns
 process injection and filesystem interception.
 
+## Local build and PoC status
+
+`ModOrganizer2/usvfs` was built locally as x64 with Visual Studio Build Tools,
+CMake, Ninja and vcpkg. The build artifacts used for research were kept outside
+the repository under `.external/` and a temporary source/build folder.
+
+The branch also contains a tiny external proof of concept in
+`research/usvfs-poc`. It links against the locally built `usvfs_x64.lib`, copies
+`usvfs_x64.dll` and `usvfs_proxy_x64.exe` to the PoC output directory, then:
+
+1. creates a `base` folder and a `mod` folder;
+2. maps both folders over one virtual root with `usvfsVirtualLinkDirectoryStatic`;
+3. starts a child process through `usvfsCreateProcessHooked`;
+4. verifies that files unique to each layer are visible and that `mod` wins over
+   `base` for matching paths.
+
+Verified result:
+
+```text
+shared=mod
+base-only=base
+mod-only=mod
+nested=mod-system
+USVFS overlay PoC passed.
+```
+
 ## Current safe bridge
 
 The branch adds `UsvfsMappingPlanBuilder`. It does not load USVFS, does not
@@ -68,15 +94,12 @@ The new direction is narrower:
 
 ## Next steps
 
-1. Build `ModOrganizer2/usvfs` x64 locally with Visual Studio Build Tools,
-   CMake and vcpkg.
-2. Create a tiny native/managed proof of concept outside game launch:
-   - create a VFS instance;
-   - map two test folders over one virtual root;
-   - launch a simple process through `usvfsCreateProcessHooked`;
-   - verify the process sees the overlaid files.
-3. Only after that, add an adapter project or runtime wrapper to the launcher.
+1. Add a narrow adapter boundary around the official USVFS API.
+2. Feed that adapter from the existing `UsvfsMappingPlanBuilder`.
+3. Run the same PoC shape from managed code before involving game profiles.
 4. Keep the UI disabled until the adapter can pass a simple integration test.
+5. Only then try one non-critical game profile behind an explicit experimental
+   flag.
 
 ## Important constraints
 
