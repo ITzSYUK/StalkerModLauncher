@@ -93,9 +93,10 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
         };
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
         var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
-        var writableFile = manifest.WritableFiles.Single(file => file.RelativePath == "fsgame.ltx");
+        var writableFile = manifest.WritableFiles.Single(file =>
+            file.RelativePath == Path.Combine("gamedata", "configs", "localization.ltx"));
         Directory.CreateDirectory(Path.GetDirectoryName(writableFile.StoragePath)!);
-        File.WriteAllText(writableFile.StoragePath, "profile fsgame");
+        File.WriteAllText(writableFile.StoragePath, "language = rus");
         var builder = new UsvfsMappingPlanBuilder();
 
         var plan = builder.Build(layerPlan, manifest);
@@ -104,7 +105,9 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
             plan.Operations,
             operation => operation.Kind == UsvfsMappingKind.File && operation.SourceName == "profile writable files");
         Assert.Equal(Path.GetFullPath(writableFile.StoragePath), knownWritable.SourcePath);
-        Assert.Equal(Path.Combine(Path.GetFullPath(game), "fsgame.ltx"), knownWritable.DestinationPath);
+        Assert.Equal(
+            Path.Combine(Path.GetFullPath(game), "gamedata", "configs", "localization.ltx"),
+            knownWritable.DestinationPath);
         Assert.True(knownWritable.Order < plan.Operations.Single(operation => operation.SourceName == "profile overwrite").Order);
     }
 

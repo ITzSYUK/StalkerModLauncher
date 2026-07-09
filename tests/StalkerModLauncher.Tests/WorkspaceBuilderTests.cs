@@ -158,6 +158,57 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildAsync_RewritesCachedUtf8FsgameWithWindows1251()
+    {
+        var profile = CreateProfile(CreateMod("mod", "mod"));
+        profile.Name = "Мой мод";
+        var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+        var fsgamePath = Path.Combine(first.WorkspaceRoot, "fsgame.ltx");
+        var appDataPath = Path.Combine(first.ProfileWorkspacePath, "userdata");
+
+        File.WriteAllText(fsgamePath, $"$app_data_root$ = true | false| {appDataPath}", Encoding.UTF8);
+
+        var second = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+        Assert.Equal(first.WorkspaceRoot, second.WorkspaceRoot);
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var fsgameText = Encoding.GetEncoding(1251).GetString(File.ReadAllBytes(fsgamePath));
+        Assert.Contains("Мой мод-", fsgameText);
+        Assert.Contains(appDataPath, fsgameText);
+        Assert.DoesNotContain("РњРѕР№", fsgameText);
+    }
+
+    [Fact]
+    public async Task BuildAsync_DoesNotRestoreLegacyStoredFsgame()
+    {
+        var modPath = CreateMod("mod", "mod");
+        var profile = CreateProfile(modPath);
+        var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+        var storedFsgamePath = Path.Combine(
+            first.ProfileWorkspacePath,
+            "userdata",
+            "writable-game-files",
+            "fsgame.ltx");
+        Directory.CreateDirectory(Path.GetDirectoryName(storedFsgamePath)!);
+        File.WriteAllText(
+            storedFsgamePath,
+            """
+            $app_data_root$ = true | false| old
+            $game_weathers$ = true| false| $game_config$| environment\weathers
+            $mod_dir$ = false| false| $fs_root$| mods\
+            """);
+        CreateFile(modPath, "gamedata/config/rebuild-marker.ltx", "changed");
+
+        var rebuilt = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+        var fsgameText = File.ReadAllText(Path.Combine(rebuilt.WorkspaceRoot, "fsgame.ltx"));
+        Assert.Contains(Path.Combine(rebuilt.ProfileWorkspacePath, "userdata"), fsgameText);
+        Assert.DoesNotContain("$game_weathers$", fsgameText);
+        Assert.DoesNotContain("$mod_dir$", fsgameText);
+        Assert.False(File.Exists(storedFsgamePath));
+    }
+
+    [Fact]
     public async Task BuildAsync_PreservesGeneratedAnomalyLocalizationFileAcrossRebuild()
     {
         var modPath = CreateMod("mod", "mod");

@@ -85,13 +85,15 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         {
             _writableGameFileStore.EnsureWorkspaceDirectories(currentWorkspace);
             _writableGameFileStore.RestoreToCachedWorkspace(currentWorkspace, workspaceRoot, progress);
+            var cachedWorkingDirectoryRelative = _dataConfigurator.Configure(gamePath, currentWorkspace, workspaceRoot, progress);
+            _writableGameFileStore.CaptureFromWorkspace(currentWorkspace, workspaceRoot, progress);
             progress.Report($"Проверка источников: {FormatElapsed(scanTimer.Elapsed)}. Пересборка не требуется.");
             return new WorkspaceBuildResult(
                 currentWorkspace,
                 cachedExecutable,
                 workspaceRoot,
                 profile.ExecutableRelativePath,
-                profile.WorkingDirectoryRelative);
+                cachedWorkingDirectoryRelative);
         }
 
         _materializer.ValidateLinkSupport(sourceSnapshot, workspaceRoot, progress);

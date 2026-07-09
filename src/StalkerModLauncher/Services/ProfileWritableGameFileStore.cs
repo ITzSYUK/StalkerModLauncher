@@ -11,6 +11,8 @@ internal sealed class ProfileWritableGameFileStore
             return;
         }
 
+        DeleteLegacyStoredFsgame(profileWorkspace, progress);
+
         var captured = 0;
         foreach (var rule in ProfileWritableGameFiles.Rules)
         {
@@ -49,6 +51,7 @@ internal sealed class ProfileWritableGameFileStore
         IProgress<string>? progress = null)
     {
         EnsureWorkspaceDirectories(currentWorkspace);
+        DeleteLegacyStoredFsgame(profileWorkspace, progress);
 
         var restored = 0;
         foreach (var rule in ProfileWritableGameFiles.Rules)
@@ -79,6 +82,7 @@ internal sealed class ProfileWritableGameFileStore
         IProgress<string>? progress = null)
     {
         EnsureWorkspaceDirectories(currentWorkspace);
+        DeleteLegacyStoredFsgame(profileWorkspace, progress);
 
         var restored = 0;
         foreach (var rule in ProfileWritableGameFiles.Rules)
@@ -107,6 +111,18 @@ internal sealed class ProfileWritableGameFileStore
     {
         FileSystemSafety.EnsureRelativePath(relativePath, "Profile writable game file");
         return Path.Combine(profileWorkspace, "userdata", StoreDirectoryName, relativePath);
+    }
+
+    private static void DeleteLegacyStoredFsgame(string profileWorkspace, IProgress<string>? progress)
+    {
+        var legacyPath = Path.Combine(profileWorkspace, "userdata", StoreDirectoryName, "fsgame.ltx");
+        if (!File.Exists(legacyPath))
+        {
+            return;
+        }
+
+        File.Delete(legacyPath);
+        progress?.Report("Удалён устаревший профильный fsgame.ltx. Лаунчер пересоздаёт этот файл из текущих слоёв профиля.");
     }
 
     private static void CopyThroughTemporaryFile(string sourceFile, string destinationFile)
