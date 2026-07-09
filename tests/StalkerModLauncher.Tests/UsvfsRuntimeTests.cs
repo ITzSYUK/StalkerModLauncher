@@ -48,7 +48,7 @@ public sealed class UsvfsRuntimeTests
             new UsvfsProcessLaunchRequest(@"C:\game\bin\xrEngine.exe", "-nointro", @"C:\game"),
             new UsvfsRuntimeOptions("test-instance"));
 
-        Assert.Equal(1234, result.ProcessId);
+        Assert.Equal(Environment.ProcessId, result.ProcessId);
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("create-vfs", native.Calls);
         Assert.Contains("clear-mappings", native.Calls);
@@ -155,7 +155,7 @@ public sealed class UsvfsRuntimeTests
             CommandLine = commandLine;
             WorkingDirectory = workingDirectory;
             Calls.Add("create-process-hooked");
-            return Task.FromResult(new UsvfsProcessHandle(1234, Task.FromResult(0)));
+            return Task.FromResult(new UsvfsProcessHandle(Environment.ProcessId, Task.FromResult(0)));
         }
 
         private static string InferSourceName(string sourcePath)

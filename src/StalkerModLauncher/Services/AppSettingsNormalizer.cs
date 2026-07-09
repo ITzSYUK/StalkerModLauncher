@@ -39,7 +39,8 @@ public static class AppSettingsNormalizer
                 profile.LaunchBackendKind = LaunchBackendKind.LinkedWorkspace;
             }
 
-            if (profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem)
+            if (profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem &&
+                !UsvfsFeatureGate.IsEnabled())
             {
                 profile.LaunchBackendKind = LaunchBackendKind.LinkedWorkspace;
             }

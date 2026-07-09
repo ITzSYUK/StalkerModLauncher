@@ -70,6 +70,12 @@ nested=mod-system
 Managed USVFS PoC passed.
 ```
 
+The branch now contains an experimental `UsvfsLaunchBackend`. It is deliberately
+behind `STALKER_MOD_LAUNCHER_ENABLE_OFFICIAL_USVFS=1`; without that flag,
+profiles stored with `VirtualFileSystem` still fall back to `LinkedWorkspace`.
+The backend requires `usvfs_x64.dll` and `usvfs_proxy_x64.exe` next to the
+launcher executable. It is not exposed in the UI yet.
+
 ## Current safe bridge
 
 The branch adds `UsvfsMappingPlanBuilder`. It does not load USVFS, does not
@@ -108,11 +114,13 @@ The new direction is narrower:
 
 ## Next steps
 
-1. Add a dedicated experimental launch backend around the managed USVFS adapter.
-2. Feed that backend from the existing `UsvfsMappingPlanBuilder`.
-3. Keep the UI disabled until the backend can pass a simple integration test.
-4. Only then try one non-critical game profile behind an explicit experimental
-   flag.
+1. Create a safe manual test workflow for one non-critical profile:
+   - copy `usvfs_x64.dll` and `usvfs_proxy_x64.exe` next to the launcher;
+   - set `STALKER_MOD_LAUNCHER_ENABLE_OFFICIAL_USVFS=1`;
+   - set one profile's `LaunchBackendKind` to `VirtualFileSystem`;
+   - verify logs, saves and mod overlay behavior.
+2. Add a compact backend-status diagnostic before exposing any UI switch.
+3. Only after real profile tests pass, add a hidden/advanced UI toggle.
 
 ## Important constraints
 

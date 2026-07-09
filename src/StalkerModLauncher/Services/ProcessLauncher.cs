@@ -13,6 +13,11 @@ public sealed class LaunchPlanExecutor : ILaunchPlanExecutor
 {
     public Process Start(LaunchPlan plan, IProgress<string>? progress = null)
     {
+        if (plan.ProcessStarter is not null)
+        {
+            return plan.ProcessStarter(plan, progress);
+        }
+
         return ProcessLauncher.Start(plan);
     }
 }
