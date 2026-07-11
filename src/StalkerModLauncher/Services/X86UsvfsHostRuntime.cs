@@ -26,9 +26,10 @@ public sealed class X86UsvfsHostRuntime(string? runtimeDirectory = null) : IUsvf
         CancellationToken cancellationToken = default)
     {
         await using var session = CreateSession(mappingPlan, options, progress);
-        var process = session.StartProcess(launchRequest, progress, cancellationToken);
+        using var process = session.StartProcess(launchRequest, progress, cancellationToken);
+        var processId = process.Id;
         var exitCode = await session.GetExitCodeAsync(cancellationToken);
-        return new UsvfsProcessLaunchResult(exitCode, process.Id);
+        return new UsvfsProcessLaunchResult(exitCode, processId);
     }
 
     private sealed class Session : IUsvfsRuntimeSession
@@ -104,7 +105,9 @@ public sealed class X86UsvfsHostRuntime(string? runtimeDirectory = null) : IUsvf
             }
 
             _disposed = true;
-            _hostProcess?.Dispose();
+            // The Process returned by StartProcess belongs to the launch/session tracker.
+            // Disposing it here races with GameSessionTracker reading ExitCode.
+            _hostProcess = null;
             if (!string.IsNullOrWhiteSpace(_configurationPath))
             {
                 try

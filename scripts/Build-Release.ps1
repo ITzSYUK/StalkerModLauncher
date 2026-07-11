@@ -8,7 +8,6 @@ $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repositoryRoot "src\StalkerModLauncher\StalkerModLauncher.csproj"
 $releaseRoot = Join-Path $repositoryRoot "publish\release\v$Version"
 $stagingRoot = Join-Path $repositoryRoot "publish\release\.staging-v$Version"
-$releaseNotes = Join-Path $repositoryRoot "docs\RELEASE_NOTES_v$Version.md"
 $usvfsRoot = Join-Path $repositoryRoot ".external\usvfs"
 $x86Host = Join-Path $repositoryRoot "native\StalkerModLauncher.UsvfsX86Host\build32\StalkerModLauncher.UsvfsX86Host.exe"
 
@@ -23,10 +22,6 @@ foreach ($entry in $runtimeFiles.GetEnumerator()) {
     if (-not (Test-Path -LiteralPath $entry.Value -PathType Leaf)) {
         throw "Missing release dependency '$($entry.Key)': $($entry.Value)"
     }
-}
-
-if (-not (Test-Path -LiteralPath $releaseNotes -PathType Leaf)) {
-    throw "Missing release notes: $releaseNotes"
 }
 
 foreach ($path in @($releaseRoot, $stagingRoot)) {
@@ -69,12 +64,10 @@ function Publish-Package {
         Copy-Item -LiteralPath $entry.Value -Destination (Join-Path $packageDirectory $entry.Key)
     }
 
-    Copy-Item -LiteralPath (Join-Path $repositoryRoot "README.md") -Destination $packageDirectory
-    Copy-Item -LiteralPath (Join-Path $repositoryRoot "LICENSE.md") -Destination $packageDirectory
-    Copy-Item -LiteralPath (Join-Path $repositoryRoot "THIRD_PARTY_NOTICES.md") -Destination $packageDirectory
-    Copy-Item -LiteralPath $releaseNotes -Destination (Join-Path $packageDirectory "RELEASE_NOTES.md")
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot "LICENSE.md") -Destination (Join-Path $packageDirectory "LICENSE.txt")
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot "THIRD_PARTY_NOTICES.md") -Destination (Join-Path $packageDirectory "THIRD-PARTY-NOTICES.txt")
 
-    $unexpected = Get-ChildItem -LiteralPath $packageDirectory -File | Where-Object { $_.Extension -in @('.pdb', '.json') }
+    $unexpected = Get-ChildItem -LiteralPath $packageDirectory -File | Where-Object { $_.Extension -in @('.pdb', '.json', '.md') }
     if ($unexpected) {
         throw "Unexpected debug/runtime files in ${PackageName}: $($unexpected.Name -join ', ')"
     }

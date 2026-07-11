@@ -190,7 +190,7 @@ dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 - framework-dependent: нужен .NET 8 Desktop Runtime x64;
 - standalone: .NET включён в `StalkerModLauncher-Standalone.exe`.
 
-Обе поставки содержат необходимые native-файлы USVFS, `LICENSE.md`, `THIRD_PARTY_NOTICES.md` и краткий README. Для воспроизводимой упаковки локально должны быть собраны официальный USVFS x64/x86 и x86 helper; эти бинарные артефакты не хранятся в Git.
+Обе поставки содержат необходимые native-файлы USVFS, `LICENSE.txt` и `THIRD-PARTY-NOTICES.txt`. README и release notes в пользовательский ZIP не дублируются. Для воспроизводимой упаковки локально должны быть собраны официальный USVFS x64/x86 и x86 helper; эти бинарные артефакты не хранятся в Git.
 
 ## Структура проекта
 

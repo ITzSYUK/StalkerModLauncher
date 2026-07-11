@@ -29,7 +29,7 @@ Regular profiles do not copy the whole game. The stable Workspace mode connects 
 - Drag-and-drop mod priority; lower entries overwrite matching files above.
 - Automatic executable detection with a manual override.
 - Isolated saves, logs, screenshots and settings per profile.
-- Stable linked Workspace backend and optional experimental USVFS backend (x64 and x86).
+- Stable linked Workspace backend and experimental USVFS backend (x64 and x86).
 - Profile preflight, workspace status, latest log and crash dump helpers.
 - Profile import, export and duplication.
 - AP-PRO modification browser for Shadow of Chernobyl, Clear Sky and Call of Pripyat.
@@ -78,7 +78,7 @@ Architecture, workspace safety, USVFS, settings and release packaging are descri
 - Изменение приоритета модов перетаскиванием; нижние моды заменяют совпадающие файлы верхних.
 - Автоматический поиск EXE с возможностью ручного выбора.
 - Отдельные сохранения, логи, скриншоты и настройки каждого профиля.
-- Стабильный backend Workspace и необязательный экспериментальный USVFS для x64 и x86.
+- Стабильный backend Workspace и экспериментальный USVFS для x64 и x86.
 - Проверка готовности профиля, состояние workspace, последний лог и crash dump.
 - Импорт, экспорт и копирование профилей.
 - Браузер модификаций AP-PRO для ТЧ, ЧН и ЗП.
