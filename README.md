@@ -1,9 +1,10 @@
 # S.T.A.L.K.E.R. Mod Launcher
 
-| ![Screenshot](assets/screenshots/launcher_main_screen.png) | ![Screenshot](assets/screenshots/launcher_mods_browser.png) |
-| ---------------------------------------------------------- | ----------------------------------------------------------- |
+| ![Main window](assets/screenshots/launcher_main_screen.png) | ![Modification browser](assets/screenshots/launcher_mods_browser.png) |
+| ---------------------------------------------------------- | -------------------------------------------------------------------- |
 
 <p align="center">
+  <strong>v1.2.0</strong><br>
   <a href="https://github.com/ITzSYUK/StalkerModLauncher/releases/latest"><strong>Download latest release / Скачать последний релиз</strong></a>
 </p>
 
@@ -17,37 +18,38 @@
 
 ## English
 
-**S.T.A.L.K.E.R. Mod Launcher** is a Windows launcher for local S.T.A.L.K.E.R. mods and standalone X-Ray based builds.
+**S.T.A.L.K.E.R. Mod Launcher** is a Windows launcher for local S.T.A.L.K.E.R. modifications and standalone X-Ray builds. It keeps profiles, saves, logs and settings separate without modifying the original game or mod folders.
 
-It creates separate profiles, keeps saves/logs/settings isolated, and avoids changing the original game or mod folders. Regular profiles do not copy the whole game: the launcher connects source files with links, so profile workspaces usually take very little extra disk space.
+Regular profiles do not copy the whole game. The stable Workspace mode connects source files with NTFS links, while the experimental USVFS mode uses the virtual filesystem from Mod Organizer 2.
 
 ### Features
 
-- Regular profiles: base game plus one or more mod folders.
-- Standalone profiles: ready-to-play builds with their own executable.
-- Mod priority order with drag-and-drop.
-- Automatic executable detection with manual override.
-- Per-profile saves, logs, screenshots and workspace.
-- Profile status, preflight checks, latest log and crash dump helpers.
-- Import, export and duplicate profiles.
+- Regular profiles: base game plus ordered mod folders.
+- Standalone profiles for ready-to-play builds with their own executable.
+- Drag-and-drop mod priority; lower entries overwrite matching files above.
+- Automatic executable detection with a manual override.
+- Isolated saves, logs, screenshots and settings per profile.
+- Stable linked Workspace backend and optional experimental USVFS backend (x64 and x86).
+- Profile preflight, workspace status, latest log and crash dump helpers.
+- Profile import, export and duplication.
+- AP-PRO modification browser for Shadow of Chernobyl, Clear Sky and Call of Pripyat.
 - Optional Discord Rich Presence.
-- Built-in AP-PRO modification browser for Shadow of Chernobyl, Clear Sky and Call of Pripyat.
 
 ### Quick Start
 
-1. Click **Create** and choose a profile type.
-2. For a regular profile, select the base game folder and add mod folders.
-3. For a standalone profile, select one root folder of the ready build.
-4. Check the selected executable in profile settings.
+1. Click **Create** and choose a regular or standalone profile.
+2. Select the base game and mod folders, or one ready-to-play standalone folder.
+3. Check the detected executable and mod order.
+4. Keep **Workspace - stable** unless you intentionally want to test USVFS.
 5. Click **Launch**.
 
-Mods lower in the list have higher priority and overwrite matching files from mods above them.
+### Release Packages
 
-### Requirements
+- `StalkerModLauncher.exe` requires the .NET 8 Desktop Runtime x64.
+- `StalkerModLauncher-Standalone.exe` includes .NET and does not require a separate runtime.
+- Experimental USVFS also requires the Microsoft Visual C++ 2015-2022 Redistributable for x64 and x86 games.
 
-- Windows 10/11 x64.
-- .NET 8 Desktop Runtime x64 for the framework-dependent release.
-- .NET 8 SDK if you want to build from source.
+Windows 10/11 x64 is required. The .NET 8 SDK is required only when building from source.
 
 ### Build From Source
 
@@ -57,9 +59,7 @@ dotnet test .\StalkerModLauncher.sln -c Release
 dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 ```
 
-### Documentation
-
-Technical notes about profiles, workspaces, file safety, settings and diagnostics are available in [docs/TECHNICAL.md](docs/TECHNICAL.md).
+Architecture, workspace safety, USVFS, settings and release packaging are described in [docs/TECHNICAL.md](docs/TECHNICAL.md).
 
 ---
 
@@ -67,37 +67,38 @@ Technical notes about profiles, workspaces, file safety, settings and diagnostic
 
 ## Русский
 
-**S.T.A.L.K.E.R. Mod Launcher** — Windows-лаунчер для локальных модификаций S.T.A.L.K.E.R. и автономных сборок на базе X-Ray.
+**S.T.A.L.K.E.R. Mod Launcher** — Windows-лаунчер для локальных модификаций S.T.A.L.K.E.R. и автономных сборок на базе X-Ray. Он разделяет профили, сохранения, логи и настройки, не изменяя исходные папки игры и модов.
 
-Лаунчер создаёт отдельные профили, изолирует сохранения, логи и настройки, а исходные папки игры и модов не изменяет. Создаваемые профили не копируют игру целиком: лаунчер подключает исходные файлы ссылками, поэтому обычно занимает минимум дополнительного места на диске.
+Создаваемые профили не копируют игру целиком. Стабильный режим Workspace подключает исходные файлы NTFS-ссылками, а экспериментальный USVFS использует виртуальную файловую систему Mod Organizer 2.
 
 ### Возможности
 
-- Обычные профили: базовая игра плюс одна или несколько папок модов.
-- Автономные профили: готовые сборки со своим исполняемым файлом.
-- Порядок модов с изменением через drag-and-drop.
+- Обычные профили: базовая игра и упорядоченный список папок модов.
+- Автономные профили для готовых сборок со своим исполняемым файлом.
+- Изменение приоритета модов перетаскиванием; нижние моды заменяют совпадающие файлы верхних.
 - Автоматический поиск EXE с возможностью ручного выбора.
-- Отдельные сохранения, логи, скриншоты и workspace для профиля.
-- Проверка состояния профиля, preflight-проверки, последний лог и crash dump.
+- Отдельные сохранения, логи, скриншоты и настройки каждого профиля.
+- Стабильный backend Workspace и необязательный экспериментальный USVFS для x64 и x86.
+- Проверка готовности профиля, состояние workspace, последний лог и crash dump.
 - Импорт, экспорт и копирование профилей.
+- Браузер модификаций AP-PRO для ТЧ, ЧН и ЗП.
 - Необязательный Discord Rich Presence.
-- Встроенный браузер модификаций AP-PRO для ТЧ, ЧН и ЗП.
 
 ### Быстрый старт
 
-1. Нажмите **Создать** и выберите тип профиля.
-2. Для обычного профиля укажите папку базовой игры и добавьте папки модов.
-3. Для автономного профиля укажите одну корневую папку готовой сборки.
-4. Проверьте выбранный EXE в настройках профиля.
+1. Нажмите **Создать** и выберите обычный или автономный профиль.
+2. Укажите базовую игру и папки модов либо одну папку готовой автономной сборки.
+3. Проверьте найденный EXE и порядок модов.
+4. Оставьте **Workspace — стабильный**, если не собираетесь осознанно тестировать USVFS.
 5. Нажмите **Запустить**.
 
-Моды ниже в списке имеют больший приоритет и перезаписывают совпадающие файлы модов выше.
+### Варианты релиза
 
-### Требования
+- `StalkerModLauncher.exe` требует .NET 8 Desktop Runtime x64.
+- `StalkerModLauncher-Standalone.exe` содержит .NET и не требует отдельной установки runtime.
+- Для экспериментального USVFS также нужен Microsoft Visual C++ 2015-2022 Redistributable для запуска x64- и x86-игр.
 
-- Windows 10/11 x64.
-- .NET 8 Desktop Runtime x64 для обычного релиза.
-- .NET 8 SDK для сборки из исходного кода.
+Требуется Windows 10/11 x64. .NET 8 SDK нужен только для сборки из исходного кода.
 
 ### Сборка из исходного кода
 
@@ -107,12 +108,10 @@ dotnet test .\StalkerModLauncher.sln -c Release
 dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 ```
 
-### Документация
-
-Техническое описание профилей, workspace, безопасности файлов, настроек и диагностики находится в [docs/TECHNICAL.md](docs/TECHNICAL.md).
+Архитектура, безопасность workspace, USVFS, настройки и подготовка релиза описаны в [docs/TECHNICAL.md](docs/TECHNICAL.md).
 
 ---
 
 ## License
 
-The launcher source code is licensed under the [GNU GPLv3](LICENSE.md). Third-party assets keep their original licenses.
+The launcher source code is licensed under the [GNU GPLv3](LICENSE.md). Third-party components and assets retain their original licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

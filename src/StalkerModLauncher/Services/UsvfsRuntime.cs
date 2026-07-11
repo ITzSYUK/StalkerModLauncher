@@ -14,6 +14,7 @@ public sealed class UsvfsRuntime(IUsvfsNativeApi nativeApi) : IUsvfsRuntime
         ArgumentNullException.ThrowIfNull(options);
 
         var parameters = IntPtr.Zero;
+        var reservation = UsvfsSessionReservation.Acquire();
         try
         {
             parameters = nativeApi.CreateParameters();
@@ -27,12 +28,20 @@ public sealed class UsvfsRuntime(IUsvfsNativeApi nativeApi) : IUsvfsRuntime
 
             nativeApi.ClearVirtualMappings();
             ApplyMappings(mappingPlan, progress);
-            return new UsvfsRuntimeSession(nativeApi, parameters);
+            return new UsvfsRuntimeSession(nativeApi, parameters, reservation);
         }
         catch
         {
-            nativeApi.DisconnectVfs();
-            nativeApi.FreeParameters(parameters);
+            try
+            {
+                nativeApi.DisconnectVfs();
+            }
+            finally
+            {
+                nativeApi.FreeParameters(parameters);
+                reservation.Dispose();
+            }
+
             throw;
         }
     }
@@ -141,14 +150,19 @@ public sealed class UsvfsRuntimeSession : IUsvfsRuntimeSession
 {
     private readonly IUsvfsNativeApi _nativeApi;
     private readonly IntPtr _parameters;
+    private readonly UsvfsSessionReservation _reservation;
     private readonly object _sync = new();
     private Task<int>? _exitCodeTask;
     private bool _disposed;
 
-    internal UsvfsRuntimeSession(IUsvfsNativeApi nativeApi, IntPtr parameters)
+    internal UsvfsRuntimeSession(
+        IUsvfsNativeApi nativeApi,
+        IntPtr parameters,
+        UsvfsSessionReservation reservation)
     {
         _nativeApi = nativeApi;
         _parameters = parameters;
+        _reservation = reservation;
     }
 
     public Process StartProcess(
@@ -208,8 +222,22 @@ public sealed class UsvfsRuntimeSession : IUsvfsRuntimeSession
             _disposed = true;
         }
 
-        _nativeApi.DisconnectVfs();
-        _nativeApi.FreeParameters(_parameters);
+        try
+        {
+            _nativeApi.DisconnectVfs();
+        }
+        finally
+        {
+            try
+            {
+                _nativeApi.FreeParameters(_parameters);
+            }
+            finally
+            {
+                _reservation.Dispose();
+            }
+        }
+
         return ValueTask.CompletedTask;
     }
 }

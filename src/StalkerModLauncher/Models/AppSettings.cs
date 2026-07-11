@@ -4,7 +4,7 @@ namespace StalkerModLauncher.Models;
 
 public sealed class AppSettings
 {
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 4;
 
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
     public string LastBrowsedGamePath { get; set; } = string.Empty;

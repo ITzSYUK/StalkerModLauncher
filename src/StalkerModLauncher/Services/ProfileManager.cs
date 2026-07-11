@@ -36,6 +36,7 @@ public sealed class ProfileManager
             LaunchArguments = source.LaunchArguments,
             ExecutableRelativePath = source.ExecutableRelativePath,
             ExecutableSourcePath = source.ExecutableSourcePath,
+            UsvfsExecutableOverrideRelativePath = source.UsvfsExecutableOverrideRelativePath,
             WorkingDirectoryRelative = source.WorkingDirectoryRelative,
             GameInstallPath = source.GameInstallPath
         };
@@ -114,6 +115,21 @@ public sealed class ProfileManager
         }
 
         return CreateWorkspacePath(profile, profile.GameInstallPath);
+    }
+
+    public string EnsureProfileFolderPath(ModProfile profile, IProgress<string>? progress = null)
+    {
+        if (profile.IsStandalone)
+        {
+            throw new InvalidOperationException("Автономный профиль не использует workspace.");
+        }
+
+        var workspacePath = _workspaceManager.EnsureProfileWorkspace(
+            profile,
+            profile.GameInstallPath,
+            progress);
+        profile.WorkspacePath = workspacePath;
+        return workspacePath;
     }
 
     public static string GetUniqueName(IEnumerable<ModProfile> profiles, string requestedName)

@@ -18,12 +18,8 @@ public sealed class AppSettingsNormalizerTests
     }
 
     [Fact]
-    public void Normalize_ResetsLegacyVirtualFileSystemProfiles()
+    public void Normalize_PreservesVirtualFileSystemSelectionWithoutRuntime()
     {
-        var previous = Environment.GetEnvironmentVariable(UsvfsFeatureGate.EnableEnvironmentVariable);
-        Environment.SetEnvironmentVariable(UsvfsFeatureGate.EnableEnvironmentVariable, null);
-        try
-        {
         var profile = new ModProfile
         {
             LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
@@ -32,34 +28,20 @@ public sealed class AppSettingsNormalizerTests
 
         var normalized = AppSettingsNormalizer.Normalize(settings);
 
-        Assert.Equal(LaunchBackendKind.LinkedWorkspace, normalized.Profiles[0].LaunchBackendKind);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(UsvfsFeatureGate.EnableEnvironmentVariable, previous);
-        }
+        Assert.Equal(LaunchBackendKind.VirtualFileSystem, normalized.Profiles[0].LaunchBackendKind);
     }
 
     [Fact]
-    public void Normalize_KeepsVirtualFileSystemProfilesWhenOfficialUsvfsIsEnabled()
+    public void Normalize_ClearsUnsupportedAnomalyUsvfsOverride()
     {
-        var previous = Environment.GetEnvironmentVariable(UsvfsFeatureGate.EnableEnvironmentVariable);
-        Environment.SetEnvironmentVariable(UsvfsFeatureGate.EnableEnvironmentVariable, "1");
-        try
+        var profile = new ModProfile
         {
-            var profile = new ModProfile
-            {
-                LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
-            };
-            var settings = new AppSettings { Profiles = [profile] };
+            UsvfsExecutableOverrideRelativePath = @"bin\Unknown.exe"
+        };
+        var settings = new AppSettings { Profiles = [profile] };
 
-            var normalized = AppSettingsNormalizer.Normalize(settings);
+        var normalized = AppSettingsNormalizer.Normalize(settings);
 
-            Assert.Equal(LaunchBackendKind.VirtualFileSystem, normalized.Profiles[0].LaunchBackendKind);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(UsvfsFeatureGate.EnableEnvironmentVariable, previous);
-        }
+        Assert.Empty(normalized.Profiles[0].UsvfsExecutableOverrideRelativePath);
     }
 }

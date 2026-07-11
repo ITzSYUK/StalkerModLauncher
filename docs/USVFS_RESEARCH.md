@@ -32,7 +32,7 @@ process injection and filesystem interception.
 
 ## Local build and PoC status
 
-`ModOrganizer2/usvfs` was built locally as x64 with Visual Studio Build Tools,
+`ModOrganizer2/usvfs` was built locally as x64 and x86 with Visual Studio Build Tools,
 CMake, Ninja and vcpkg. The build artifacts used for research were kept outside
 the repository under `.external/` and a temporary source/build folder.
 
@@ -70,28 +70,56 @@ nested=mod-system
 Managed USVFS PoC passed.
 ```
 
-The branch now contains an experimental `UsvfsLaunchBackend`. It is deliberately
-behind `STALKER_MOD_LAUNCHER_ENABLE_OFFICIAL_USVFS=1`; without that flag,
-profiles stored with `VirtualFileSystem` still fall back to `LinkedWorkspace`.
-The backend requires `usvfs_x64.dll` and `usvfs_proxy_x64.exe` next to the
-launcher executable. It is not exposed in the UI yet.
+The branch now contains an experimental `UsvfsLaunchBackend`. The backend is
+available when `usvfs_x64.dll` and `usvfs_proxy_x64.exe` are placed next to the
+launcher executable. The environment variable
+`STALKER_MOD_LAUNCHER_ENABLE_OFFICIAL_USVFS=1` remains available for isolated
+research runs, but is no longer required by the prepared experimental build.
+Each non-standalone profile can select `LinkedWorkspace` or `VirtualFileSystem`
+in the profile settings UI.
 
-## Current safe bridge
+The integration supports both executable architectures. x64 targets use the
+managed adapter and `usvfs_x64.dll` directly. x86 targets are started by the
+small same-bitness `StalkerModLauncher.UsvfsX86Host.exe`, which loads
+`usvfs_x86.dll`, applies the same mapping plan and waits for the game process.
+This deliberately avoids the unstable cross-bitness proxy path observed during
+research. The launcher permits one active USVFS profile at a time for both
+architectures; an x86 session itself runs in an isolated helper process.
+The helper remains alive while hooked descendants are running, so a short-lived
+launcher such as Gunslinger `Play.exe` cannot tear down USVFS before its
+`xrEngine.exe` child exits.
 
-The branch adds `UsvfsMappingPlanBuilder`. It does not load USVFS, does not
-inject into games, and does not change runtime behavior.
+Anomaly profiles bypass the 32-bit `AnomalyLauncher.exe` and start a selected
+64-bit `AnomalyDX*.exe` directly. `Auto` reads `AnomalyLauncher.cfg`; the profile
+settings also allow DX8, DX9, DX10 or DX11 with optional AVX. This selection is
+stored as a relative path, so `FileLayerPlan` still resolves the executable from
+the enabled mod with the highest priority.
 
-It converts the existing launcher model into operations that an external USVFS
-adapter can later apply:
+## Current integration
+
+`UsvfsMappingPlanBuilder` converts the existing launcher model into operations
+applied by the official USVFS runtime:
 
 ```text
-base game root -> virtual game root
 mod 1 root     -> virtual game root
 mod 2 root     -> virtual game root
 ...
 known writable files -> exact virtual file paths
 userdata\overwrite -> virtual game root, create target
 ```
+
+The runtime backend creates a small profile-local bootstrap root. The selected
+EXE, its loader-time dependencies and the generated `fsgame.ltx` physically
+exist there. OGSR/X-Ray profiles use it as their virtual game root because some
+engines derive the root from the module path. Anomaly keeps its physical game
+root as the USVFS destination because its loose script loading is not reliable
+through a separate root. Mapping a base directory onto itself is deliberately
+avoided in both strategies because it can hide physical `gamedata.db*` files.
+
+The profile workspace path is reserved before either backend prepares a launch.
+It is persisted by profile ID and contains the standard launcher marker, so
+renaming a profile does not create a second directory and deletion follows the
+same safety rules in `LinkedWorkspace` and `VirtualFileSystem` modes.
 
 This keeps one source of truth:
 
@@ -108,19 +136,20 @@ The new direction is narrower:
 
 1. Keep `LinkedWorkspace` as the stable launch backend.
 2. Keep `FileLayerPlan` and `OverlayManifest` as shared logic.
-3. Build a small adapter around the official USVFS API.
-4. Enable it only behind an explicit experimental setting after a real native
-   proof of concept works.
+3. Keep the official USVFS adapter isolated behind `IProfileLaunchBackend`.
+4. Expose it as an explicit per-profile experimental setting without changing
+   the default backend.
 
-## Next steps
+## Manual test workflow
 
-1. Create a safe manual test workflow for one non-critical profile:
-   - copy `usvfs_x64.dll` and `usvfs_proxy_x64.exe` next to the launcher;
-   - set `STALKER_MOD_LAUNCHER_ENABLE_OFFICIAL_USVFS=1`;
-   - set one profile's `LaunchBackendKind` to `VirtualFileSystem`;
-   - verify logs, saves and mod overlay behavior.
-2. Add a compact backend-status diagnostic before exposing any UI switch.
-3. Only after real profile tests pass, add a hidden/advanced UI toggle.
+1. Put the USVFS runtime files next to the launcher: `usvfs_x64.dll`,
+   `usvfs_proxy_x64.exe`, `usvfs_x86.dll` and
+   `StalkerModLauncher.UsvfsX86Host.exe`.
+2. Open profile settings and select `USVFS - experimental`.
+3. For Anomaly, leave `Auto` selected or choose the required renderer.
+4. Start the profile and verify mod files, saves, settings and the application log.
+5. Switch the profile back to `Workspace - stable` if the game build is not
+   compatible with the current USVFS runtime.
 
 ## Important constraints
 

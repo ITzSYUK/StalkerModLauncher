@@ -6,6 +6,8 @@ obj/
 TestResults/
 publish/
 .external/
+native/**/build*/
+research/**/build*/
 session-ses_*.md
 opencode.txt
 /ModLauncherLogo*.png

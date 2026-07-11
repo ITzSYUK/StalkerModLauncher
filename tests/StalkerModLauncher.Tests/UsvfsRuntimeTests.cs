@@ -91,6 +91,21 @@ public sealed class UsvfsRuntimeTests
         Assert.Contains("free-parameters", native.Calls);
     }
 
+    [Fact]
+    public async Task CreateSession_RejectsConcurrentSessionAndAllowsNextAfterDispose()
+    {
+        var runtime = new UsvfsRuntime(new FakeUsvfsNativeApi());
+        var plan = new UsvfsMappingPlan(@"C:\game", @"C:\overwrite", []);
+        var options = new UsvfsRuntimeOptions("test-instance");
+        var first = runtime.CreateSession(plan, options);
+
+        var error = Assert.Throws<InvalidOperationException>(() => runtime.CreateSession(plan, options));
+        Assert.Contains("уже запущен", error.Message);
+
+        await first.DisposeAsync();
+        await using var next = runtime.CreateSession(plan, options);
+    }
+
     private sealed class FakeUsvfsNativeApi : IUsvfsNativeApi
     {
         private static readonly IntPtr Parameters = new(42);

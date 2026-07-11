@@ -12,7 +12,7 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void Build_MapsBaseGameAndModsToBaseGameVirtualRootInPriorityOrder()
+    public void Build_UsesPhysicalBaseGameAndMapsOnlyModsToVirtualRootInPriorityOrder()
     {
         var game = CreateDirectory("game");
         var firstMod = CreateDirectory("mod1");
@@ -47,11 +47,14 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
 
         Assert.Equal(Path.GetFullPath(game), plan.VirtualRoot);
         Assert.Equal(
-            [Path.GetFullPath(game), Path.GetFullPath(firstMod), Path.GetFullPath(patch)],
+            [Path.GetFullPath(firstMod), Path.GetFullPath(patch)],
             plan.Operations
                 .Where(operation => operation.SourceName != "profile overwrite")
                 .Select(operation => operation.SourcePath)
                 .ToArray());
+        Assert.DoesNotContain(
+            plan.Operations,
+            operation => string.Equals(operation.SourcePath, plan.VirtualRoot, StringComparison.OrdinalIgnoreCase));
         Assert.All(
             plan.Operations.Where(operation => operation.SourceName != "profile overwrite"),
             operation => Assert.Equal(Path.GetFullPath(game), operation.DestinationPath));
@@ -79,6 +82,34 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
         Assert.Equal(Path.GetFullPath(game), overwrite.DestinationPath);
         Assert.True(overwrite.MonitorChanges);
         Assert.True(overwrite.CreateTarget);
+    }
+
+    [Fact]
+    public void Build_MapsBaseGameWhenUsingSeparateBootstrapVirtualRoot()
+    {
+        var game = CreateDirectory("game");
+        var mod = CreateDirectory("mod");
+        var workspace = CreateDirectory("workspace");
+        var virtualRoot = CreateDirectory("bootstrap-root");
+        var profile = new ModProfile { Name = "Layered", GameInstallPath = game };
+        profile.Mods.Add(new ModEntry
+        {
+            Id = "mod",
+            Name = "Mod",
+            SourcePath = mod,
+            IsEnabled = true,
+            Order = 1
+        });
+        var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
+        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+
+        var plan = new UsvfsMappingPlanBuilder().Build(layerPlan, manifest, virtualRoot);
+
+        Assert.Equal(Path.GetFullPath(virtualRoot), plan.VirtualRoot);
+        Assert.Equal(
+            [Path.GetFullPath(game), Path.GetFullPath(mod), Path.GetFullPath(manifest.WriteOverlayRoot)],
+            plan.Operations.Select(operation => operation.SourcePath).ToArray());
+        Assert.All(plan.Operations, operation => Assert.Equal(Path.GetFullPath(virtualRoot), operation.DestinationPath));
     }
 
     [Fact]

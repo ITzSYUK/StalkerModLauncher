@@ -4,12 +4,30 @@ namespace StalkerModLauncher.Services;
 
 public sealed class UsvfsMappingPlanBuilder
 {
-    public UsvfsMappingPlan Build(FileLayerPlan layerPlan, OverlayManifest manifest)
+    public UsvfsMappingPlan Build(
+        FileLayerPlan layerPlan,
+        OverlayManifest manifest,
+        string? virtualRootOverride = null)
     {
-        var virtualRoot = Path.GetFullPath(layerPlan.BaseGame.RootPath);
+        var baseGameRoot = Path.GetFullPath(layerPlan.BaseGame.RootPath);
+        var virtualRoot = Path.GetFullPath(virtualRootOverride ?? baseGameRoot);
         var operations = new List<UsvfsMappingOperation>();
 
-        foreach (var layer in layerPlan.SourceLayers)
+        // Never map the game directory onto itself: USVFS would hide physical files
+        // such as gamedata.db*. A separate bootstrap root does need the base layer.
+        if (!FileSystemSafety.IsSameDirectory(baseGameRoot, virtualRoot))
+        {
+            operations.Add(new UsvfsMappingOperation(
+                UsvfsMappingKind.DirectoryStatic,
+                baseGameRoot,
+                virtualRoot,
+                FileLayerPlan.GetDisplayName(layerPlan.BaseGame),
+                layerPlan.BaseGame.Order,
+                MonitorChanges: false,
+                CreateTarget: false));
+        }
+
+        foreach (var layer in layerPlan.Mods)
         {
             operations.Add(new UsvfsMappingOperation(
                 UsvfsMappingKind.DirectoryStatic,

@@ -44,6 +44,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0">
@@ -80,12 +81,72 @@
                         </TextBlock>
                     </CheckBox>
 
-                    <TextBlock Grid.Row="4"
+                    <StackPanel Grid.Row="4" Margin="0,4,0,12">
+                        <TextBlock Text="Система запуска"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   FontSize="12"
+                                   Margin="0,0,0,6"/>
+                        <WrapPanel>
+                            <RadioButton Content="Workspace — стабильный"
+                                         GroupName="LaunchBackend"
+                                         IsChecked="{Binding UseLinkedWorkspace, Mode=TwoWay}"
+                                         Margin="0,0,18,0"/>
+                            <RadioButton Content="USVFS — экспериментальный"
+                                         GroupName="LaunchBackend"
+                                         IsChecked="{Binding UseVirtualFileSystem, Mode=TwoWay}"
+                                         IsEnabled="{Binding CanUseUsvfs}"/>
+                        </WrapPanel>
+                        <TextBlock Text="{Binding UsvfsAvailabilityText}"
+                                   Foreground="{StaticResource DisabledTextBrush}"
+                                   FontSize="11"
+                                   TextWrapping="Wrap"
+                                   Margin="0,4,0,0"/>
+
+                        <StackPanel Margin="0,10,0,0"
+                                    Visibility="{Binding IsAnomalyUsvfsOptionsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Text="Движок Anomaly"
+                                       Foreground="{StaticResource MutedTextBrush}"
+                                       FontSize="12"
+                                       Margin="0,0,0,5"/>
+                            <WrapPanel>
+                                <RadioButton Content="Авто"
+                                             GroupName="AnomalyRenderer"
+                                             IsChecked="{Binding UseAutomaticAnomalyRenderer, Mode=TwoWay}"
+                                             Margin="0,0,12,0"/>
+                                <RadioButton Content="DX8"
+                                             GroupName="AnomalyRenderer"
+                                             IsChecked="{Binding UseAnomalyDx8, Mode=TwoWay}"
+                                             Margin="0,0,12,0"/>
+                                <RadioButton Content="DX9"
+                                             GroupName="AnomalyRenderer"
+                                             IsChecked="{Binding UseAnomalyDx9, Mode=TwoWay}"
+                                             Margin="0,0,12,0"/>
+                                <RadioButton Content="DX10"
+                                             GroupName="AnomalyRenderer"
+                                             IsChecked="{Binding UseAnomalyDx10, Mode=TwoWay}"
+                                             Margin="0,0,12,0"/>
+                                <RadioButton Content="DX11"
+                                             GroupName="AnomalyRenderer"
+                                             IsChecked="{Binding UseAnomalyDx11, Mode=TwoWay}"
+                                             Margin="0,0,16,0"/>
+                                <CheckBox Content="AVX"
+                                          IsChecked="{Binding AnomalyUseAvx}"
+                                          IsEnabled="{Binding HasManualAnomalyRenderer}"/>
+                            </WrapPanel>
+                            <TextBlock Text="Авто использует AnomalyLauncher.cfg. Ручной выбор сохраняет автоматический приоритет модов."
+                                       Foreground="{StaticResource DisabledTextBrush}"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="5"
                                Text="Файл запуска (.exe)"
                                Foreground="{StaticResource MutedTextBrush}"
                                FontSize="12"/>
 
-                    <Border Grid.Row="5"
+                    <Border Grid.Row="6"
                             Background="{StaticResource FieldBackgroundBrush}"
                             BorderBrush="{StaticResource StrokeBrush}"
                             BorderThickness="1"
@@ -112,7 +173,7 @@
                         </Grid>
                     </Border>
 
-                    <Grid Grid.Row="6" Margin="0,2,0,0">
+                    <Grid Grid.Row="7" Margin="0,2,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
@@ -148,7 +209,7 @@
                         </Button>
                     </Grid>
 
-                    <StackPanel Grid.Row="7" Margin="0,12,0,0">
+                    <StackPanel Grid.Row="8" Margin="0,12,0,0">
                         <TextBlock Text="Параметры запуска"
                                    Foreground="{StaticResource MutedTextBrush}"
                                    FontSize="12"/>
@@ -160,7 +221,7 @@
                                    Margin="0,2,0,0"/>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="8" Margin="0,16,0,0">
+                    <StackPanel Grid.Row="9" Margin="0,16,0,0">
                         <TextBlock Text="Discord"
                                    Foreground="{StaticResource MutedTextBrush}"
                                    FontSize="12"

@@ -2,11 +2,11 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Найденные моды"
-        Width="560"
-        Height="480"
-        MinWidth="400"
-        MinHeight="300"
-        WindowStartupLocation="CenterScreen"
+        Width="900"
+        Height="620"
+        MinWidth="680"
+        MinHeight="420"
+        WindowStartupLocation="CenterOwner"
         Background="{StaticResource WindowBackgroundBrush}"
         Foreground="{StaticResource TextBrush}"
         ShowInTaskbar="False"
@@ -60,11 +60,11 @@
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="Название" Width="200"
+                    <GridViewColumn Header="Название" Width="250"
                                     DisplayMemberBinding="{Binding Name}"/>
-                    <GridViewColumn Header="Обнаружен" Width="110"
+                    <GridViewColumn Header="Обнаружен" Width="130"
                                     DisplayMemberBinding="{Binding DetectedBy}"/>
-                    <GridViewColumn Header="Путь" Width="Auto"
+                    <GridViewColumn Header="Путь" Width="440"
                                     DisplayMemberBinding="{Binding Path}"/>
                 </GridView>
             </ListView.View>

@@ -299,6 +299,54 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
+    public void DeleteProfileWorkspace_RestoresMarkerForRenamedLegacyUsvfsWorkspace()
+    {
+        var profile = CreateProfile();
+        var oldName = "Аномали — копия";
+        profile.WorkspacePath = Path.Combine(
+            _workspaceRoot,
+            $"{oldName}-{profile.Id[..8]}");
+        CreateFileAtPath(Path.Combine(profile.WorkspacePath, "userdata", "test.txt"), "profile data");
+        profile.Name = "Новое имя";
+
+        _builder.DeleteProfileWorkspace(profile, _gamePath);
+
+        Assert.False(Directory.Exists(profile.WorkspacePath));
+        Assert.True(File.Exists(Path.Combine(_workspaceRoot, ".stalker-launcher-workspace-root")));
+    }
+
+    [Fact]
+    public void EnsureProfileWorkspace_RecoversExistingUsvfsFolderByProfileId()
+    {
+        var profile = CreateProfile();
+        var legacyWorkspace = Path.Combine(_workspaceRoot, $"Старое имя-{profile.Id[..8]}");
+        CreateFileAtPath(Path.Combine(legacyWorkspace, "userdata", "save.dat"), "save");
+        profile.Name = "Новое имя";
+
+        var recovered = _builder.EnsureProfileWorkspace(profile, _gamePath);
+
+        Assert.Equal(legacyWorkspace, recovered);
+        Assert.True(File.Exists(Path.Combine(recovered, ".stalker-launcher-workspace")));
+        Assert.Equal("save", File.ReadAllText(Path.Combine(recovered, "userdata", "save.dat")));
+    }
+
+    [Fact]
+    public void DeleteProfileWorkspace_RemovesAllLegacyUsvfsFoldersWithSameProfileId()
+    {
+        var profile = CreateProfile();
+        var first = Path.Combine(_workspaceRoot, $"Профиль 1-{profile.Id[..8]}");
+        var second = Path.Combine(_workspaceRoot, $"Профиль 2-{profile.Id[..8]}");
+        CreateFileAtPath(Path.Combine(first, "userdata", "first.dat"), "first");
+        CreateFileAtPath(Path.Combine(second, "userdata", "second.dat"), "second");
+        profile.WorkspacePath = string.Empty;
+
+        _builder.DeleteProfileWorkspace(profile, _gamePath);
+
+        Assert.False(Directory.Exists(first));
+        Assert.False(Directory.Exists(second));
+    }
+
+    [Fact]
     public async Task BuildAsync_DoesNotFallbackToDedicatedServerExecutable()
     {
         File.Delete(Path.Combine(_gamePath, "bin", "xr_3da.exe"));

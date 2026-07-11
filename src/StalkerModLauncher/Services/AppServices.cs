@@ -20,7 +20,9 @@ public sealed class AppServices
         };
         if (UsvfsFeatureGate.IsEnabled())
         {
-            launchBackends.Add(new UsvfsLaunchBackend(new UsvfsRuntime(new OfficialUsvfsNativeApi())));
+            launchBackends.Add(new UsvfsLaunchBackend(
+                new UsvfsRuntime(new OfficialUsvfsNativeApi()),
+                x86Runtime: new X86UsvfsHostRuntime()));
         }
 
         LaunchCoordinator = new LaunchCoordinator(

@@ -22,6 +22,9 @@
                        FontSize="22"
                        FontWeight="Bold"
                        Foreground="{StaticResource AccentBrush}"/>
+            <TextBlock x:Name="VersionTextBlock"
+                       Margin="0,3,0,0"
+                       Foreground="{StaticResource MutedTextBrush}"/>
         </StackPanel>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -60,6 +63,15 @@
                            Margin="0,0,0,6"/>
                 <TextBlock TextWrapping="Wrap" Margin="0,0,0,16" LineHeight="21">
                     Workspace — отдельная папка, в которой лаунчер объединяет игру и включённые моды для обычного профиля. Большие исходные файлы подключаются ссылками, поэтому игра не копируется целиком на каждый профиль. Все изменения, профильные настройки, логи и сохранения остаются внутри этой рабочей среды; оригинальная игра не редактируется.
+                </TextBlock>
+
+                <TextBlock Text="Режимы запуска"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource AccentBrush}"
+                           Margin="0,0,0,6"/>
+                <TextBlock TextWrapping="Wrap" Margin="0,0,0,16" LineHeight="21">
+                    «Workspace — стабильный» заранее собирает рабочую среду ссылками и подходит для большинства игр и модов. «USVFS — экспериментальный» накладывает те же слои виртуально через технологию Mod Organizer 2 и почти не использует место для файлов игры, но отдельные сборки могут быть с ним несовместимы. При проблемах выберите стабильный режим в настройках профиля.
                 </TextBlock>
 
                 <TextBlock Text="Браузер модификаций"

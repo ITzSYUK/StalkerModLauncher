@@ -24,23 +24,20 @@ public sealed class ProfileLauncherTests
     }
 
     [Fact]
-    public async Task LaunchAsync_FallsBackToLinkedWorkspaceForLegacyVirtualFileSystemProfiles()
+    public async Task LaunchAsync_RejectsUnavailableVirtualFileSystemWithoutChangingProfile()
     {
         using var process = Process.GetCurrentProcess();
         var linkedBackend = new RecordingLaunchBackend(LaunchBackendKind.LinkedWorkspace);
         var executor = new RecordingLaunchPlanExecutor(process);
         var launcher = new ProfileLauncher([linkedBackend], executor);
         var profile = new ModProfile { LaunchBackendKind = LaunchBackendKind.VirtualFileSystem };
-        var progress = new ListProgress();
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            launcher.LaunchAsync("game", profile, new ListProgress()));
 
-        await launcher.LaunchAsync("game", profile, progress);
-
-        Assert.Same(profile, linkedBackend.Profile);
-        Assert.Equal(LaunchBackendKind.LinkedWorkspace, profile.LaunchBackendKind);
-        Assert.Equal(LaunchBackendKind.LinkedWorkspace, executor.Plan?.BackendKind);
-        Assert.Contains(
-            progress.Messages,
-            message => message.Contains("no longer available", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("usvfs_x64.dll", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(LaunchBackendKind.VirtualFileSystem, profile.LaunchBackendKind);
+        Assert.Null(linkedBackend.Profile);
+        Assert.Null(executor.Plan);
     }
 
     [Fact]
@@ -85,8 +82,12 @@ public sealed class ProfileLauncherTests
 
             await launcher.LaunchAsync(game, profile, new Progress<string>());
 
+            Assert.False(string.IsNullOrWhiteSpace(profile.WorkspacePath));
             Assert.NotNull(linkedBackend.Context?.FileLayerPlan);
             Assert.NotNull(linkedBackend.Context?.OverlayManifest);
+            Assert.Equal(
+                profile.WorkspacePath,
+                Path.GetFullPath(Path.Combine(linkedBackend.Context.OverlayManifest.WriteOverlayRoot, "..", "..")));
             Assert.Equal(["__base_game", "mod", "__userdata"], linkedBackend.Context.FileLayerPlan.Layers.Select(layer => layer.Id));
             Assert.Equal(3, linkedBackend.Context.OverlayManifest.Layers.Count);
         }
@@ -197,6 +198,13 @@ public sealed class ProfileLauncherTests
 
     private sealed class NoopWorkspaceManager : IProfileWorkspaceManager
     {
+        public string EnsureProfileWorkspace(ModProfile profile, string gamePath, IProgress<string>? progress = null)
+        {
+            return string.IsNullOrWhiteSpace(profile.WorkspacePath)
+                ? Path.Combine(Path.GetTempPath(), $"profile-{profile.Id}")
+                : profile.WorkspacePath;
+        }
+
         public void DeleteProfileWorkspace(ModProfile profile, string gamePath)
         {
         }
