@@ -45,6 +45,7 @@ public sealed class ProfileTransferService
             LaunchBackendKind = LaunchBackendKind.LinkedWorkspace,
             ExecutableRelativePath = profile.ExecutableRelativePath,
             ExecutableSourcePath = profile.ExecutableSourcePath,
+            UsvfsExecutableOverrideRelativePath = profile.UsvfsExecutableOverrideRelativePath,
             LaunchArguments = profile.LaunchArguments,
             WorkingDirectoryRelative = profile.WorkingDirectoryRelative,
             GameInstallPath = profile.GameInstallPath,
@@ -69,6 +70,7 @@ public sealed class ProfileTransferService
             LaunchBackendKind = LaunchBackendKind.LinkedWorkspace,
             ExecutableRelativePath = exported.ExecutableRelativePath,
             ExecutableSourcePath = exported.ExecutableSourcePath ?? string.Empty,
+            UsvfsExecutableOverrideRelativePath = exported.UsvfsExecutableOverrideRelativePath ?? string.Empty,
             LaunchArguments = exported.LaunchArguments,
             WorkingDirectoryRelative = exported.WorkingDirectoryRelative,
             GameInstallPath = exported.GameInstallPath

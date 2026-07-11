@@ -16,6 +16,7 @@ public sealed class ModProfile : ObservableObject
     private string _launchArguments = "-nointro";
     private string _executableRelativePath = @"bin\xr_3da.exe";
     private string _executableSourcePath = string.Empty;
+    private string _usvfsExecutableOverrideRelativePath = string.Empty;
     private double _totalPlaytimeSeconds;
     private DateTime? _lastPlayedAt;
     private string _workspacePath = string.Empty;
@@ -87,6 +88,12 @@ public sealed class ModProfile : ObservableObject
     {
         get => _executableSourcePath;
         set => SetProperty(ref _executableSourcePath, value);
+    }
+
+    public string UsvfsExecutableOverrideRelativePath
+    {
+        get => _usvfsExecutableOverrideRelativePath;
+        set => SetProperty(ref _usvfsExecutableOverrideRelativePath, value);
     }
 
     public double TotalPlaytimeSeconds

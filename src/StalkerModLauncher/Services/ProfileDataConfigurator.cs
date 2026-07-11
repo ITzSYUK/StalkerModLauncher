@@ -20,7 +20,7 @@ internal sealed class ProfileDataConfigurator
 
         var profileDataPath = Path.Combine(profileWorkspace, "userdata");
         Directory.CreateDirectory(profileDataPath);
-        CopyUserLtxFromGame(gamePath, profileDataPath, progress);
+        EnsureProfileUserLtx(gamePath, profileDataPath, progress);
 
         var fsgamePath = Path.Combine(fsgameDir, "fsgame.ltx");
         var lines = File.ReadAllLines(fsgamePath, XRayTextEncoding.Config);
@@ -55,7 +55,7 @@ internal sealed class ProfileDataConfigurator
         return null;
     }
 
-    private void CopyUserLtxFromGame(string gamePath, string profileDataPath, IProgress<string> progress)
+    public void EnsureProfileUserLtx(string gamePath, string profileDataPath, IProgress<string>? progress)
     {
         var searchPaths = new List<string>();
         var gameFsgame = FindFileDirectory(gamePath, "fsgame.ltx");
@@ -90,17 +90,17 @@ internal sealed class ProfileDataConfigurator
                 var destination = Path.Combine(profileDataPath, "user.ltx");
                 if (File.Exists(destination))
                 {
-                    progress.Report("Keeping existing profile-local user.ltx.");
+                    progress?.Report("Keeping existing profile-local user.ltx.");
                     return;
                 }
 
                 File.Copy(source, destination, overwrite: false);
-                progress.Report($"Copied user.ltx from {source}");
+                progress?.Report($"Copied user.ltx from {source}");
                 return;
             }
             catch (Exception ex)
             {
-                progress.Report($"Warning: could not copy user.ltx from {source}: {ex.Message}");
+                progress?.Report($"Warning: could not copy user.ltx from {source}: {ex.Message}");
             }
         }
     }

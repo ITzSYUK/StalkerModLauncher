@@ -158,6 +158,57 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildAsync_RewritesCachedUtf8FsgameWithWindows1251()
+    {
+        var profile = CreateProfile(CreateMod("mod", "mod"));
+        profile.Name = "Мой мод";
+        var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+        var fsgamePath = Path.Combine(first.WorkspaceRoot, "fsgame.ltx");
+        var appDataPath = Path.Combine(first.ProfileWorkspacePath, "userdata");
+
+        File.WriteAllText(fsgamePath, $"$app_data_root$ = true | false| {appDataPath}", Encoding.UTF8);
+
+        var second = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+        Assert.Equal(first.WorkspaceRoot, second.WorkspaceRoot);
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var fsgameText = Encoding.GetEncoding(1251).GetString(File.ReadAllBytes(fsgamePath));
+        Assert.Contains("Мой мод-", fsgameText);
+        Assert.Contains(appDataPath, fsgameText);
+        Assert.DoesNotContain("РњРѕР№", fsgameText);
+    }
+
+    [Fact]
+    public async Task BuildAsync_DoesNotRestoreLegacyStoredFsgame()
+    {
+        var modPath = CreateMod("mod", "mod");
+        var profile = CreateProfile(modPath);
+        var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+        var storedFsgamePath = Path.Combine(
+            first.ProfileWorkspacePath,
+            "userdata",
+            "writable-game-files",
+            "fsgame.ltx");
+        Directory.CreateDirectory(Path.GetDirectoryName(storedFsgamePath)!);
+        File.WriteAllText(
+            storedFsgamePath,
+            """
+            $app_data_root$ = true | false| old
+            $game_weathers$ = true| false| $game_config$| environment\weathers
+            $mod_dir$ = false| false| $fs_root$| mods\
+            """);
+        CreateFile(modPath, "gamedata/config/rebuild-marker.ltx", "changed");
+
+        var rebuilt = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+        var fsgameText = File.ReadAllText(Path.Combine(rebuilt.WorkspaceRoot, "fsgame.ltx"));
+        Assert.Contains(Path.Combine(rebuilt.ProfileWorkspacePath, "userdata"), fsgameText);
+        Assert.DoesNotContain("$game_weathers$", fsgameText);
+        Assert.DoesNotContain("$mod_dir$", fsgameText);
+        Assert.False(File.Exists(storedFsgamePath));
+    }
+
+    [Fact]
     public async Task BuildAsync_PreservesGeneratedAnomalyLocalizationFileAcrossRebuild()
     {
         var modPath = CreateMod("mod", "mod");
@@ -245,6 +296,54 @@ public sealed class WorkspaceBuilderTests : IDisposable
         Assert.True(File.Exists(markerPath));
         Assert.False(Directory.Exists(first.WorkspaceRoot));
         Assert.Contains(progress.Messages, message => message.Contains("Восстановлен защитный маркер", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void DeleteProfileWorkspace_RestoresMarkerForRenamedLegacyUsvfsWorkspace()
+    {
+        var profile = CreateProfile();
+        var oldName = "Аномали — копия";
+        profile.WorkspacePath = Path.Combine(
+            _workspaceRoot,
+            $"{oldName}-{profile.Id[..8]}");
+        CreateFileAtPath(Path.Combine(profile.WorkspacePath, "userdata", "test.txt"), "profile data");
+        profile.Name = "Новое имя";
+
+        _builder.DeleteProfileWorkspace(profile, _gamePath);
+
+        Assert.False(Directory.Exists(profile.WorkspacePath));
+        Assert.True(File.Exists(Path.Combine(_workspaceRoot, ".stalker-launcher-workspace-root")));
+    }
+
+    [Fact]
+    public void EnsureProfileWorkspace_RecoversExistingUsvfsFolderByProfileId()
+    {
+        var profile = CreateProfile();
+        var legacyWorkspace = Path.Combine(_workspaceRoot, $"Старое имя-{profile.Id[..8]}");
+        CreateFileAtPath(Path.Combine(legacyWorkspace, "userdata", "save.dat"), "save");
+        profile.Name = "Новое имя";
+
+        var recovered = _builder.EnsureProfileWorkspace(profile, _gamePath);
+
+        Assert.Equal(legacyWorkspace, recovered);
+        Assert.True(File.Exists(Path.Combine(recovered, ".stalker-launcher-workspace")));
+        Assert.Equal("save", File.ReadAllText(Path.Combine(recovered, "userdata", "save.dat")));
+    }
+
+    [Fact]
+    public void DeleteProfileWorkspace_RemovesAllLegacyUsvfsFoldersWithSameProfileId()
+    {
+        var profile = CreateProfile();
+        var first = Path.Combine(_workspaceRoot, $"Профиль 1-{profile.Id[..8]}");
+        var second = Path.Combine(_workspaceRoot, $"Профиль 2-{profile.Id[..8]}");
+        CreateFileAtPath(Path.Combine(first, "userdata", "first.dat"), "first");
+        CreateFileAtPath(Path.Combine(second, "userdata", "second.dat"), "second");
+        profile.WorkspacePath = string.Empty;
+
+        _builder.DeleteProfileWorkspace(profile, _gamePath);
+
+        Assert.False(Directory.Exists(first));
+        Assert.False(Directory.Exists(second));
     }
 
     [Fact]

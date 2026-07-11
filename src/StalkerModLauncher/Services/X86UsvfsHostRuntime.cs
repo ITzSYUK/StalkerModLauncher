@@ -1,0 +1,176 @@
+using System.Diagnostics;
+using System.Text;
+using StalkerModLauncher.Models;
+
+namespace StalkerModLauncher.Services;
+
+public sealed class X86UsvfsHostRuntime(string? runtimeDirectory = null) : IUsvfsRuntime
+{
+    private readonly string _runtimeDirectory = Path.GetFullPath(runtimeDirectory ?? AppContext.BaseDirectory);
+
+    public IUsvfsRuntimeSession CreateSession(
+        UsvfsMappingPlan mappingPlan,
+        UsvfsRuntimeOptions options,
+        IProgress<string>? progress = null)
+    {
+        ArgumentNullException.ThrowIfNull(mappingPlan);
+        ArgumentNullException.ThrowIfNull(options);
+        return new Session(_runtimeDirectory, mappingPlan, options, UsvfsSessionReservation.Acquire());
+    }
+
+    public async Task<UsvfsProcessLaunchResult> RunAsync(
+        UsvfsMappingPlan mappingPlan,
+        UsvfsProcessLaunchRequest launchRequest,
+        UsvfsRuntimeOptions options,
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        await using var session = CreateSession(mappingPlan, options, progress);
+        using var process = session.StartProcess(launchRequest, progress, cancellationToken);
+        var processId = process.Id;
+        var exitCode = await session.GetExitCodeAsync(cancellationToken);
+        return new UsvfsProcessLaunchResult(exitCode, processId);
+    }
+
+    private sealed class Session : IUsvfsRuntimeSession
+    {
+        private const uint ConfigMagic = 0x31534656;
+        private readonly string _runtimeDirectory;
+        private readonly UsvfsMappingPlan _mappingPlan;
+        private readonly UsvfsRuntimeOptions _options;
+        private readonly UsvfsSessionReservation _reservation;
+        private Process? _hostProcess;
+        private string? _configurationPath;
+        private bool _disposed;
+
+        public Session(
+            string runtimeDirectory,
+            UsvfsMappingPlan mappingPlan,
+            UsvfsRuntimeOptions options,
+            UsvfsSessionReservation reservation)
+        {
+            _runtimeDirectory = runtimeDirectory;
+            _mappingPlan = mappingPlan;
+            _options = options;
+            _reservation = reservation;
+        }
+
+        public Process StartProcess(
+            UsvfsProcessLaunchRequest launchRequest,
+            IProgress<string>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_hostProcess is not null)
+            {
+                throw new InvalidOperationException("This USVFS x86 session already started a process.");
+            }
+
+            UsvfsRuntime.ValidateLaunchRequest(launchRequest);
+            var hostPath = Path.Combine(_runtimeDirectory, UsvfsRuntimeFiles.X86HostFileName);
+            if (!File.Exists(hostPath))
+            {
+                throw new FileNotFoundException("USVFS x86 host was not found.", hostPath);
+            }
+
+            _configurationPath = Path.Combine(
+                Path.GetTempPath(),
+                $"stalker-usvfs-x86-{Guid.NewGuid():N}.bin");
+            WriteConfiguration(_configurationPath, _mappingPlan, launchRequest, _options);
+            progress?.Report($"USVFS x86 host starting: {launchRequest.ExecutablePath}");
+            _hostProcess = Process.Start(new ProcessStartInfo
+            {
+                FileName = hostPath,
+                Arguments = Quote(_configurationPath),
+                WorkingDirectory = _runtimeDirectory,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            }) ?? throw new InvalidOperationException("USVFS x86 host did not start.");
+            return _hostProcess;
+        }
+
+        public async Task<int> GetExitCodeAsync(CancellationToken cancellationToken = default)
+        {
+            var process = _hostProcess ??
+                          throw new InvalidOperationException("The USVFS x86 session has not started a process.");
+            await process.WaitForExitAsync(cancellationToken);
+            return process.ExitCode;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            if (_disposed)
+            {
+                return ValueTask.CompletedTask;
+            }
+
+            _disposed = true;
+            // The Process returned by StartProcess belongs to the launch/session tracker.
+            // Disposing it here races with GameSessionTracker reading ExitCode.
+            _hostProcess = null;
+            if (!string.IsNullOrWhiteSpace(_configurationPath))
+            {
+                try
+                {
+                    File.Delete(_configurationPath);
+                }
+                catch (IOException)
+                {
+                }
+                catch (UnauthorizedAccessException)
+                {
+                }
+            }
+
+            _reservation.Dispose();
+            return ValueTask.CompletedTask;
+        }
+
+        private static void WriteConfiguration(
+            string path,
+            UsvfsMappingPlan mappingPlan,
+            UsvfsProcessLaunchRequest request,
+            UsvfsRuntimeOptions options)
+        {
+            using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
+            using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: false);
+            writer.Write(ConfigMagic);
+            WriteUtf8(writer, options.InstanceName);
+            WriteUtf8(writer, request.ExecutablePath);
+            WriteUtf8(writer, request.Arguments ?? string.Empty);
+            WriteUtf8(writer, request.WorkingDirectory);
+            var operations = mappingPlan.Operations
+                .OrderBy(operation => operation.Order)
+                .ToArray();
+            writer.Write((uint)operations.Length);
+            foreach (var operation in operations)
+            {
+                var flags = UsvfsLinkFlags.Recursive;
+                if (operation.MonitorChanges)
+                {
+                    flags |= UsvfsLinkFlags.MonitorChanges;
+                }
+
+                if (operation.CreateTarget)
+                {
+                    flags |= UsvfsLinkFlags.CreateTarget;
+                }
+
+                writer.Write((uint)operation.Kind);
+                writer.Write((uint)flags);
+                WriteUtf8(writer, operation.SourcePath);
+                WriteUtf8(writer, operation.DestinationPath);
+            }
+        }
+
+        private static void WriteUtf8(BinaryWriter writer, string value)
+        {
+            var bytes = Encoding.UTF8.GetBytes(value);
+            writer.Write((uint)bytes.Length);
+            writer.Write(bytes);
+        }
+
+        private static string Quote(string value) =>
+            "\"" + value.Replace("\"", "\\\"", StringComparison.Ordinal) + "\"";
+    }
+}

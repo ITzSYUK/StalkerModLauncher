@@ -18,7 +18,7 @@ public sealed class AppSettingsNormalizerTests
     }
 
     [Fact]
-    public void Normalize_ResetsLegacyVirtualFileSystemProfiles()
+    public void Normalize_PreservesVirtualFileSystemSelectionWithoutRuntime()
     {
         var profile = new ModProfile
         {
@@ -28,6 +28,20 @@ public sealed class AppSettingsNormalizerTests
 
         var normalized = AppSettingsNormalizer.Normalize(settings);
 
-        Assert.Equal(LaunchBackendKind.LinkedWorkspace, normalized.Profiles[0].LaunchBackendKind);
+        Assert.Equal(LaunchBackendKind.VirtualFileSystem, normalized.Profiles[0].LaunchBackendKind);
+    }
+
+    [Fact]
+    public void Normalize_ClearsUnsupportedAnomalyUsvfsOverride()
+    {
+        var profile = new ModProfile
+        {
+            UsvfsExecutableOverrideRelativePath = @"bin\Unknown.exe"
+        };
+        var settings = new AppSettings { Profiles = [profile] };
+
+        var normalized = AppSettingsNormalizer.Normalize(settings);
+
+        Assert.Empty(normalized.Profiles[0].UsvfsExecutableOverrideRelativePath);
     }
 }

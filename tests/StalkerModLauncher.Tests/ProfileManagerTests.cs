@@ -36,6 +36,7 @@ public sealed class ProfileManagerTests
             Description = "Description",
             IsDiscordStatusEnabled = false,
             GameInstallPath = @"D:\Games\STALKER",
+            UsvfsExecutableOverrideRelativePath = @"bin\AnomalyDX10.exe",
             WorkspacePath = @"D:\OldWorkspace",
             TotalPlaytimeSeconds = 500,
             LastPlayedAt = DateTime.Now
@@ -55,6 +56,7 @@ public sealed class ProfileManagerTests
         Assert.NotSame(source.Mods[0], duplicate.Mods[0]);
         Assert.NotEqual(source.Mods[0].Id, duplicate.Mods[0].Id);
         Assert.Equal(source.Mods[0].SourcePath, duplicate.Mods[0].SourcePath);
+        Assert.Equal(source.UsvfsExecutableOverrideRelativePath, duplicate.UsvfsExecutableOverrideRelativePath);
     }
 
     [Fact]
@@ -145,6 +147,19 @@ public sealed class ProfileManagerTests
     }
 
     [Fact]
+    public void EnsureProfileFolderPath_PersistsFirstPathAcrossProfileRename()
+    {
+        var profile = new ModProfile { Name = "Профиль 1", GameInstallPath = @"D:\Game" };
+
+        var first = _manager.EnsureProfileFolderPath(profile);
+        profile.Name = "Профиль 2";
+        var second = _manager.EnsureProfileFolderPath(profile);
+
+        Assert.Equal(first, profile.WorkspacePath);
+        Assert.Equal(first, second);
+    }
+
+    [Fact]
     public void MoveToInsertionIndex_ReordersProfiles()
     {
         var first = new ModProfile { Name = "First" };
@@ -163,6 +178,13 @@ public sealed class ProfileManagerTests
     {
         public List<ModProfile> DeletedProfiles { get; } = [];
         public Exception? DeleteException { get; set; }
+
+        public string EnsureProfileWorkspace(ModProfile profile, string gamePath, IProgress<string>? progress = null)
+        {
+            return string.IsNullOrWhiteSpace(profile.WorkspacePath)
+                ? Path.Combine(Path.GetTempPath(), $"profile-{profile.Id}")
+                : profile.WorkspacePath;
+        }
 
         public void DeleteProfileWorkspace(ModProfile profile, string gamePath)
         {

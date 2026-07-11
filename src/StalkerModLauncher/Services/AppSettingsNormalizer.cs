@@ -31,15 +31,19 @@ public static class AppSettingsNormalizer
                 ? @"bin\xr_3da.exe"
                 : profile.ExecutableRelativePath;
             profile.ExecutableSourcePath ??= string.Empty;
+            profile.UsvfsExecutableOverrideRelativePath ??= string.Empty;
+            if (!string.IsNullOrWhiteSpace(profile.UsvfsExecutableOverrideRelativePath) &&
+                !AnomalyUsvfsEngineSelection.TryParseRelativePath(
+                    profile.UsvfsExecutableOverrideRelativePath,
+                    out _,
+                    out _))
+            {
+                profile.UsvfsExecutableOverrideRelativePath = string.Empty;
+            }
             profile.WorkspacePath ??= string.Empty;
             profile.WorkingDirectoryRelative ??= string.Empty;
             profile.GameInstallPath ??= string.Empty;
             if (!Enum.IsDefined(profile.LaunchBackendKind))
-            {
-                profile.LaunchBackendKind = LaunchBackendKind.LinkedWorkspace;
-            }
-
-            if (profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem)
             {
                 profile.LaunchBackendKind = LaunchBackendKind.LinkedWorkspace;
             }
