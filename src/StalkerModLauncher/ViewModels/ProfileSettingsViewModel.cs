@@ -14,6 +14,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     private readonly Func<ProfileExecutableSelection?> _detectAutomaticExecutableSelection;
     private readonly Func<string, bool> _isNameTaken;
     private readonly ProfileSettingsValidator _validator;
+    private readonly bool _isUsvfsAvailable;
     private string _profileName;
     private string _profileDescription;
     private string _executableRelativePath;
@@ -23,6 +24,11 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     private bool _isEnabled;
     private bool _isDiscordStatusEnabled;
     private bool _isStandalone;
+    private LaunchBackendKind _launchBackendKind;
+    private string _usvfsExecutableOverrideRelativePath;
+    private string _anomalyRenderer = string.Empty;
+    private bool _anomalyUseAvx;
+    private readonly bool _isAnomalyProfile;
 
     public ProfileSettingsViewModel(
         ModProfile profile,
@@ -30,7 +36,8 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         Func<Task> onSave,
         Func<string, ProfileExecutableSelection?> createExecutableSelection,
         Func<ProfileExecutableSelection?> detectAutomaticExecutableSelection,
-        Func<string, bool> isNameTaken)
+        Func<string, bool> isNameTaken,
+        bool? usvfsAvailable = null)
     {
         _profile = profile;
         _dialogService = dialogService;
@@ -39,6 +46,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         _detectAutomaticExecutableSelection = detectAutomaticExecutableSelection;
         _isNameTaken = isNameTaken;
         _validator = new ProfileSettingsValidator();
+        _isUsvfsAvailable = usvfsAvailable ?? UsvfsFeatureGate.IsEnabled();
         _profileName = profile.Name.Trim();
         _profileDescription = profile.Description;
         _executableRelativePath = profile.ExecutableRelativePath;
@@ -48,6 +56,17 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         _isEnabled = profile.IsEnabled;
         _isDiscordStatusEnabled = profile.IsDiscordStatusEnabled;
         _isStandalone = profile.IsStandalone;
+        _launchBackendKind = profile.LaunchBackendKind;
+        _usvfsExecutableOverrideRelativePath = profile.UsvfsExecutableOverrideRelativePath;
+        _isAnomalyProfile = IsAnomalyProfile(profile);
+        if (AnomalyUsvfsEngineSelection.TryParseRelativePath(
+                _usvfsExecutableOverrideRelativePath,
+                out var renderer,
+                out var useAvx))
+        {
+            _anomalyRenderer = renderer;
+            _anomalyUseAvx = useAvx;
+        }
 
         SaveCommand = new AsyncRelayCommand(async () => await TrySaveAsync());
         BrowseExecutableCommand = new RelayCommand(BrowseExecutable);
@@ -139,7 +158,106 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     public bool IsStandalone
     {
         get => _isStandalone;
-        set => SetProperty(ref _isStandalone, value);
+        set
+        {
+            if (!SetProperty(ref _isStandalone, value))
+            {
+                return;
+            }
+
+            if (value)
+            {
+                SetLaunchBackend(LaunchBackendKind.LinkedWorkspace);
+            }
+
+            OnPropertyChanged(nameof(CanUseUsvfs));
+            OnPropertyChanged(nameof(IsAnomalyUsvfsOptionsVisible));
+        }
+    }
+
+    public bool IsUsvfsAvailable => _isUsvfsAvailable;
+
+    public bool CanUseUsvfs => IsUsvfsAvailable && !IsStandalone;
+
+    public string UsvfsAvailabilityText => IsUsvfsAvailable
+        ? "USVFS подключает моды без сборки полного workspace. Режим пока считается экспериментальным."
+        : "Компоненты USVFS не найдены рядом с лаунчером. Доступен только стабильный Workspace.";
+
+    public bool UseLinkedWorkspace
+    {
+        get => _launchBackendKind == LaunchBackendKind.LinkedWorkspace;
+        set
+        {
+            if (value)
+            {
+                SetLaunchBackend(LaunchBackendKind.LinkedWorkspace);
+            }
+        }
+    }
+
+    public bool UseVirtualFileSystem
+    {
+        get => _launchBackendKind == LaunchBackendKind.VirtualFileSystem;
+        set
+        {
+            if (value && CanUseUsvfs)
+            {
+                SetLaunchBackend(LaunchBackendKind.VirtualFileSystem);
+            }
+        }
+    }
+
+    public bool IsAnomalyUsvfsOptionsVisible =>
+        _isAnomalyProfile && UseVirtualFileSystem;
+
+    public bool UseAutomaticAnomalyRenderer
+    {
+        get => _anomalyRenderer.Length == 0;
+        set
+        {
+            if (value)
+            {
+                SetAnomalyRenderer(string.Empty);
+            }
+        }
+    }
+
+    public bool UseAnomalyDx8
+    {
+        get => _anomalyRenderer == "DX8";
+        set { if (value) SetAnomalyRenderer("DX8"); }
+    }
+
+    public bool UseAnomalyDx9
+    {
+        get => _anomalyRenderer == "DX9";
+        set { if (value) SetAnomalyRenderer("DX9"); }
+    }
+
+    public bool UseAnomalyDx10
+    {
+        get => _anomalyRenderer == "DX10";
+        set { if (value) SetAnomalyRenderer("DX10"); }
+    }
+
+    public bool UseAnomalyDx11
+    {
+        get => _anomalyRenderer == "DX11";
+        set { if (value) SetAnomalyRenderer("DX11"); }
+    }
+
+    public bool HasManualAnomalyRenderer => _anomalyRenderer.Length > 0;
+
+    public bool AnomalyUseAvx
+    {
+        get => _anomalyUseAvx;
+        set
+        {
+            if (SetProperty(ref _anomalyUseAvx, value))
+            {
+                UpdateAnomalyExecutableOverride();
+            }
+        }
     }
 
     public ICommand SaveCommand { get; }
@@ -172,7 +290,10 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         _profile.IsEnabled = IsEnabled;
         _profile.IsDiscordStatusEnabled = IsDiscordStatusEnabled;
         _profile.IsStandalone = IsStandalone;
-        _profile.LaunchBackendKind = LaunchBackendKind.LinkedWorkspace;
+        _profile.LaunchBackendKind = IsStandalone
+            ? LaunchBackendKind.LinkedWorkspace
+            : _launchBackendKind;
+        _profile.UsvfsExecutableOverrideRelativePath = _usvfsExecutableOverrideRelativePath;
     }
 
     private void BrowseExecutable()
@@ -277,5 +398,50 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         {
             // ignored
         }
+    }
+
+    private void SetLaunchBackend(LaunchBackendKind backend)
+    {
+        if (_launchBackendKind == backend)
+        {
+            return;
+        }
+
+        _launchBackendKind = backend;
+        OnPropertyChanged(nameof(UseLinkedWorkspace));
+        OnPropertyChanged(nameof(UseVirtualFileSystem));
+        OnPropertyChanged(nameof(IsAnomalyUsvfsOptionsVisible));
+    }
+
+    private void SetAnomalyRenderer(string renderer)
+    {
+        if (_anomalyRenderer == renderer)
+        {
+            return;
+        }
+
+        _anomalyRenderer = renderer;
+        OnPropertyChanged(nameof(UseAutomaticAnomalyRenderer));
+        OnPropertyChanged(nameof(UseAnomalyDx8));
+        OnPropertyChanged(nameof(UseAnomalyDx9));
+        OnPropertyChanged(nameof(UseAnomalyDx10));
+        OnPropertyChanged(nameof(UseAnomalyDx11));
+        OnPropertyChanged(nameof(HasManualAnomalyRenderer));
+        UpdateAnomalyExecutableOverride();
+    }
+
+    private void UpdateAnomalyExecutableOverride()
+    {
+        _usvfsExecutableOverrideRelativePath = _anomalyRenderer.Length == 0
+            ? string.Empty
+            : AnomalyUsvfsEngineSelection.CreateRelativePath(_anomalyRenderer, _anomalyUseAvx);
+    }
+
+    private static bool IsAnomalyProfile(ModProfile profile)
+    {
+        return (!string.IsNullOrWhiteSpace(profile.GameInstallPath) &&
+                File.Exists(Path.Combine(profile.GameInstallPath, "AnomalyLauncher.exe"))) ||
+               Path.GetFileName(profile.ExecutableRelativePath)
+                   .StartsWith("Anomaly", StringComparison.OrdinalIgnoreCase);
     }
 }

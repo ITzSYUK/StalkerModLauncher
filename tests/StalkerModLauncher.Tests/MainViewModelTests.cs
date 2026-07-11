@@ -287,6 +287,13 @@ public sealed class MainViewModelTests
 
     private sealed class FakeProfileWorkspaceManager : IProfileWorkspaceManager
     {
+        public string EnsureProfileWorkspace(ModProfile profile, string gamePath, IProgress<string>? progress = null)
+        {
+            return string.IsNullOrWhiteSpace(profile.WorkspacePath)
+                ? Path.Combine(Path.GetTempPath(), $"profile-{profile.Id}")
+                : profile.WorkspacePath;
+        }
+
         public void DeleteProfileWorkspace(ModProfile profile, string gamePath)
         {
         }

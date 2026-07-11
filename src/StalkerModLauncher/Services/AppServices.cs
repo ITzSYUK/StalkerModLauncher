@@ -14,11 +14,20 @@ public sealed class AppServices
         var workspaceBuilder = new WorkspaceBuilder(Paths);
         WorkspaceManagementService = new WorkspaceManagementService(workspaceBuilder);
         ProfileManager = new ProfileManager(Paths, workspaceBuilder);
+        var launchBackends = new List<IProfileLaunchBackend>
+        {
+            new LinkedWorkspaceLaunchBackend(workspaceBuilder)
+        };
+        if (UsvfsFeatureGate.IsEnabled())
+        {
+            launchBackends.Add(new UsvfsLaunchBackend(
+                new UsvfsRuntime(new OfficialUsvfsNativeApi()),
+                x86Runtime: new X86UsvfsHostRuntime()));
+        }
+
         LaunchCoordinator = new LaunchCoordinator(
             new ProfileLauncher(
-                [
-                    new LinkedWorkspaceLaunchBackend(workspaceBuilder)
-                ],
+                launchBackends,
                 profileManager: ProfileManager),
             new GameSessionTracker());
         GameValidator = new GameInstallationValidator();

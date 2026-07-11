@@ -41,14 +41,8 @@ public sealed class ProfileLauncher : IProfileLauncher
         CancellationToken cancellationToken = default)
     {
         var backend = ResolveBackend(profile.LaunchBackendKind);
-        if (backend.Kind != profile.LaunchBackendKind)
-        {
-            progress.Report($"Launch backend '{profile.LaunchBackendKind}' is no longer available. Using {backend.Kind}.");
-            profile.LaunchBackendKind = backend.Kind;
-        }
-
         progress.Report($"Launch backend: {backend.Kind}.");
-        var context = CreateBackendContext(gamePath, profile);
+        var context = CreateBackendContext(gamePath, profile, progress);
         var plan = await backend.PrepareAsync(context, progress, cancellationToken);
         progress.Report($"Starting: {plan.ExecutablePath}");
         try
@@ -68,18 +62,17 @@ public sealed class ProfileLauncher : IProfileLauncher
         }
     }
 
-    private ProfileLaunchBackendContext CreateBackendContext(string gamePath, ModProfile profile)
+    private ProfileLaunchBackendContext CreateBackendContext(
+        string gamePath,
+        ModProfile profile,
+        IProgress<string> progress)
     {
         if (profile.IsStandalone || _profileManager is null || string.IsNullOrWhiteSpace(gamePath))
         {
             return new ProfileLaunchBackendContext(gamePath, profile);
         }
 
-        var workspace = _profileManager.GetProfileFolderPath(profile);
-        if (string.IsNullOrWhiteSpace(workspace))
-        {
-            return new ProfileLaunchBackendContext(gamePath, profile);
-        }
+        var workspace = _profileManager.EnsureProfileFolderPath(profile, progress);
 
         var fileLayerPlan = FileLayerPlan.CreateLinkedWorkspace(gamePath, profile, workspace);
         var overlayManifest = _overlayManifestBuilder.BuildLinkedWorkspace(profile, fileLayerPlan, workspace);
@@ -93,7 +86,9 @@ public sealed class ProfileLauncher : IProfileLauncher
             return backend;
         }
 
-        return _backends[LaunchBackendKind.LinkedWorkspace];
+        throw new InvalidOperationException(kind == LaunchBackendKind.VirtualFileSystem
+            ? "Для профиля выбран USVFS, но его компоненты недоступны. Запустите экспериментальную сборку с файлами usvfs_x64.dll и usvfs_proxy_x64.exe либо выберите Workspace в настройках профиля."
+            : $"Система запуска профиля недоступна: {kind}.");
     }
 
     private static void AttachRuntimeLease(Process process, IAsyncDisposable? runtimeLease)

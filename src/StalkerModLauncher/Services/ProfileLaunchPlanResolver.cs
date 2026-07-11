@@ -148,6 +148,52 @@ internal sealed class ProfileLaunchPlanResolver
         }
     }
 
+    public LaunchPlanResolution PreviewVirtualFileSystem(ModProfile profile, FileLayerPlan fileLayerPlan)
+    {
+        try
+        {
+            FileSystemSafety.EnsureRelativePath(profile.ExecutableRelativePath, "Launch executable");
+            var executable = ResolveExecutableSource(
+                profile,
+                FileLayerSourceResolver.CreateExecutableRoots(fileLayerPlan),
+                profile.ExecutableRelativePath,
+                allowPinnedSource: true,
+                allowDedicatedFallback: LaunchExecutableDetector.IsDedicatedExecutable(profile.ExecutableRelativePath));
+
+            if (executable is null)
+            {
+                return new LaunchPlanResolution(null, null, $"Executable was not found: {profile.ExecutableRelativePath}");
+            }
+
+            if (!executable.IsAvailable)
+            {
+                return new LaunchPlanResolution(null, executable, executable.Reason);
+            }
+
+            var virtualRoot = Path.GetFullPath(fileLayerPlan.BaseGame.RootPath);
+            var workingDirectoryRelative = FindWorkingDirectoryRelative(fileLayerPlan);
+            var workingDirectory = string.IsNullOrWhiteSpace(workingDirectoryRelative)
+                ? virtualRoot
+                : FileSystemSafety.ResolvePathInside(
+                    virtualRoot,
+                    workingDirectoryRelative,
+                    "Working directory");
+
+            return new LaunchPlanResolution(
+                new LaunchPlan(
+                    LaunchBackendKind.VirtualFileSystem,
+                    executable.FullPath,
+                    profile.LaunchArguments,
+                    workingDirectory),
+                executable,
+                null);
+        }
+        catch (Exception ex)
+        {
+            return new LaunchPlanResolution(null, null, ex.Message);
+        }
+    }
+
     public LaunchExecutableResolution? ResolveExecutableSource(
         ModProfile profile,
         IReadOnlyList<LaunchExecutableSearchRoot> roots,

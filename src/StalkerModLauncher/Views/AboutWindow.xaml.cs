@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -18,6 +19,17 @@ public partial class AboutWindow : Window
     public AboutWindow()
     {
         InitializeComponent();
+        VersionTextBlock.Text = GetVersionText();
+    }
+
+    private static string GetVersionText()
+    {
+        var assembly = typeof(AboutWindow).Assembly;
+        var informationalVersion = assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+        var version = informationalVersion?.Split('+')[0] ?? assembly.GetName().Version?.ToString(3) ?? "неизвестна";
+        return $"Версия {version}";
     }
 
     private void AboutWindow_OnSourceInitialized(object? sender, EventArgs e)
