@@ -6,7 +6,7 @@
         Height="620"
         MinWidth="680"
         MinHeight="420"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
         Background="{StaticResource WindowBackgroundBrush}"
         Foreground="{StaticResource TextBrush}"
         ShowInTaskbar="False"

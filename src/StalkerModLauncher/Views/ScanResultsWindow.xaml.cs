@@ -18,7 +18,6 @@ public sealed partial class ScanResultsWindow : Window
     public ScanResultsWindow()
     {
         InitializeComponent();
-        Owner = Application.Current?.MainWindow;
         ModsListView.ItemsSource = Mods;
     }
 
