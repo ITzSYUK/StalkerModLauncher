@@ -99,7 +99,7 @@ public sealed class ProfileHealthService
 
         if (!profile.IsStandalone)
         {
-            AddWorkspaceChecks(checks, profile.WorkspacePath);
+            AddProfileStorageChecks(checks, profile);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -144,8 +144,13 @@ public sealed class ProfileHealthService
             return _launchPlanResolver.PreviewStandalone(profile, cancellationToken);
         }
 
-        return fileLayerPlan is null || string.IsNullOrWhiteSpace(profileFolderPath)
-            ? null
+        if (fileLayerPlan is null || string.IsNullOrWhiteSpace(profileFolderPath))
+        {
+            return null;
+        }
+
+        return profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem
+            ? _launchPlanResolver.PreviewVirtualFileSystem(profile, fileLayerPlan)
             : _launchPlanResolver.PreviewLinkedWorkspace(profile, fileLayerPlan, profileFolderPath);
     }
 
@@ -160,25 +165,45 @@ public sealed class ProfileHealthService
             : _overlayManifestBuilder.BuildLinkedWorkspace(profile, fileLayerPlan, profileFolderPath, cancellationToken: cancellationToken);
     }
 
-    private static void AddWorkspaceChecks(List<ProfileHealthCheck> checks, string workspacePath)
+    private static void AddProfileStorageChecks(List<ProfileHealthCheck> checks, ModProfile profile)
     {
+        var workspacePath = profile.WorkspacePath;
+        var usesVirtualFileSystem = profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem;
+        var checkTitle = usesVirtualFileSystem ? "USVFS" : "Workspace";
         if (string.IsNullOrWhiteSpace(workspacePath))
         {
-            checks.Add(new ProfileHealthCheck(ProfileHealthStatus.Warning, "Workspace", "Путь еще не назначен."));
+            checks.Add(new ProfileHealthCheck(
+                ProfileHealthStatus.Warning,
+                checkTitle,
+                usesVirtualFileSystem
+                    ? "Профильная папка будет назначена при первом запуске. Папка current для USVFS не требуется."
+                    : "Путь еще не назначен."));
             return;
         }
 
         if (!Directory.Exists(workspacePath))
         {
-            checks.Add(new ProfileHealthCheck(ProfileHealthStatus.Warning, "Workspace", $"Будет создан при запуске: {workspacePath}"));
+            checks.Add(new ProfileHealthCheck(
+                ProfileHealthStatus.Warning,
+                checkTitle,
+                $"Профильная папка будет создана при запуске: {workspacePath}"));
             return;
         }
 
         var markerExists = File.Exists(Path.Combine(workspacePath, ".stalker-launcher-workspace"));
         checks.Add(new ProfileHealthCheck(
             markerExists ? ProfileHealthStatus.Healthy : ProfileHealthStatus.Error,
-            "Workspace",
-            markerExists ? $"Управляемая папка: {workspacePath}" : $"Отсутствует защитный маркер: {workspacePath}"));
+            checkTitle,
+            markerExists
+                ? usesVirtualFileSystem
+                    ? $"Профильные данные хранятся отдельно: {workspacePath}. Папка current не используется."
+                    : $"Управляемая папка: {workspacePath}"
+                : $"Отсутствует защитный маркер: {workspacePath}"));
+
+        if (usesVirtualFileSystem)
+        {
+            return;
+        }
 
         var currentExists = Directory.Exists(Path.Combine(workspacePath, "current"));
         var manifestExists = File.Exists(Path.Combine(workspacePath, "build-manifest.json"));

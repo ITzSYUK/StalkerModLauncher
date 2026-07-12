@@ -83,7 +83,13 @@ public sealed class WorkspaceManagementService
             if (Directory.Exists(sourceUserData))
             {
                 progress.Report("Копирование сохранений, настроек и логов...");
-                CopyDirectory(sourceUserData, targetUserData, cancellationToken);
+                CopyDirectory(
+                    sourceUserData,
+                    targetUserData,
+                    cancellationToken,
+                    profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem
+                        ? "usvfs-bootstrap"
+                        : null);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -112,22 +118,50 @@ public sealed class WorkspaceManagementService
         }
     }
 
-    private static void CopyDirectory(string source, string destination, CancellationToken cancellationToken)
+    private static void CopyDirectory(
+        string source,
+        string destination,
+        CancellationToken cancellationToken,
+        string? excludedTopLevelDirectory)
     {
         foreach (var directory in Directory.EnumerateDirectories(source, "*", SearchOption.AllDirectories))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            Directory.CreateDirectory(Path.Combine(destination, Path.GetRelativePath(source, directory)));
+            var relative = Path.GetRelativePath(source, directory);
+            if (IsExcluded(relative, excludedTopLevelDirectory))
+            {
+                continue;
+            }
+
+            Directory.CreateDirectory(Path.Combine(destination, relative));
         }
 
         Directory.CreateDirectory(destination);
         foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var target = Path.Combine(destination, Path.GetRelativePath(source, file));
+            var relative = Path.GetRelativePath(source, file);
+            if (IsExcluded(relative, excludedTopLevelDirectory))
+            {
+                continue;
+            }
+
+            var target = Path.Combine(destination, relative);
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             File.Copy(file, target, overwrite: false);
         }
+    }
+
+    private static bool IsExcluded(string relativePath, string? excludedTopLevelDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(excludedTopLevelDirectory))
+        {
+            return false;
+        }
+
+        var firstSeparator = relativePath.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
+        var topLevel = firstSeparator < 0 ? relativePath : relativePath[..firstSeparator];
+        return string.Equals(topLevel, excludedTopLevelDirectory, StringComparison.OrdinalIgnoreCase);
     }
 
     private static WorkspaceStatus Inspect(ModProfile profile, CancellationToken cancellationToken)

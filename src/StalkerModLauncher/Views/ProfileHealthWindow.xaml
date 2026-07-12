@@ -15,7 +15,6 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -60,7 +59,7 @@
                 <Style TargetType="Border">
                     <Setter Property="Visibility" Value="Visible"/>
                     <Style.Triggers>
-                        <DataTrigger Binding="{Binding CanManageWorkspace}" Value="False">
+                        <DataTrigger Binding="{Binding ShowStoragePanel}" Value="False">
                             <Setter Property="Visibility" Value="Collapsed"/>
                         </DataTrigger>
                     </Style.Triggers>
@@ -74,14 +73,16 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Workspace"
+                    <TextBlock Text="{Binding StoragePanelTitle}"
                                FontSize="14"
-                               FontWeight="SemiBold"/>
-                    <TextBlock Text="{Binding Workspace.StateDisplay, Mode=OneWay}"
+                               FontWeight="SemiBold"
+                               ToolTip="{Binding StoragePanelToolTip}"/>
+                    <TextBlock Text="{Binding StorageStateDisplay}"
                                Foreground="{StaticResource MutedTextBrush}"
                                FontSize="11"
                                TextTrimming="CharacterEllipsis"
-                               ToolTip="{Binding Workspace.StateDisplay, Mode=OneWay}"
+                               ToolTip="{Binding StorageStateDisplay}"
+                               Visibility="{Binding UsesLinkedWorkspace, Converter={StaticResource BooleanToVisibilityConverter}}"
                                Margin="0,1,0,0"/>
                 </StackPanel>
 
@@ -90,30 +91,30 @@
                              VerticalAlignment="Center"
                              Margin="18,0">
                     <StackPanel Margin="0,0,12,0">
-                        <TextBlock Text="Видимый размер"
+                        <TextBlock Text="{Binding FirstMetricTitle}"
                                    Foreground="{StaticResource MutedTextBrush}"
                                    FontSize="11"
-                                   ToolTip="Сколько данных видит игра внутри рабочей папки. Из-за ссылок это не равно расходу места на диске."/>
-                        <TextBlock Text="{Binding Workspace.LogicalSizeDisplay, Mode=OneWay}"
+                                   ToolTip="{Binding FirstMetricToolTip}"/>
+                        <TextBlock Text="{Binding FirstMetricValue}"
                                    FontSize="13"
                                    FontWeight="SemiBold"
                                    Margin="0,1,0,0"/>
                     </StackPanel>
                     <StackPanel Margin="0,0,12,0">
-                        <TextBlock Text="Реально занято"
+                        <TextBlock Text="{Binding SecondMetricTitle}"
                                    Foreground="{StaticResource MutedTextBrush}"
                                    FontSize="11"
-                                   ToolTip="Сколько места примерно занимает workspace с учетом hardlink и symlink."/>
-                        <TextBlock Text="{Binding Workspace.PhysicalSizeDisplay, Mode=OneWay}"
+                                   ToolTip="{Binding SecondMetricToolTip}"/>
+                        <TextBlock Text="{Binding SecondMetricValue}"
                                    FontSize="13"
                                    FontWeight="SemiBold"
                                    Margin="0,1,0,0"/>
                     </StackPanel>
-                    <StackPanel ToolTip="{Binding Workspace.LinkSummaryDisplay, Mode=OneWay}">
-                        <TextBlock Text="Файлы"
+                    <StackPanel ToolTip="{Binding ThirdMetricToolTip}">
+                        <TextBlock Text="{Binding ThirdMetricTitle}"
                                    Foreground="{StaticResource MutedTextBrush}"
                                    FontSize="11"/>
-                        <TextBlock Text="{Binding Workspace.FileCountDisplay, Mode=OneWay}"
+                        <TextBlock Text="{Binding ThirdMetricValue}"
                                    FontSize="13"
                                    FontWeight="SemiBold"
                                    Margin="0,1,0,0"/>
@@ -125,67 +126,19 @@
                             VerticalAlignment="Center">
                     <Button Content="Пересобрать"
                             Command="{Binding RebuildWorkspaceCommand}"
+                            Visibility="{Binding UsesLinkedWorkspace, Converter={StaticResource BooleanToVisibilityConverter}}"
                             Margin="0,0,8,0"/>
                     <Button Content="Перенести..."
                             Command="{Binding MoveWorkspaceCommand}"
                             Margin="0,0,8,0"/>
                     <Button Content="Очистить кэш"
-                            Command="{Binding ClearWorkspaceCommand}"/>
+                            Command="{Binding ClearWorkspaceCommand}"
+                            Visibility="{Binding UsesLinkedWorkspace, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                 </StackPanel>
             </Grid>
         </Border>
 
         <Border Grid.Row="3"
-                Background="{StaticResource PanelBrush}"
-                BorderBrush="{StaticResource StrokeBrush}"
-                BorderThickness="1"
-                CornerRadius="6"
-                Padding="10,8"
-                Margin="0,0,0,10">
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Setter Property="Visibility" Value="Visible"/>
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding CanInspectVirtualFiles}" Value="False">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="260"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <StackPanel>
-                    <TextBlock Text="Виртуальный файл"
-                               FontSize="14"
-                               FontWeight="SemiBold"/>
-                    <TextBlock Text="Какой файл увидит будущий VFS"
-                               Foreground="{StaticResource MutedTextBrush}"
-                               FontSize="11"
-                               Margin="0,1,0,6"/>
-                    <TextBox Text="{Binding VirtualFilePath, UpdateSourceTrigger=PropertyChanged}"
-                             Height="30"/>
-                </StackPanel>
-
-                <Button Grid.Column="1"
-                        Content="Проверить"
-                        Command="{Binding InspectVirtualFileCommand}"
-                        VerticalAlignment="Bottom"
-                        Margin="10,0,14,0"/>
-
-                <TextBlock Grid.Column="2"
-                           Text="{Binding VirtualFileStatus}"
-                           Foreground="{StaticResource MutedTextBrush}"
-                           TextWrapping="Wrap"
-                           VerticalAlignment="Center"/>
-            </Grid>
-        </Border>
-
-        <Border Grid.Row="4"
                 Background="{StaticResource FieldBackgroundBrush}"
                 BorderBrush="{StaticResource StrokeBrush}"
                 BorderThickness="1"
@@ -256,7 +209,7 @@
             </Grid>
         </Border>
 
-        <WrapPanel Grid.Row="5"
+        <WrapPanel Grid.Row="4"
                    HorizontalAlignment="Right"
                    Margin="0,14,0,0">
             <Button Content="Обновить"
