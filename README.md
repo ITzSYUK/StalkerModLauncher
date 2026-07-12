@@ -1,11 +1,12 @@
-# S.T.A.L.K.E.R. Mod Launcher
+<p align="center">
+  <img src="assets/logo/ml_logo.png" alt="S.T.A.L.K.E.R. Mod Launcher" width="100%">
+</p>
 
 | ![Main window](assets/screenshots/launcher_main_screen.png) | ![Modification browser](assets/screenshots/launcher_mods_browser.png) |
 | ---------------------------------------------------------- | -------------------------------------------------------------------- |
 
 <p align="center">
-  <strong>v1.2.0</strong><br>
-  <a href="https://github.com/ITzSYUK/StalkerModLauncher/releases/latest"><strong>Download latest release / Скачать последний релиз</strong></a>
+  <a href="https://github.com/ITzSYUK/StalkerModLauncher/releases/latest"><strong>Download latest release</strong></a>
 </p>
 
 <p align="center">
@@ -59,7 +60,7 @@ dotnet test .\StalkerModLauncher.sln -c Release
 dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 ```
 
-Architecture, workspace safety, USVFS, settings and release packaging are described in [docs/TECHNICAL.md](docs/TECHNICAL.md).
+Architecture, workspace safety, USVFS, settings and release packaging are described in [docs/TECHNICAL_EN.md](https://github.com/ITzSYUK/StalkerModLauncher/blob/main/docs/TECHNICAL_EN.md).
 
 ---
 
@@ -108,7 +109,7 @@ dotnet test .\StalkerModLauncher.sln -c Release
 dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 ```
 
-Архитектура, безопасность workspace, USVFS, настройки и подготовка релиза описаны в [docs/TECHNICAL.md](docs/TECHNICAL.md).
+Архитектура, безопасность workspace, USVFS, настройки и подготовка релиза описаны в [docs/TECHNICAL_RU.md](https://github.com/ITzSYUK/StalkerModLauncher/blob/main/docs/TECHNICAL_RU.md).
 
 ---
 

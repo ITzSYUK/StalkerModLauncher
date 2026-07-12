@@ -75,12 +75,14 @@
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="{Binding StoragePanelTitle}"
                                FontSize="14"
-                               FontWeight="SemiBold"/>
+                               FontWeight="SemiBold"
+                               ToolTip="{Binding StoragePanelToolTip}"/>
                     <TextBlock Text="{Binding StorageStateDisplay}"
                                Foreground="{StaticResource MutedTextBrush}"
                                FontSize="11"
                                TextTrimming="CharacterEllipsis"
                                ToolTip="{Binding StorageStateDisplay}"
+                               Visibility="{Binding UsesLinkedWorkspace, Converter={StaticResource BooleanToVisibilityConverter}}"
                                Margin="0,1,0,0"/>
                 </StackPanel>
 

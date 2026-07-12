@@ -1,5 +1,7 @@
 # Техническая документация
 
+[Русская версия](TECHNICAL_RU.md) | [English version](TECHNICAL_EN.md)
+
 Документ описывает архитектуру S.T.A.L.K.E.R. Mod Launcher `v1.2.0`, хранение данных, режимы запуска и ограничения безопасности.
 
 ## Назначение и совместимость
@@ -102,7 +104,7 @@ x64-игры запускаются через managed-адаптер и `usvfs_
 
 Anomaly Launcher является 32-битной оболочкой, поэтому USVFS запускает выбранный `AnomalyDX*.exe` напрямую. В режиме **Авто** renderer читается из `AnomalyLauncher.cfg`; также доступны DX8/DX9/DX10/DX11 и AVX. Относительный EXE разрешается через `FileLayerPlan`, поэтому бинарник мода с более высоким приоритетом заменяет одноимённый базовый файл.
 
-Глубокие исследовательские заметки и PoC находятся в [USVFS_RESEARCH.md](USVFS_RESEARCH.md).
+Глубокие исследовательские заметки и PoC находятся в [USVFS_RESEARCH_RU.md](https://github.com/ITzSYUK/StalkerModLauncher/blob/main/docs/USVFS_RESEARCH_RU.md).
 
 ## Профильные данные и fsgame.ltx
 
@@ -191,6 +193,12 @@ dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 - standalone: .NET включён в `StalkerModLauncher-Standalone.exe`.
 
 Обе поставки содержат необходимые native-файлы USVFS, `LICENSE.txt` и `THIRD-PARTY-NOTICES.txt`. README и release notes в пользовательский ZIP не дублируются. Для воспроизводимой упаковки локально должны быть собраны официальный USVFS x64/x86 и x86 helper; эти бинарные артефакты не хранятся в Git.
+
+Для обычной тестовой сборки с официальными файлами USVFS используется:
+
+```powershell
+.\scripts\Build-VfsExperimental.ps1 -CleanPublishRoot
+```
 
 ## Структура проекта
 

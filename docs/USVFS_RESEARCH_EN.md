@@ -1,5 +1,7 @@
 # USVFS research branch
 
+[English version](USVFS_RESEARCH_EN.md) | [Русская версия](USVFS_RESEARCH_RU.md)
+
 This branch is intentionally separate from `main`. The stable launcher mode is still
 `LinkedWorkspace`; this branch is for researching integration with
 [ModOrganizer2/usvfs](https://github.com/ModOrganizer2/usvfs) without risking the

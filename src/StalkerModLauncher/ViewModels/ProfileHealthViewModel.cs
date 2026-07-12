@@ -73,9 +73,10 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
     public bool UsesLinkedWorkspace => !_profile.IsStandalone && _profile.LaunchBackendKind == LaunchBackendKind.LinkedWorkspace;
     public bool UsesVirtualFileSystem => !_profile.IsStandalone && _profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem;
     public string StoragePanelTitle => UsesVirtualFileSystem ? "USVFS" : "Workspace";
-    public string StorageStateDisplay => UsesVirtualFileSystem
-        ? "Файлы игры и модов подключаются виртуально. Папка current не создаётся."
-        : Workspace?.StateDisplay ?? "Состояние рабочей папки ещё не получено.";
+    public string? StoragePanelToolTip => UsesVirtualFileSystem
+        ? "Файлы игры и модов подключаются виртуально. Папка current не используется."
+        : null;
+    public string StorageStateDisplay => Workspace?.StateDisplay ?? "Состояние рабочей папки ещё не получено.";
     public string FirstMetricTitle => UsesVirtualFileSystem ? "Слои" : "Видимый размер";
     public string FirstMetricValue => UsesVirtualFileSystem
         ? $"{1 + _profile.Mods.Count(mod => mod.IsEnabled):N0}"
