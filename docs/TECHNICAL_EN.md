@@ -2,7 +2,7 @@
 
 [English version](TECHNICAL_EN.md) | [Русская версия](TECHNICAL_RU.md)
 
-This document describes the architecture of S.T.A.L.K.E.R. Mod Launcher `v1.2.0`, its data storage, launch modes, and safety constraints.
+This document describes the architecture of S.T.A.L.K.E.R. Mod Launcher `v1.2.1`, its data storage, launch modes, and safety constraints.
 
 ## Purpose and compatibility
 
@@ -181,13 +181,13 @@ dotnet test .\StalkerModLauncher.sln -c Release
 dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 ```
 
-Release `v1.2.0` is packaged with:
+Release `v1.2.1` is packaged with:
 
 ```powershell
-.\scripts\Build-Release.ps1 -Version 1.2.0
+.\scripts\Build-Release.ps1 -Version 1.2.1
 ```
 
-The script creates two ZIP packages in `publish\release\v1.2.0`:
+The script creates two ZIP packages in `publish\release\v1.2.1`:
 
 - framework-dependent: requires .NET 8 Desktop Runtime x64;
 - standalone: .NET is included in `StalkerModLauncher-Standalone.exe`.
@@ -221,7 +221,7 @@ research/
 tests/StalkerModLauncher.Tests/
 ```
 
-## Known limitations in v1.2.0
+## Known limitations in v1.2.1
 
 - USVFS remains experimental; unusual wrappers and individual engines may require Workspace mode.
 - USVFS requires the Microsoft Visual C++ 2015-2022 Redistributable matching the game architecture.
