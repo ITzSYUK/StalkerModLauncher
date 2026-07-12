@@ -1,3 +1,7 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Net;
+using System.Net.Http.Headers;
 using StalkerModLauncher.Services;
 using Xunit;
 
@@ -54,5 +58,125 @@ public sealed class ApProCatalogParserTests
         var url = ApProCatalogService.GetPageUrl(ApProCatalogCategory.ShadowOfChernobyl, 2);
 
         Assert.Equal("https://ap-pro.ru/stuff/ten_chernobylja/page/2/?d=3", url);
+    }
+
+    [Fact]
+    public async Task LoadPageAsync_UsesHonestLauncherUserAgent()
+    {
+        string? userAgent = null;
+        var handler = new StubHttpMessageHandler((request, _) =>
+        {
+            userAgent = request.Headers.UserAgent.ToString();
+            return Task.FromResult(CreateResponse(HttpStatusCode.OK, "<html></html>"));
+        });
+        var service = new ApProCatalogService(handler, TimeSpan.Zero);
+
+        await service.LoadPageAsync(ApProCatalogCategory.ShadowOfChernobyl, 1);
+
+        Assert.StartsWith("StalkerModLauncher/1.2.1", userAgent);
+        Assert.Contains("github.com/ITzSYUK/StalkerModLauncher", userAgent);
+        Assert.DoesNotContain("Mozilla", userAgent);
+    }
+
+    [Fact]
+    public async Task LoadPageAsync_RetriesOnceAfterTooManyRequests()
+    {
+        var requests = 0;
+        var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            if (Interlocked.Increment(ref requests) == 1)
+            {
+                var throttled = CreateResponse(HttpStatusCode.TooManyRequests, string.Empty);
+                throttled.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.Zero);
+                return Task.FromResult(throttled);
+            }
+
+            return Task.FromResult(CreateResponse(HttpStatusCode.OK, "<html></html>"));
+        });
+        var service = new ApProCatalogService(handler, TimeSpan.Zero);
+
+        await service.LoadPageAsync(ApProCatalogCategory.ShadowOfChernobyl, 1);
+
+        Assert.Equal(2, requests);
+    }
+
+    [Fact]
+    public async Task LoadPageAsync_LeavesMinimumIntervalBetweenPages()
+    {
+        var requestTimes = new ConcurrentQueue<TimeSpan>();
+        var stopwatch = Stopwatch.StartNew();
+        var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            requestTimes.Enqueue(stopwatch.Elapsed);
+            return Task.FromResult(CreateResponse(HttpStatusCode.OK, "<html></html>"));
+        });
+        var service = new ApProCatalogService(handler, TimeSpan.FromMilliseconds(60));
+
+        await service.LoadPageAsync(ApProCatalogCategory.ShadowOfChernobyl, 1);
+        await service.LoadPageAsync(ApProCatalogCategory.ShadowOfChernobyl, 2);
+
+        var times = requestTimes.ToArray();
+        Assert.Equal(2, times.Length);
+        Assert.True(times[1] - times[0] >= TimeSpan.FromMilliseconds(45));
+    }
+
+    [Fact]
+    public async Task DownloadThumbnailAsync_LimitsConcurrentRequests()
+    {
+        var activeRequests = 0;
+        var maximumActiveRequests = 0;
+        var handler = new StubHttpMessageHandler(async (_, cancellationToken) =>
+        {
+            var active = Interlocked.Increment(ref activeRequests);
+            UpdateMaximum(ref maximumActiveRequests, active);
+            try
+            {
+                await Task.Delay(40, cancellationToken);
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new ByteArrayContent([1, 2, 3])
+                };
+            }
+            finally
+            {
+                Interlocked.Decrement(ref activeRequests);
+            }
+        });
+        var service = new ApProCatalogService(
+            handler,
+            TimeSpan.Zero,
+            maximumConcurrentThumbnailDownloads: 2);
+
+        var downloads = Enumerable.Range(1, 8)
+            .Select(index => service.DownloadThumbnailAsync($"https://ap-pro.ru/uploads/{index}.jpg"));
+        var results = await Task.WhenAll(downloads);
+
+        Assert.All(results, result => Assert.NotNull(result));
+        Assert.InRange(maximumActiveRequests, 1, 2);
+    }
+
+    private static HttpResponseMessage CreateResponse(HttpStatusCode statusCode, string content) => new(statusCode)
+    {
+        Content = new StringContent(content)
+    };
+
+    private static void UpdateMaximum(ref int maximum, int candidate)
+    {
+        while (true)
+        {
+            var current = Volatile.Read(ref maximum);
+            if (candidate <= current || Interlocked.CompareExchange(ref maximum, candidate, current) == current)
+            {
+                return;
+            }
+        }
+    }
+
+    private sealed class StubHttpMessageHandler(
+        Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) => handler(request, cancellationToken);
     }
 }

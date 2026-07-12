@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Reflection;
 using System.Text.RegularExpressions;
 
 namespace StalkerModLauncher.Services;
@@ -26,9 +28,35 @@ public sealed record ApProCatalogPage(
 
 public sealed class ApProCatalogService
 {
-    private static readonly HttpClient HttpClient = CreateHttpClient();
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan MinimumCatalogRequestInterval = TimeSpan.FromMilliseconds(750);
+    private static readonly TimeSpan DefaultRetryAfterDelay = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan MaximumRetryAfterDelay = TimeSpan.FromSeconds(30);
+    private const int MaximumConcurrentThumbnailDownloads = 4;
+
+    private readonly HttpClient _httpClient;
+    private readonly TimeSpan _minimumCatalogRequestInterval;
+    private readonly SemaphoreSlim _catalogRequestLock = new(1, 1);
+    private readonly SemaphoreSlim _thumbnailDownloadLimit;
     private readonly Dictionary<CatalogPageKey, CachedCatalog> _cache = new();
+    private DateTimeOffset _lastCatalogRequestAt = DateTimeOffset.MinValue;
+
+    public ApProCatalogService(
+        HttpMessageHandler? httpMessageHandler = null,
+        TimeSpan? minimumCatalogRequestInterval = null,
+        int maximumConcurrentThumbnailDownloads = MaximumConcurrentThumbnailDownloads)
+    {
+        if (maximumConcurrentThumbnailDownloads < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maximumConcurrentThumbnailDownloads));
+        }
+
+        _httpClient = CreateHttpClient(httpMessageHandler);
+        _minimumCatalogRequestInterval = minimumCatalogRequestInterval ?? MinimumCatalogRequestInterval;
+        _thumbnailDownloadLimit = new SemaphoreSlim(
+            maximumConcurrentThumbnailDownloads,
+            maximumConcurrentThumbnailDownloads);
+    }
 
     public static string GetCategoryTitle(ApProCatalogCategory category) => category switch
     {
@@ -85,7 +113,7 @@ public sealed class ApProCatalogService
             return cached.Page;
         }
 
-        var html = await HttpClient.GetStringAsync(GetPageUrl(category, pageNumber), cancellationToken);
+        var html = await DownloadCatalogPageAsync(GetPageUrl(category, pageNumber), cancellationToken);
         if (html.Contains("cf-chl", StringComparison.OrdinalIgnoreCase) ||
             html.Contains("Just a moment...", StringComparison.OrdinalIgnoreCase))
         {
@@ -101,27 +129,106 @@ public sealed class ApProCatalogService
 
     public async Task<byte[]?> DownloadThumbnailAsync(string thumbnailUrl, CancellationToken cancellationToken = default)
     {
+        await _thumbnailDownloadLimit.WaitAsync(cancellationToken);
         try
         {
-            return await HttpClient.GetByteArrayAsync(thumbnailUrl, cancellationToken);
+            using var response = await SendWithRetryAfterAsync(thumbnailUrl, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsByteArrayAsync(cancellationToken);
         }
         catch (HttpRequestException)
         {
             return null;
         }
+        finally
+        {
+            _thumbnailDownloadLimit.Release();
+        }
     }
 
-    private static HttpClient CreateHttpClient()
+    private async Task<string> DownloadCatalogPageAsync(string url, CancellationToken cancellationToken)
     {
-        var client = new HttpClient
+        await _catalogRequestLock.WaitAsync(cancellationToken);
+        try
         {
-            Timeout = TimeSpan.FromSeconds(20)
-        };
+            await WaitForCatalogRequestIntervalAsync(cancellationToken);
+            using var response = await SendWithRetryAfterAsync(url, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync(cancellationToken);
+        }
+        finally
+        {
+            _catalogRequestLock.Release();
+        }
+    }
+
+    private async Task WaitForCatalogRequestIntervalAsync(CancellationToken cancellationToken)
+    {
+        var remaining = _minimumCatalogRequestInterval - (DateTimeOffset.UtcNow - _lastCatalogRequestAt);
+        if (remaining > TimeSpan.Zero)
+        {
+            await Task.Delay(remaining, cancellationToken);
+        }
+
+        _lastCatalogRequestAt = DateTimeOffset.UtcNow;
+    }
+
+    private async Task<HttpResponseMessage> SendWithRetryAfterAsync(string url, CancellationToken cancellationToken)
+    {
+        var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (response.StatusCode != HttpStatusCode.TooManyRequests)
+        {
+            return response;
+        }
+
+        var retryDelay = GetRetryAfterDelay(response.Headers.RetryAfter);
+        response.Dispose();
+        if (retryDelay > TimeSpan.Zero)
+        {
+            await Task.Delay(retryDelay, cancellationToken);
+        }
+
+        return await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+    }
+
+    private static TimeSpan GetRetryAfterDelay(RetryConditionHeaderValue? retryAfter)
+    {
+        var delay = retryAfter?.Delta;
+        if (delay is null && retryAfter?.Date is { } retryDate)
+        {
+            delay = retryDate - DateTimeOffset.UtcNow;
+        }
+
+        if (delay is null)
+        {
+            return DefaultRetryAfterDelay;
+        }
+
+        return delay <= TimeSpan.Zero
+            ? TimeSpan.Zero
+            : TimeSpan.FromTicks(Math.Min(delay.Value.Ticks, MaximumRetryAfterDelay.Ticks));
+    }
+
+    private static HttpClient CreateHttpClient(HttpMessageHandler? httpMessageHandler)
+    {
+        var client = httpMessageHandler is null
+            ? new HttpClient()
+            : new HttpClient(httpMessageHandler, disposeHandler: false);
+        client.Timeout = TimeSpan.FromSeconds(20);
         client.DefaultRequestHeaders.UserAgent.ParseAdd(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-            "(KHTML, like Gecko) Chrome/136.0 Safari/537.36");
+            $"StalkerModLauncher/{GetApplicationVersion()} (+https://github.com/ITzSYUK/StalkerModLauncher)");
         client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("ru-RU,ru;q=0.9,en;q=0.6");
         return client;
+    }
+
+    private static string GetApplicationVersion()
+    {
+        var informationalVersion = typeof(ApProCatalogService).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+        return informationalVersion?.Split('+')[0]
+               ?? typeof(ApProCatalogService).Assembly.GetName().Version?.ToString(3)
+               ?? "unknown";
     }
 
     private void InvalidateCategory(ApProCatalogCategory category)

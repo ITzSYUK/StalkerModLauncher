@@ -169,6 +169,8 @@ The browser reads public AP-PRO category pages for Shadow of Chernobyl, Clear Sk
 
 Pages load sequentially while scrolling. Category loading is cancelled when the category changes, so an outdated response cannot replace the new list. Search works on received titles and continues to include results from subsequent pages. The "nothing found" message appears only after loading has finished.
 
+The HTTP client identifies itself as `StalkerModLauncher/<version>` and includes the repository URL. A short delay is kept between catalog page requests, and no more than four covers are downloaded concurrently. After `429 Too Many Requests`, the launcher retries once after the server-provided `Retry-After` delay, capped at 30 seconds.
+
 Catalog responses are cached in memory for approximately 10 minutes; covers are decoded lazily. No persistent catalog is saved to disk after the window closes. Internet access is required. The launcher does not bypass site protection and does not download or install mods.
 
 ## Build and tests
