@@ -89,6 +89,42 @@ public sealed class WorkspaceManagementServiceTests : IDisposable
         Assert.False(Directory.Exists(oldWorkspace));
     }
 
+    [Fact]
+    public async Task MoveAsync_DoesNotCopyTemporaryUsvfsBootstrap()
+    {
+        var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
+        var service = new WorkspaceManagementService(new WorkspaceBuilder(paths));
+        var oldWorkspace = Path.Combine(_root, "workspaces", "usvfs-profile");
+        File.WriteAllText(
+            CreateDirectoryAndReturnFile(oldWorkspace, ".stalker-launcher-workspace"),
+            "marker");
+        File.WriteAllText(
+            CreateDirectoryAndReturnFile(Path.Combine(oldWorkspace, "userdata", "savedgames"), "save.sav"),
+            "save");
+        File.WriteAllText(
+            CreateDirectoryAndReturnFile(Path.Combine(oldWorkspace, "userdata", "usvfs-bootstrap", "bin"), "xrEngine.exe"),
+            "cache");
+        var profile = new ModProfile
+        {
+            Id = "87654321",
+            Name = "USVFS profile",
+            WorkspacePath = oldWorkspace,
+            LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
+        };
+
+        await service.MoveAsync(profile, Path.Combine(_root, "destination-usvfs"), new Progress<string>());
+
+        Assert.True(File.Exists(Path.Combine(profile.WorkspacePath, "userdata", "savedgames", "save.sav")));
+        Assert.False(Directory.Exists(Path.Combine(profile.WorkspacePath, "userdata", "usvfs-bootstrap")));
+        Assert.False(Directory.Exists(oldWorkspace));
+    }
+
+    private static string CreateDirectoryAndReturnFile(string directory, string fileName)
+    {
+        Directory.CreateDirectory(directory);
+        return Path.Combine(directory, fileName);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

@@ -10,7 +10,6 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
 {
     private readonly ModProfile _profile;
     private readonly ProfileHealthService _healthService;
-    private readonly ProfileVirtualFileDiagnosticsService _virtualFileDiagnosticsService;
     private readonly DialogService _dialogService;
     private readonly WorkspaceManagementService _workspaceManagementService;
     private readonly Action<string>? _log;
@@ -19,20 +18,16 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
     private bool _isChecking;
     private WorkspaceStatus? _workspace;
     private CancellationTokenSource? _refreshCancellation;
-    private string _virtualFilePath = "fsgame.ltx";
-    private string _virtualFileStatus = "Введите путь внутри игры и нажмите «Проверить».";
 
     public ProfileHealthViewModel(
         ModProfile profile,
         ProfileHealthService healthService,
-        ProfileVirtualFileDiagnosticsService virtualFileDiagnosticsService,
         DialogService dialogService,
         WorkspaceManagementService workspaceManagementService,
         Action<string>? log = null)
     {
         _profile = profile;
         _healthService = healthService;
-        _virtualFileDiagnosticsService = virtualFileDiagnosticsService;
         _dialogService = dialogService;
         _workspaceManagementService = workspaceManagementService;
         _log = log;
@@ -43,10 +38,9 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         OpenLatestLogCommand = new RelayCommand(OpenLatestLog, () => File.Exists(_report?.LatestLogPath));
         OpenCrashDumpCommand = new RelayCommand(OpenCrashDump, () => File.Exists(_report?.LatestCrashDumpPath));
         CopyReportCommand = new RelayCommand(CopyReport, () => _report is not null);
-        ClearWorkspaceCommand = new RelayCommand(ClearWorkspace, () => CanManageWorkspace);
-        RebuildWorkspaceCommand = new AsyncRelayCommand(RebuildWorkspaceAsync, () => CanManageWorkspace && !IsChecking);
+        ClearWorkspaceCommand = new RelayCommand(ClearWorkspace, () => CanManageWorkspace && UsesLinkedWorkspace);
+        RebuildWorkspaceCommand = new AsyncRelayCommand(RebuildWorkspaceAsync, () => CanManageWorkspace && UsesLinkedWorkspace && !IsChecking);
         MoveWorkspaceCommand = new AsyncRelayCommand(MoveWorkspaceAsync, () => CanManageWorkspace && !IsChecking);
-        InspectVirtualFileCommand = new RelayCommand(InspectVirtualFile, () => CanInspectVirtualFiles);
 
         _ = RefreshAsync();
     }
@@ -69,25 +63,43 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
             if (SetProperty(ref _workspace, value))
             {
                 OnPropertyChanged(nameof(CanManageWorkspace));
+                RaiseStorageProperties();
             }
         }
     }
 
-    public bool CanManageWorkspace => !_profile.IsStandalone && !string.IsNullOrWhiteSpace(_profile.WorkspacePath);
+    public bool ShowStoragePanel => !_profile.IsStandalone;
+    public bool CanManageWorkspace => ShowStoragePanel && !string.IsNullOrWhiteSpace(_profile.WorkspacePath);
+    public bool UsesLinkedWorkspace => !_profile.IsStandalone && _profile.LaunchBackendKind == LaunchBackendKind.LinkedWorkspace;
+    public bool UsesVirtualFileSystem => !_profile.IsStandalone && _profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem;
+    public string StoragePanelTitle => UsesVirtualFileSystem ? "USVFS" : "Workspace";
+    public string StorageStateDisplay => UsesVirtualFileSystem
+        ? "Файлы игры и модов подключаются виртуально. Папка current не создаётся."
+        : Workspace?.StateDisplay ?? "Состояние рабочей папки ещё не получено.";
+    public string FirstMetricTitle => UsesVirtualFileSystem ? "Слои" : "Видимый размер";
+    public string FirstMetricValue => UsesVirtualFileSystem
+        ? $"{1 + _profile.Mods.Count(mod => mod.IsEnabled):N0}"
+        : Workspace?.LogicalSizeDisplay ?? "—";
+    public string FirstMetricToolTip => UsesVirtualFileSystem
+        ? "Базовая игра и включённые моды, которые USVFS объединит при запуске."
+        : "Сколько данных видит игра внутри рабочей папки. Из-за ссылок это не равно расходу места на диске.";
+    public string SecondMetricTitle => UsesVirtualFileSystem ? "Профильные данные" : "Реально занято";
+    public string SecondMetricValue => UsesVirtualFileSystem
+        ? ProfileDataStateDisplay
+        : Workspace?.PhysicalSizeDisplay ?? "—";
+    public string SecondMetricToolTip => UsesVirtualFileSystem
+        ? "Сохранения, настройки и логи хранятся отдельно в userdata профиля."
+        : "Сколько места примерно занимает workspace с учетом hardlink и symlink.";
+    public string ThirdMetricTitle => UsesVirtualFileSystem ? "Папка current" : "Файлы";
+    public string ThirdMetricValue => UsesVirtualFileSystem ? "не используется" : Workspace?.FileCountDisplay ?? "—";
+    public string ThirdMetricToolTip => UsesVirtualFileSystem
+        ? "USVFS формирует представление игры в памяти процесса и не собирает папку current."
+        : Workspace?.LinkSummaryDisplay ?? string.Empty;
 
-    public bool CanInspectVirtualFiles => !_profile.IsStandalone && _report?.OverlayManifest is not null;
-
-    public string VirtualFilePath
-    {
-        get => _virtualFilePath;
-        set => SetProperty(ref _virtualFilePath, value);
-    }
-
-    public string VirtualFileStatus
-    {
-        get => _virtualFileStatus;
-        private set => SetProperty(ref _virtualFileStatus, value);
-    }
+    private string ProfileDataStateDisplay => !string.IsNullOrWhiteSpace(_profile.WorkspacePath) &&
+                                              Directory.Exists(Path.Combine(_profile.WorkspacePath, "userdata"))
+        ? "созданы"
+        : "при запуске";
 
     public string Summary
     {
@@ -118,7 +130,6 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
     public ICommand ClearWorkspaceCommand { get; }
     public ICommand RebuildWorkspaceCommand { get; }
     public ICommand MoveWorkspaceCommand { get; }
-    public ICommand InspectVirtualFileCommand { get; }
 
     private async Task RefreshAsync()
     {
@@ -133,7 +144,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
             var report = await _healthService.AnalyzeAsync(_profile, _refreshCancellation.Token);
             _report = report;
             Workspace = report.Workspace;
-            OnPropertyChanged(nameof(CanInspectVirtualFiles));
+            RaiseStorageProperties();
             Checks.Clear();
             foreach (var check in report.Checks)
             {
@@ -186,23 +197,6 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
     private void CopyReport()
     {
         RunAction(() => _dialogService.CopyText(_report!.ToText(_profile.Name)));
-    }
-
-    private void InspectVirtualFile()
-    {
-        try
-        {
-            var inspection = _virtualFileDiagnosticsService.InspectLinkedWorkspaceFile(_profile, VirtualFilePath);
-            VirtualFilePath = inspection.RelativePath;
-            VirtualFileStatus =
-                $"{inspection.ReadSourceDisplay}{Environment.NewLine}" +
-                $"{inspection.WriteTargetDisplay}{Environment.NewLine}" +
-                inspection.ProvidersDisplay;
-        }
-        catch (Exception ex)
-        {
-            VirtualFileStatus = $"Не удалось проверить файл: {ex.Message}";
-        }
     }
 
     private void ClearWorkspace()
@@ -261,8 +255,10 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         }
 
         if (!_dialogService.Confirm(
-                "Перенести workspace",
-                $"Перенести userdata профиля в выбранную папку?{Environment.NewLine}{Environment.NewLine}Папка current не копируется и будет пересобрана при следующем запуске."))
+                UsesVirtualFileSystem ? "Перенести данные профиля" : "Перенести workspace",
+                UsesVirtualFileSystem
+                    ? $"Перенести сохранения, настройки и логи в выбранную папку?{Environment.NewLine}{Environment.NewLine}Временный USVFS-bootstrap не копируется и будет создан заново."
+                    : $"Перенести userdata профиля в выбранную папку?{Environment.NewLine}{Environment.NewLine}Папка current не копируется и будет пересобрана при следующем запуске."))
         {
             return;
         }
@@ -315,8 +311,15 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         ((RelayCommand)OpenCrashDumpCommand).RaiseCanExecuteChanged();
         ((RelayCommand)CopyReportCommand).RaiseCanExecuteChanged();
         ((RelayCommand)ClearWorkspaceCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)InspectVirtualFileCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)RebuildWorkspaceCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)MoveWorkspaceCommand).RaiseCanExecuteChanged();
+    }
+
+    private void RaiseStorageProperties()
+    {
+        OnPropertyChanged(nameof(StorageStateDisplay));
+        OnPropertyChanged(nameof(FirstMetricValue));
+        OnPropertyChanged(nameof(SecondMetricValue));
+        OnPropertyChanged(nameof(ThirdMetricValue));
     }
 }

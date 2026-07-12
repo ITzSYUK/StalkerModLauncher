@@ -153,6 +153,30 @@ public sealed class ProfileHealthServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AnalyzeAsync_DescribesUsvfsWithoutRequiringCurrentCache()
+    {
+        var workspace = Path.Combine(_root, "usvfs-profile");
+        CreateFileAtPath(Path.Combine(workspace, ".stalker-launcher-workspace"));
+        var profile = new ModProfile
+        {
+            GameInstallPath = CreateGame(),
+            WorkspacePath = workspace,
+            LaunchBackendKind = LaunchBackendKind.VirtualFileSystem,
+            ExecutableRelativePath = @"bin\xr_3da.exe"
+        };
+
+        var report = await _service.AnalyzeAsync(profile);
+
+        Assert.Equal(LaunchBackendKind.VirtualFileSystem, report.LaunchPlan?.BackendKind);
+        Assert.Contains(
+            report.Checks,
+            check => check.Title == "USVFS" &&
+                     check.Status == ProfileHealthStatus.Healthy &&
+                     check.Details.Contains("current не используется"));
+        Assert.DoesNotContain(report.Checks, check => check.Title == "Кэш workspace");
+    }
+
+    [Fact]
     public async Task AnalyzeAsync_ReportsLastEnabledModAsExecutableSource()
     {
         var game = CreateGame();
