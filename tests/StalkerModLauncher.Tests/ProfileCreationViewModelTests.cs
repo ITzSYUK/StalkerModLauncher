@@ -57,6 +57,47 @@ public sealed class ProfileCreationViewModelTests : IDisposable
         Assert.Contains("Файл запуска не найден", viewModel.Message);
     }
 
+    [Fact]
+    public void AddDroppedMods_AddsDirectoriesInDropOrderAndSkipsDuplicatesAndFiles()
+    {
+        var first = CreateDirectory("first-mod");
+        var second = CreateDirectory("second-mod");
+        var file = Path.Combine(_root, "not-a-directory.txt");
+        File.WriteAllText(file, "test");
+        var viewModel = new ProfileCreationViewModel(new DialogService());
+
+        viewModel.AddDroppedMods([first, file, second, first]);
+
+        Assert.Collection(
+            viewModel.Mods,
+            mod =>
+            {
+                Assert.Equal("first-mod", mod.Name);
+                Assert.Equal(1, mod.Order);
+            },
+            mod =>
+            {
+                Assert.Equal("second-mod", mod.Name);
+                Assert.Equal(2, mod.Order);
+            });
+    }
+
+    [Fact]
+    public void DroppedPaths_SetGameAndStandaloneSourcesForMatchingProfileType()
+    {
+        var game = CreateDirectory("game-drop");
+        var standalone = CreateDirectory("standalone-drop");
+        var viewModel = new ProfileCreationViewModel(new DialogService());
+
+        viewModel.SetDroppedGamePath(game);
+        viewModel.IsStandalone = true;
+        viewModel.SetDroppedStandalonePath(standalone);
+
+        Assert.Equal(Path.GetFullPath(game), viewModel.GamePath);
+        var mod = Assert.Single(viewModel.Mods);
+        Assert.Equal(Path.GetFullPath(standalone), mod.SourcePath);
+    }
+
     private string CreateDirectory(string relativePath)
     {
         var path = Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));

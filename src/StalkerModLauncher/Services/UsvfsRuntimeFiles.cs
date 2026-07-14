@@ -12,7 +12,9 @@ public sealed record UsvfsRuntimeFileStatus(
 
     public bool IsX86Ready =>
         File.Exists(X86DllPath) &&
-        File.Exists(X86HostPath);
+        File.Exists(X86HostPath) &&
+        File.Exists(ControllerDllPath) &&
+        File.Exists(X64ProxyPath);
 
     public bool IsReady => IsX64Ready;
 
@@ -34,7 +36,8 @@ public sealed record UsvfsRuntimeFileStatus(
         }
 
         var requiredFiles = architecture == WindowsExecutableArchitecture.X86
-            ? $"{UsvfsRuntimeFiles.X86DllFileName} и {UsvfsRuntimeFiles.X86HostFileName}"
+            ? $"{UsvfsRuntimeFiles.X86DllFileName}, {UsvfsRuntimeFiles.X86HostFileName}, " +
+              $"{UsvfsRuntimeFiles.ControllerDllFileName} и {UsvfsRuntimeFiles.X64ProxyFileName}"
             : $"{UsvfsRuntimeFiles.ControllerDllFileName} и {UsvfsRuntimeFiles.X64ProxyFileName}";
         var target = architecture == WindowsExecutableArchitecture.X86 ? "32-битной игры" : "64-битной игры";
         return $"Не найден полный комплект USVFS для {target}. " +

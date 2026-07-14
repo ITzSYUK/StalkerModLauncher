@@ -151,6 +151,30 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task MoveModsToBoundaries_ReordersWholeSelection()
+    {
+        await RunWithViewModelAsync((viewModel, root) =>
+        {
+            var profile = new ModProfile { Name = "Overlay", GameInstallPath = Path.Combine(root, "game") };
+            foreach (var name in new[] { "First", "Second", "Third", "Fourth" })
+            {
+                profile.Mods.Add(new ModEntry { Name = name, SourcePath = Path.Combine(root, "mods", name) });
+            }
+
+            viewModel.AddCreatedProfile(profile);
+            var selected = new[] { profile.Mods[1], profile.Mods[3] };
+
+            viewModel.MoveModsToStart(selected);
+            Assert.Equal(["Second", "Fourth", "First", "Third"], profile.Mods.Select(mod => mod.Name));
+
+            viewModel.MoveModsToEnd(selected);
+            Assert.Equal(["First", "Third", "Second", "Fourth"], profile.Mods.Select(mod => mod.Name));
+            Assert.Equal([1, 2, 3, 4], profile.Mods.Select(mod => mod.Order));
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
     public async Task AddDroppedMods_IgnoresDuplicatesAndStandaloneProfileLimit()
     {
         await RunWithViewModelAsync((viewModel, root) =>

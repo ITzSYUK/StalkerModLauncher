@@ -32,6 +32,20 @@ public sealed class DialogService
         return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
 
+    public string? PickFile(string title, string filter, string? initialPath = null)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = title,
+            Filter = filter,
+            InitialDirectory = Directory.Exists(initialPath) ? initialPath : string.Empty,
+            CheckFileExists = true,
+            Multiselect = false
+        };
+
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
     public bool Confirm(string title, string message)
     {
         return MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
@@ -40,6 +54,11 @@ public sealed class DialogService
     public void ShowError(string title, string message)
     {
         MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+    }
+
+    public void ShowInfo(string title, string message)
+    {
+        MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     public void OpenFolder(string path)

@@ -53,13 +53,54 @@ public sealed class ModListEditor
 
     public bool MoveToInsertionIndex(ModProfile profile, ModEntry source, int insertionIndex)
     {
-        if (!CollectionReorderer.MoveToInsertionIndex(profile.Mods, source, insertionIndex))
+        return MoveManyToInsertionIndex(profile, [source], insertionIndex);
+    }
+
+    public bool MoveManyToInsertionIndex(
+        ModProfile profile,
+        IEnumerable<ModEntry> sources,
+        int insertionIndex)
+    {
+        var selected = sources
+            .Where(profile.Mods.Contains)
+            .Distinct()
+            .ToHashSet();
+        if (selected.Count == 0)
         {
             return false;
         }
 
+        var original = profile.Mods.ToList();
+        var orderedSelection = original.Where(selected.Contains).ToList();
+        insertionIndex = Math.Clamp(insertionIndex, 0, original.Count);
+
+        // The insertion index is expressed against the original list. Account for
+        // selected rows preceding it before inserting the block into the remainder.
+        var removedBeforeInsertion = original
+            .Take(insertionIndex)
+            .Count(selected.Contains);
+        var remainder = original.Where(mod => !selected.Contains(mod)).ToList();
+        var adjustedIndex = Math.Clamp(insertionIndex - removedBeforeInsertion, 0, remainder.Count);
+        remainder.InsertRange(adjustedIndex, orderedSelection);
+
+        if (original.SequenceEqual(remainder))
+        {
+            return false;
+        }
+
+        ApplyOrder(profile, remainder);
         Renumber(profile);
         return true;
+    }
+
+    public bool MoveManyToStart(ModProfile profile, IEnumerable<ModEntry> sources)
+    {
+        return MoveManyToInsertionIndex(profile, sources, 0);
+    }
+
+    public bool MoveManyToEnd(ModProfile profile, IEnumerable<ModEntry> sources)
+    {
+        return MoveManyToInsertionIndex(profile, sources, profile.Mods.Count);
     }
 
     public bool CanMoveByOffset(ModProfile profile, ModEntry source, int offset)
@@ -87,5 +128,17 @@ public sealed class ModListEditor
         profile.Mods.Move(oldIndex, newIndex);
         Renumber(profile);
         return true;
+    }
+
+    private static void ApplyOrder(ModProfile profile, IReadOnlyList<ModEntry> desiredOrder)
+    {
+        for (var targetIndex = 0; targetIndex < desiredOrder.Count; targetIndex++)
+        {
+            var currentIndex = profile.Mods.IndexOf(desiredOrder[targetIndex]);
+            if (currentIndex != targetIndex)
+            {
+                profile.Mods.Move(currentIndex, targetIndex);
+            }
+        }
     }
 }

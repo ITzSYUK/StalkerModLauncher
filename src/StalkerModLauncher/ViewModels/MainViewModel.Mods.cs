@@ -71,14 +71,53 @@ public sealed partial class MainViewModel
 
     public void MoveModToInsertionIndex(ModEntry source, int insertionIndex)
     {
+        MoveModsToInsertionIndex([source], insertionIndex);
+    }
+
+    public void MoveModsToInsertionIndex(IReadOnlyList<ModEntry> sources, int insertionIndex)
+    {
         if (!CanEditSelectedProfile ||
             SelectedProfile is null ||
-            !_modListEditor.MoveToInsertionIndex(SelectedProfile, source, insertionIndex))
+            sources.Count == 0 ||
+            !_modListEditor.MoveManyToInsertionIndex(SelectedProfile, sources, insertionIndex))
         {
             return;
         }
 
-        SelectedMod = source;
+        SelectedMod = sources[^1];
+        RecalculateModOverlayInfo();
+        _autoSave.Schedule();
+        RaiseCommandStates();
+    }
+
+    public void MoveModsToStart(IReadOnlyList<ModEntry> sources)
+    {
+        MoveModsToBoundary(sources, moveToEnd: false);
+    }
+
+    public void MoveModsToEnd(IReadOnlyList<ModEntry> sources)
+    {
+        MoveModsToBoundary(sources, moveToEnd: true);
+    }
+
+    private void MoveModsToBoundary(IReadOnlyList<ModEntry> sources, bool moveToEnd)
+    {
+        if (!CanEditSelectedProfile || SelectedProfile is null || sources.Count == 0)
+        {
+            return;
+        }
+
+        var moved = moveToEnd
+            ? _modListEditor.MoveManyToEnd(SelectedProfile, sources)
+            : _modListEditor.MoveManyToStart(SelectedProfile, sources);
+        if (!moved)
+        {
+            return;
+        }
+
+        SelectedMod = sources[^1];
+        RecalculateModOverlayInfo();
+        _autoSave.Schedule();
         RaiseCommandStates();
     }
 

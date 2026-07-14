@@ -133,7 +133,7 @@
                                           IsChecked="{Binding AnomalyUseAvx}"
                                           IsEnabled="{Binding HasManualAnomalyRenderer}"/>
                             </WrapPanel>
-                            <TextBlock Text="Авто использует AnomalyLauncher.cfg. Ручной выбор сохраняет автоматический приоритет модов."
+                            <TextBlock Text="Авто запускает AnomalyLauncher.exe. Ручной выбор запускает выбранный движок напрямую и сохраняет приоритет модов."
                                        Foreground="{StaticResource DisabledTextBrush}"
                                        FontSize="11"
                                        TextWrapping="Wrap"
@@ -236,17 +236,29 @@
             </ScrollViewer>
         </Border>
 
-        <WrapPanel Grid.Row="2" HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button Content="Открыть папку профиля"
-                    Command="{Binding OpenProfileFolderCommand}"
+        <Grid Grid.Row="2" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="0"
+                    Content="Импорт порядка MO2..."
+                    Command="{Binding ImportMo2ModListCommand}"
+                    ToolTip="Применить порядок и состояние уже добавленных модов из файла modlist.txt"
                     Margin="0,0,8,0"/>
-            <Button Content="Сохранить"
-                    Command="{Binding SaveCommand}"
-                    Margin="0,0,8,0"/>
-            <Button Content="Готово"
-                    Click="CloseButton_OnClick"
-                    Style="{StaticResource PrimaryButtonStyle}"
-                    MinWidth="96"/>
-        </WrapPanel>
+            <WrapPanel Grid.Column="2" HorizontalAlignment="Right">
+                <Button Content="Открыть папку профиля"
+                        Command="{Binding OpenProfileFolderCommand}"
+                        Margin="0,0,8,0"/>
+                <Button Content="Сохранить"
+                        Command="{Binding SaveCommand}"
+                        Margin="0,0,8,0"/>
+                <Button Content="Готово"
+                        Click="CloseButton_OnClick"
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        MinWidth="96"/>
+            </WrapPanel>
+        </Grid>
     </Grid>
 </Window>

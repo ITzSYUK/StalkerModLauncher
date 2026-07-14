@@ -9,10 +9,14 @@ namespace StalkerModLauncher.Views.Controls;
 
 public partial class ModPanelView : UserControl
 {
+    private sealed record ModDragPayload(IReadOnlyList<ModEntry> Mods);
+
     private Point _dragStartPoint;
     private ModEntry? _draggedMod;
     private ListViewItem? _dropTargetItem;
     private bool _dropAfter;
+    private bool _preserveSelectionForPotentialDrag;
+    private bool _dragInProgress;
 
     public ModPanelView()
     {
@@ -29,8 +33,33 @@ public partial class ModPanelView : UserControl
             return;
         }
 
-        _draggedMod = FindAncestor<ListViewItem>(source)?.DataContext as ModEntry;
+        var item = FindAncestor<ListViewItem>(source);
+        _draggedMod = item?.DataContext as ModEntry;
         _dragStartPoint = e.GetPosition(ModsList);
+
+        // WPF normally collapses an extended selection as soon as an already
+        // selected row is pressed. Keep it intact long enough to start a group drag.
+        _preserveSelectionForPotentialDrag = item is { IsSelected: true } &&
+                                             ModsList.SelectedItems.Count > 1 &&
+                                             Keyboard.Modifiers == ModifierKeys.None;
+        if (_preserveSelectionForPotentialDrag)
+        {
+            item!.Focus();
+            e.Handled = true;
+        }
+    }
+
+    private void ModsList_OnPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_preserveSelectionForPotentialDrag && !_dragInProgress && _draggedMod is not null)
+        {
+            var clickedMod = _draggedMod;
+            ModsList.SelectedItems.Clear();
+            ModsList.SelectedItem = clickedMod;
+        }
+
+        _preserveSelectionForPotentialDrag = false;
+        _draggedMod = null;
     }
 
     private void ModsList_OnPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
@@ -51,37 +80,25 @@ public partial class ModPanelView : UserControl
             ModsList.SelectedItem = mod;
         }
 
+        var selectedMods = GetSelectedModsInProfileOrder();
+        var canEdit = ViewModel?.CanEditSelectedProfile == true;
         var contextMenu = new ContextMenu();
-        var removeItem = new MenuItem
-        {
-            Header = "Убрать",
-            IsEnabled = ViewModel?.CanEditSelectedProfile == true
-        };
-        var removeArmed = false;
-        removeItem.PreviewMouseDown += (_, args) =>
-        {
-            removeArmed = args.ChangedButton == MouseButton.Left;
-            if (removeArmed)
+        contextMenu.Items.Add(CreateLeftClickMenuItem(
+            "В начало",
+            canEdit,
+            () => MoveSelectedMods(selectedMods, moveToEnd: false, contextMenu)));
+        contextMenu.Items.Add(CreateLeftClickMenuItem(
+            "В конец",
+            canEdit,
+            () => MoveSelectedMods(selectedMods, moveToEnd: true, contextMenu)));
+        contextMenu.Items.Add(CreateLeftClickMenuItem(
+            "Убрать",
+            canEdit,
+            () =>
             {
-                removeItem.CaptureMouse();
-            }
-
-            args.Handled = true;
-        };
-        removeItem.PreviewMouseUp += (_, args) =>
-        {
-            var shouldRemove = args.ChangedButton == MouseButton.Left && removeArmed && removeItem.IsMouseOver;
-            removeArmed = false;
-            removeItem.ReleaseMouseCapture();
-            args.Handled = true;
-
-            if (shouldRemove)
-            {
-                ViewModel?.RemoveMods(ModsList.SelectedItems.Cast<ModEntry>().ToList());
+                ViewModel?.RemoveMods(selectedMods);
                 contextMenu.IsOpen = false;
-            }
-        };
-        contextMenu.Items.Add(removeItem);
+            }));
         contextMenu.PlacementTarget = item;
         contextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
         contextMenu.IsOpen = true;
@@ -101,13 +118,18 @@ public partial class ModPanelView : UserControl
         }
 
         var draggedMod = _draggedMod;
+        var draggedMods = ModsList.SelectedItems.Contains(draggedMod)
+            ? GetSelectedModsInProfileOrder()
+            : [draggedMod];
         try
         {
-            ModsList.SelectedItem = draggedMod;
-            DragDrop.DoDragDrop(ModsList, draggedMod, DragDropEffects.Move);
+            _dragInProgress = true;
+            DragDrop.DoDragDrop(ModsList, new ModDragPayload(draggedMods), DragDropEffects.Move);
         }
         finally
         {
+            _dragInProgress = false;
+            _preserveSelectionForPotentialDrag = false;
             _draggedMod = null;
             ClearDropHighlight();
         }
@@ -132,7 +154,7 @@ public partial class ModPanelView : UserControl
             return;
         }
 
-        if (!e.Data.GetDataPresent(typeof(ModEntry)))
+        if (!e.Data.GetDataPresent(typeof(ModDragPayload)))
         {
             e.Effects = DragDropEffects.None;
             return;
@@ -173,9 +195,9 @@ public partial class ModPanelView : UserControl
             return;
         }
 
-        if (e.Data.GetDataPresent(typeof(ModEntry)))
+        if (e.Data.GetDataPresent(typeof(ModDragPayload)))
         {
-            var source = (ModEntry)e.Data.GetData(typeof(ModEntry))!;
+            var payload = (ModDragPayload)e.Data.GetData(typeof(ModDragPayload))!;
             var target = e.OriginalSource is DependencyObject dependencyObject &&
                          FindAncestor<ListViewItem>(dependencyObject) is { DataContext: ModEntry mod }
                 ? mod
@@ -186,14 +208,15 @@ public partial class ModPanelView : UserControl
                 var targetIndex = ViewModel.SelectedProfile?.Mods.IndexOf(target) ?? -1;
                 if (targetIndex >= 0)
                 {
-                    ViewModel.MoveModToInsertionIndex(source, targetIndex + (_dropAfter ? 1 : 0));
+                    ViewModel.MoveModsToInsertionIndex(payload.Mods, targetIndex + (_dropAfter ? 1 : 0));
                 }
             }
             else
             {
-                ViewModel.MoveModToInsertionIndex(source, ViewModel.SelectedProfile?.Mods.Count ?? 0);
+                ViewModel.MoveModsToInsertionIndex(payload.Mods, ViewModel.SelectedProfile?.Mods.Count ?? 0);
             }
 
+            RestoreSelection(payload.Mods);
             ClearDropHighlight();
             return;
         }
@@ -217,6 +240,76 @@ public partial class ModPanelView : UserControl
 
         _dropTargetItem = null;
         _dropAfter = false;
+    }
+
+    private List<ModEntry> GetSelectedModsInProfileOrder()
+    {
+        var selected = ModsList.SelectedItems.Cast<ModEntry>().ToHashSet();
+        return ViewModel?.SelectedProfile?.Mods.Where(selected.Contains).ToList() ?? [];
+    }
+
+    private void MoveSelectedMods(
+        IReadOnlyList<ModEntry> mods,
+        bool moveToEnd,
+        ContextMenu contextMenu)
+    {
+        if (moveToEnd)
+        {
+            ViewModel?.MoveModsToEnd(mods);
+        }
+        else
+        {
+            ViewModel?.MoveModsToStart(mods);
+        }
+
+        RestoreSelection(mods);
+        contextMenu.IsOpen = false;
+    }
+
+    private void RestoreSelection(IReadOnlyList<ModEntry> mods)
+    {
+        ModsList.SelectedItems.Clear();
+        foreach (var mod in mods)
+        {
+            ModsList.SelectedItems.Add(mod);
+        }
+
+        if (mods.Count > 0)
+        {
+            ModsList.ScrollIntoView(mods[^1]);
+        }
+    }
+
+    private static MenuItem CreateLeftClickMenuItem(string header, bool isEnabled, Action action)
+    {
+        var item = new MenuItem
+        {
+            Header = header,
+            IsEnabled = isEnabled
+        };
+        var armed = false;
+        item.PreviewMouseDown += (_, args) =>
+        {
+            armed = args.ChangedButton == MouseButton.Left;
+            if (armed)
+            {
+                item.CaptureMouse();
+            }
+
+            args.Handled = true;
+        };
+        item.PreviewMouseUp += (_, args) =>
+        {
+            var shouldInvoke = args.ChangedButton == MouseButton.Left && armed && item.IsMouseOver;
+            armed = false;
+            item.ReleaseMouseCapture();
+            args.Handled = true;
+            if (shouldInvoke)
+            {
+                action();
+            }
+        };
+        return item;
     }
 
     private static void SetDropHighlight(FrameworkElement? item, bool after)

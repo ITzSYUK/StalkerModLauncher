@@ -143,6 +143,78 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildAsync_SeedsUserSettingsFromHighestPriorityModAppData()
+    {
+        var firstMod = CreateMod("first-user-settings", "first");
+        var fix = CreateMod("fix-user-settings", "fix");
+        CreateFile(firstMod, "appdata/user.ltx", "first mod settings");
+        CreateFile(fix, "appdata/user.ltx", "fix settings");
+        var profile = CreateProfile(firstMod, fix);
+
+        var result = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+        Assert.Equal(
+            "fix settings",
+            File.ReadAllText(Path.Combine(result.ProfileWorkspacePath, "userdata", "user.ltx")));
+        Assert.Equal("first mod settings", File.ReadAllText(Path.Combine(firstMod, "appdata", "user.ltx")));
+        Assert.Equal("fix settings", File.ReadAllText(Path.Combine(fix, "appdata", "user.ltx")));
+    }
+
+    [Fact]
+    public async Task BuildAsync_UpgradesUnchangedBaseUserSettingsWhenFixIsAdded()
+    {
+        var profile = CreateProfile();
+        var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+        var profileUserLtx = Path.Combine(first.ProfileWorkspacePath, "userdata", "user.ltx");
+        Assert.Equal("base user settings", File.ReadAllText(profileUserLtx));
+
+        var fix = CreateMod("later-user-settings-fix", "fix");
+        CreateFile(fix, "appdata/user.ltx", "fix settings");
+        profile.Mods.Add(new ModEntry
+        {
+            Id = "later-user-settings-fix",
+            Name = "Later user settings fix",
+            SourcePath = fix,
+            IsEnabled = true,
+            Order = 1
+        });
+
+        await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+        Assert.Equal("fix settings", File.ReadAllText(profileUserLtx));
+    }
+
+    [Fact]
+    public async Task BuildAsync_SeedsMissingProfileShaderCacheAndRestoresItAfterDeletion()
+    {
+        CreateFile(
+            _gamePath,
+            "appdata/shaders_cache/r4/pp_bloom.ps/variant",
+            "precompiled shader");
+        var profile = CreateProfile(CreateMod("mod", "mod"));
+
+        var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+        var profileCacheFile = Path.Combine(
+            first.ProfileWorkspacePath,
+            "userdata",
+            "shaders_cache",
+            "r4",
+            "pp_bloom.ps",
+            "variant");
+
+        Assert.Equal("precompiled shader", File.ReadAllText(profileCacheFile));
+
+        Directory.Delete(Path.Combine(first.ProfileWorkspacePath, "userdata", "shaders_cache"), recursive: true);
+        var progress = new ProgressLog();
+        await _builder.BuildAsync(_gamePath, profile, progress);
+
+        Assert.Equal("precompiled shader", File.ReadAllText(profileCacheFile));
+        Assert.Contains(
+            progress.Messages,
+            message => message.Contains("Profile shader cache prepared", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task BuildAsync_WritesFsgameWithWindows1251ForCyrillicWorkspacePath()
     {
         var profile = CreateProfile(CreateMod("mod", "mod"));

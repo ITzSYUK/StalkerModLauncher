@@ -14,6 +14,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     private readonly Func<ProfileExecutableSelection?> _detectAutomaticExecutableSelection;
     private readonly Func<string, bool> _isNameTaken;
     private readonly ProfileSettingsValidator _validator;
+    private readonly Mo2ModListImporter _mo2ModListImporter = new();
     private readonly bool _isUsvfsAvailable;
     private string _profileName;
     private string _profileDescription;
@@ -72,6 +73,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         BrowseExecutableCommand = new RelayCommand(BrowseExecutable);
         ClearExecutableSourceCommand = new RelayCommand(ClearExecutableSource, () => !string.IsNullOrWhiteSpace(ExecutableSourcePath));
         OpenProfileFolderCommand = new RelayCommand(OpenProfileFolder);
+        ImportMo2ModListCommand = new AsyncRelayCommand(ImportMo2ModListAsync);
     }
 
     public string ProfileName
@@ -264,6 +266,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     public ICommand BrowseExecutableCommand { get; }
     public ICommand ClearExecutableSourceCommand { get; }
     public ICommand OpenProfileFolderCommand { get; }
+    public ICommand ImportMo2ModListCommand { get; }
 
     public async Task<bool> TrySaveAsync()
     {
@@ -397,6 +400,50 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         catch
         {
             // ignored
+        }
+    }
+
+    private async Task ImportMo2ModListAsync()
+    {
+        var initialPath = _profile.Mods
+            .Select(mod => Path.GetDirectoryName(mod.SourcePath))
+            .FirstOrDefault(Directory.Exists);
+        var filePath = _dialogService.PickFile(
+            "Выберите modlist.txt из профиля Mod Organizer 2",
+            "Mod Organizer mod list (modlist.txt)|modlist.txt|Text files (*.txt)|*.txt",
+            initialPath);
+        if (filePath is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = _mo2ModListImporter.Import(_profile, filePath);
+            await _onSave();
+
+            var report = new List<string>
+            {
+                "Порядок модов из Mod Organizer 2 применён.",
+                string.Empty,
+                $"Сопоставлено модов: {result.MatchedCount}",
+                $"Изменено состояний включения: {result.EnabledStateChanges}",
+                $"Не найдены среди добавленных модов: {result.MissingProfileMods.Count}",
+                $"Отсутствуют в modlist.txt: {result.UnlistedLauncherMods.Count}"
+            };
+
+            if (result.MissingProfileMods.Count > 0)
+            {
+                report.Add(string.Empty);
+                report.Add("Первые несопоставленные записи:");
+                report.AddRange(result.MissingProfileMods.Take(8).Select(name => $"• {name}"));
+            }
+
+            _dialogService.ShowInfo("Импорт порядка MO2", string.Join(Environment.NewLine, report));
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowError("Не удалось импортировать порядок MO2", ex.Message);
         }
     }
 

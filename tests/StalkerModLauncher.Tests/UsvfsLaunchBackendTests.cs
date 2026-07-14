@@ -77,7 +77,108 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     }
 
     [Fact]
-    public async Task PrepareAsync_Bypasses32BitAnomalyLauncherAndStartsConfigured64BitEngine()
+    public async Task PrepareAsync_SeedsFinalLayerShaderCacheIntoProfileUserData()
+    {
+        var game = CreateDirectory("shader-cache-game");
+        var mod = CreateDirectory("shader-cache-mod");
+        var workspace = CreateDirectory("shader-cache-workspace");
+        File.WriteAllText(
+            Path.Combine(game, "fsgame.ltx"),
+            "$app_data_root$ = true | false | $fs_root$ | appdata\\");
+        Directory.CreateDirectory(Path.Combine(game, "bin_x64"));
+        File.WriteAllText(Path.Combine(game, "bin_x64", "xrEngine.exe"), string.Empty);
+        var baseCache = Path.Combine(game, "appdata", "shaders_cache", "r4", "pp_bloom.ps", "variant");
+        var modCache = Path.Combine(mod, "appdata", "shaders_cache", "r4", "pp_bloom.ps", "variant");
+        var profileCache = Path.Combine(workspace, "userdata", "shaders_cache", "r4", "pp_bloom.ps", "variant");
+        Directory.CreateDirectory(Path.GetDirectoryName(baseCache)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(modCache)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(profileCache)!);
+        File.WriteAllText(baseCache, "base cache");
+        File.WriteAllText(modCache, "mod cache");
+        File.WriteAllText(profileCache, "stale cache");
+        File.WriteAllText(Path.Combine(game, UsvfsRuntimeFiles.DllFileName), string.Empty);
+        File.WriteAllText(Path.Combine(game, UsvfsRuntimeFiles.ProxyFileName), string.Empty);
+        var profile = new ModProfile
+        {
+            Id = "profile-shader-cache",
+            Name = "Shader cache",
+            GameInstallPath = game,
+            ExecutableRelativePath = @"bin_x64\xrEngine.exe",
+            LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
+        };
+        profile.Mods.Add(new ModEntry
+        {
+            Id = "shader-cache-mod",
+            Name = "Shader cache patch",
+            SourcePath = mod,
+            IsEnabled = true,
+            Order = 1
+        });
+        var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
+        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var backend = new UsvfsLaunchBackend(new RecordingUsvfsRuntime(), game);
+
+        await backend.PrepareAsync(
+            new ProfileLaunchBackendContext(game, profile, layerPlan, manifest),
+            new Progress<string>());
+
+        Assert.Equal(
+            "mod cache",
+            File.ReadAllText(profileCache));
+        Assert.Equal("base cache", File.ReadAllText(baseCache));
+        Assert.Equal("mod cache", File.ReadAllText(modCache));
+    }
+
+    [Fact]
+    public async Task PrepareAsync_SeedsUserSettingsFromHighestPriorityModAppData()
+    {
+        var game = CreateDirectory("user-settings-game");
+        var mod = CreateDirectory("user-settings-mod");
+        var workspace = CreateDirectory("user-settings-workspace");
+        File.WriteAllText(
+            Path.Combine(game, "fsgame.ltx"),
+            "$app_data_root$ = true | false | $fs_root$ | appdata\\");
+        Directory.CreateDirectory(Path.Combine(game, "bin_x64"));
+        Directory.CreateDirectory(Path.Combine(game, "appdata"));
+        Directory.CreateDirectory(Path.Combine(mod, "appdata"));
+        File.WriteAllText(Path.Combine(game, "bin_x64", "xrEngine.exe"), string.Empty);
+        File.WriteAllText(Path.Combine(game, "appdata", "user.ltx"), "base settings");
+        File.WriteAllText(Path.Combine(mod, "appdata", "user.ltx"), "fix settings");
+        File.WriteAllText(Path.Combine(game, UsvfsRuntimeFiles.DllFileName), string.Empty);
+        File.WriteAllText(Path.Combine(game, UsvfsRuntimeFiles.ProxyFileName), string.Empty);
+        var profile = new ModProfile
+        {
+            Id = "profile-user-settings",
+            Name = "User settings",
+            GameInstallPath = game,
+            ExecutableRelativePath = @"bin_x64\xrEngine.exe",
+            LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
+        };
+        profile.Mods.Add(new ModEntry
+        {
+            Id = "user-settings-fix",
+            Name = "User settings fix",
+            SourcePath = mod,
+            IsEnabled = true,
+            Order = 1
+        });
+        var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
+        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var backend = new UsvfsLaunchBackend(new RecordingUsvfsRuntime(), game);
+
+        await backend.PrepareAsync(
+            new ProfileLaunchBackendContext(game, profile, layerPlan, manifest),
+            new Progress<string>());
+
+        Assert.Equal(
+            "fix settings",
+            File.ReadAllText(Path.Combine(workspace, "userdata", "user.ltx")));
+        Assert.Equal("base settings", File.ReadAllText(Path.Combine(game, "appdata", "user.ltx")));
+        Assert.Equal("fix settings", File.ReadAllText(Path.Combine(mod, "appdata", "user.ltx")));
+    }
+
+    [Fact]
+    public async Task PrepareAsync_StartsAnomalyLauncherAndKeepsManualEngineOverride()
     {
         var game = CreateDirectory("anomaly-game");
         var mod = CreateDirectory("anomaly-mod");
@@ -87,7 +188,9 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             Path.Combine(game, "fsgame.ltx"),
             "$app_data_root$ = true | false | $fs_root$ | appdata\\");
         File.WriteAllLines(Path.Combine(game, "AnomalyLauncher.cfg"), ["DX11", "AVX", "1"]);
-        File.WriteAllText(Path.Combine(game, "AnomalyLauncher.exe"), string.Empty);
+        File.Copy(
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "SysWOW64", "cmd.exe"),
+            Path.Combine(game, "AnomalyLauncher.exe"));
         File.WriteAllText(Path.Combine(game, "commandline.txt"), "-smap2048");
         Directory.CreateDirectory(Path.Combine(game, "bin"));
         Directory.CreateDirectory(Path.Combine(mod, "bin"));
@@ -104,6 +207,8 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             "higher-priority-dx9-avx-engine");
         File.WriteAllText(Path.Combine(game, UsvfsRuntimeFiles.DllFileName), string.Empty);
         File.WriteAllText(Path.Combine(game, UsvfsRuntimeFiles.ProxyFileName), string.Empty);
+        File.WriteAllText(Path.Combine(game, UsvfsRuntimeFiles.X86DllFileName), string.Empty);
+        File.WriteAllText(Path.Combine(game, UsvfsRuntimeFiles.X86HostFileName), string.Empty);
 
         var profile = new ModProfile
         {
@@ -139,12 +244,9 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             new ProfileLaunchBackendContext(game, profile, layerPlan, manifest),
             new Progress<string>());
 
-        Assert.EndsWith(Path.Combine("userdata", "usvfs-bootstrap", "bin", "AnomalyDX11AVX.exe"), plan.ExecutablePath);
-        Assert.Equal(string.Empty, File.ReadAllText(plan.ExecutablePath));
-        Assert.Equal("base-runtime", File.ReadAllText(Path.Combine(Path.GetDirectoryName(plan.ExecutablePath)!, "runtime.dll")));
-        Assert.Equal("mod-feature", File.ReadAllText(Path.Combine(Path.GetDirectoryName(plan.ExecutablePath)!, "feature.dll")));
-        Assert.False(File.Exists(Path.Combine(Path.GetDirectoryName(plan.ExecutablePath)!, "AnomalyDX9.exe")));
-        Assert.Equal("-smap2048 -dbg", plan.Arguments);
+        Assert.Equal(Path.Combine(game, "AnomalyLauncher.exe"), plan.ExecutablePath);
+        Assert.Equal(WindowsExecutableArchitecture.X86, WindowsExecutableArchitectureDetector.Detect(plan.ExecutablePath));
+        Assert.Equal("-dbg", plan.Arguments);
         Assert.Equal(game, plan.WorkingDirectory);
         Assert.Equal(game, runtime.MappingPlan?.VirtualRoot);
         Assert.DoesNotContain(
@@ -158,6 +260,8 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
 
         Assert.EndsWith(Path.Combine("userdata", "usvfs-bootstrap", "bin", "AnomalyDX9AVX.exe"), overridePlan.ExecutablePath);
         Assert.Equal("higher-priority-dx9-avx-engine", File.ReadAllText(overridePlan.ExecutablePath));
+        Assert.Equal("base-runtime", File.ReadAllText(Path.Combine(Path.GetDirectoryName(overridePlan.ExecutablePath)!, "runtime.dll")));
+        Assert.Equal("mod-feature", File.ReadAllText(Path.Combine(Path.GetDirectoryName(overridePlan.ExecutablePath)!, "feature.dll")));
         Assert.False(File.Exists(Path.Combine(Path.GetDirectoryName(overridePlan.ExecutablePath)!, "AnomalyDX11AVX.exe")));
     }
 
@@ -258,6 +362,63 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
         Assert.Equal(
             "base user settings",
             File.ReadAllText(Path.Combine(workspace, "userdata", "user.ltx")));
+    }
+
+    [Fact]
+    public async Task PrepareAsync_UsesPhysicalRootForXRayArchiveDirectoriesWithModEngine()
+    {
+        var game = CreateDirectory("archive-root-game");
+        var mod = CreateDirectory("archive-root-mod");
+        var workspace = CreateDirectory("archive-root-workspace");
+        Directory.CreateDirectory(Path.Combine(game, "patches"));
+        Directory.CreateDirectory(Path.Combine(mod, "bin_x64"));
+        File.WriteAllText(
+            Path.Combine(game, "fsgame.ltx"),
+            "$arch_dir_patches$ = false | true | $fs_root$ | patches\\");
+        File.WriteAllText(Path.Combine(game, "patches", "xpatch_02.db"), "game patch");
+        File.Copy(
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32", "cmd.exe"),
+            Path.Combine(mod, "bin_x64", "xrEngine.exe"));
+        File.WriteAllText(Path.Combine(mod, "bin_x64", "engine_patch.dll"), "mod engine");
+        File.WriteAllText(Path.Combine(game, UsvfsRuntimeFiles.DllFileName), string.Empty);
+        File.WriteAllText(Path.Combine(game, UsvfsRuntimeFiles.ProxyFileName), string.Empty);
+        var profile = new ModProfile
+        {
+            Id = "profile-archive-root",
+            Name = "Archive root",
+            GameInstallPath = game,
+            ExecutableRelativePath = @"bin_x64\xrEngine.exe",
+            LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
+        };
+        profile.Mods.Add(new ModEntry
+        {
+            Id = "archive-engine-mod",
+            Name = "Archive engine",
+            SourcePath = mod,
+            IsEnabled = true,
+            Order = 1
+        });
+        var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
+        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var runtime = new RecordingUsvfsRuntime();
+        var backend = new UsvfsLaunchBackend(runtime, game);
+
+        var plan = await backend.PrepareAsync(
+            new ProfileLaunchBackendContext(game, profile, layerPlan, manifest),
+            new Progress<string>());
+
+        Assert.EndsWith(
+            Path.Combine("userdata", "usvfs-bootstrap", "bin_x64", "xrEngine.exe"),
+            plan.ExecutablePath);
+        Assert.Equal(game, plan.WorkingDirectory);
+        Assert.Equal(game, runtime.MappingPlan?.VirtualRoot);
+        Assert.True(File.Exists(Path.Combine(game, "patches", "xpatch_02.db")));
+        Assert.DoesNotContain(
+            runtime.MappingPlan!.Operations,
+            operation => FileSystemSafety.IsSameDirectory(operation.SourcePath, game));
+        Assert.Contains(
+            runtime.MappingPlan.Operations,
+            operation => FileSystemSafety.IsSameDirectory(operation.SourcePath, mod));
     }
 
     [Fact]

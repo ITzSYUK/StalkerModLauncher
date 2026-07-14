@@ -27,7 +27,8 @@ Regular profiles do not copy the whole game. The stable Workspace mode connects 
 
 - Regular profiles: base game plus ordered mod folders.
 - Standalone profiles for ready-to-play builds with their own executable.
-- Drag-and-drop mod priority; lower entries overwrite matching files above.
+- Multi-select drag-and-drop mod priority with quick move-to-start/end actions.
+- Import of mod order and enabled state from Mod Organizer 2 `modlist.txt`.
 - Automatic executable detection with a manual override.
 - Isolated saves, logs, screenshots and settings per profile.
 - Stable linked Workspace backend and experimental USVFS backend (x64 and x86).
@@ -39,7 +40,7 @@ Regular profiles do not copy the whole game. The stable Workspace mode connects 
 ### Quick Start
 
 1. Click **Create** and choose a regular or standalone profile.
-2. Select the base game and mod folders, or one ready-to-play standalone folder.
+2. Select or drag in the base game and mod folders, or one ready-to-play standalone folder.
 3. Check the detected executable and mod order.
 4. Keep **Workspace - stable** unless you intentionally want to test USVFS.
 5. Click **Launch**.
@@ -76,7 +77,8 @@ Architecture, workspace safety, USVFS, settings and release packaging are descri
 
 - Обычные профили: базовая игра и упорядоченный список папок модов.
 - Автономные профили для готовых сборок со своим исполняемым файлом.
-- Изменение приоритета модов перетаскиванием; нижние моды заменяют совпадающие файлы верхних.
+- Групповое перетаскивание модов и быстрое перемещение выделения в начало или конец списка.
+- Импорт порядка и состояния модов из `modlist.txt` Mod Organizer 2.
 - Автоматический поиск EXE с возможностью ручного выбора.
 - Отдельные сохранения, логи, скриншоты и настройки каждого профиля.
 - Стабильный backend Workspace и экспериментальный USVFS для x64 и x86.
@@ -88,7 +90,7 @@ Architecture, workspace safety, USVFS, settings and release packaging are descri
 ### Быстрый старт
 
 1. Нажмите **Создать** и выберите обычный или автономный профиль.
-2. Укажите базовую игру и папки модов либо одну папку готовой автономной сборки.
+2. Выберите или перетащите базовую игру и папки модов либо одну папку готовой автономной сборки.
 3. Проверьте найденный EXE и порядок модов.
 4. Оставьте **Workspace — стабильный**, если не собираетесь осознанно тестировать USVFS.
 5. Нажмите **Запустить**.

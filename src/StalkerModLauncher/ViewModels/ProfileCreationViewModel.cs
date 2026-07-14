@@ -211,6 +211,41 @@ public sealed class ProfileCreationViewModel : ObservableObject
     public ICommand RemoveModCommand { get; }
     public ICommand BrowseExecutableCommand { get; }
 
+    public void SetDroppedGamePath(string path)
+    {
+        if (IsStandalone || !Directory.Exists(path))
+        {
+            return;
+        }
+
+        GamePath = Path.GetFullPath(path);
+        ExecutableDetectionMessage = string.Empty;
+    }
+
+    public void SetDroppedStandalonePath(string path)
+    {
+        if (!IsStandalone || !Directory.Exists(path))
+        {
+            return;
+        }
+
+        Mods.Clear();
+        AddModPath(path);
+    }
+
+    public void AddDroppedMods(IEnumerable<string> paths)
+    {
+        if (IsStandalone)
+        {
+            return;
+        }
+
+        foreach (var path in paths.Where(Directory.Exists))
+        {
+            AddModPath(path);
+        }
+    }
+
     private void Next()
     {
         if (!ValidateCurrentStep())
@@ -332,30 +367,33 @@ public sealed class ProfileCreationViewModel : ObservableObject
         }
 
         Mods.Clear();
-        Mods.Add(new ModEntry
-        {
-            Name = Path.GetFileName(selected.TrimEnd(Path.DirectorySeparatorChar)),
-            SourcePath = selected,
-            Order = 1
-        });
-        ExecutableDetectionMessage = string.Empty;
-        OnPropertyChanged(nameof(StandalonePath));
-        OnPropertyChanged(nameof(SourceSummary));
-        ((RelayCommand)AddModCommand).RaiseCanExecuteChanged();
+        AddModPath(selected);
     }
 
     private void AddMod()
     {
         var selected = _dialogService.PickFolder(IsStandalone ? "Выберите папку автономного мода" : "Выберите папку мода");
-        if (selected is null || Mods.Any(mod => FileSystemSafety.IsSameDirectory(mod.SourcePath, selected)))
+        if (selected is null)
+        {
+            return;
+        }
+
+        AddModPath(selected);
+    }
+
+    private void AddModPath(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        if (!Directory.Exists(fullPath) ||
+            Mods.Any(mod => FileSystemSafety.IsSameDirectory(mod.SourcePath, fullPath)))
         {
             return;
         }
 
         Mods.Add(new ModEntry
         {
-            Name = Path.GetFileName(selected.TrimEnd(Path.DirectorySeparatorChar)),
-            SourcePath = selected,
+            Name = Path.GetFileName(fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)),
+            SourcePath = fullPath,
             Order = Mods.Count + 1
         });
         ExecutableDetectionMessage = string.Empty;

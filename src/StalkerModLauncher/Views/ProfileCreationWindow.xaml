@@ -239,7 +239,10 @@
                                    Text="Папка базовой игры"
                                    Foreground="{StaticResource MutedTextBrush}"/>
                         <Grid Grid.Row="1"
-                              Margin="0,5,0,14">
+                              Margin="0,5,0,14"
+                              AllowDrop="True"
+                              PreviewDragOver="GamePath_OnPreviewDragOver"
+                              PreviewDrop="GamePath_OnPreviewDrop">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBox Text="{Binding GamePath}" IsReadOnly="True"/>
                             <Button Grid.Column="1" Content="Выбрать" Command="{Binding BrowseGameCommand}" Margin="8,0,0,0"/>
@@ -263,7 +266,10 @@
                                 BorderThickness="1"
                                 CornerRadius="6"
                                 Padding="0"
-                                Margin="0,0,0,10">
+                                Margin="0,0,0,10"
+                                AllowDrop="True"
+                                PreviewDragOver="ModsList_OnPreviewDragOver"
+                                PreviewDrop="ModsList_OnPreviewDrop">
                             <Grid Margin="1"
                                   ClipToBounds="True">
                                 <ScrollViewer HorizontalScrollBarVisibility="Disabled"
@@ -312,7 +318,7 @@
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
-                                    <TextBlock Text="{Binding ModListHint}"
+                                    <TextBlock Text="Перетащите сюда папки модов или нажмите «Добавить мод»."
                                                Foreground="{StaticResource MutedTextBrush}"
                                                HorizontalAlignment="Center"
                                                VerticalAlignment="Center"
@@ -334,11 +340,13 @@
                                 <Style.Triggers><DataTrigger Binding="{Binding IsStandalone}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBlock Text="Выберите корневую директорию с модом или игрой"
+                        <TextBlock Text="Выберите или переместите мышкой корневую директорию мода или игры"
                                    FontSize="15"
                                    FontWeight="SemiBold"
                                    Margin="0,0,0,14"/>
-                        <Grid>
+                        <Grid AllowDrop="True"
+                              PreviewDragOver="StandalonePath_OnPreviewDragOver"
+                              PreviewDrop="StandalonePath_OnPreviewDrop">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBox Text="{Binding StandalonePath, Mode=OneWay}"
                                      IsReadOnly="True"

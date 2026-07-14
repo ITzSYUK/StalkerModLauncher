@@ -15,6 +15,7 @@ $runtimeFiles = @{
     "usvfs_x64.dll" = Join-Path $usvfsRoot "lib\usvfs_x64.dll"
     "usvfs_proxy_x64.exe" = Join-Path $usvfsRoot "bin\usvfs_proxy_x64.exe"
     "usvfs_x86.dll" = Join-Path $usvfsRoot "lib\usvfs_x86.dll"
+    "usvfs_proxy_x86.exe" = Join-Path $usvfsRoot "bin\usvfs_proxy_x86.exe"
     "StalkerModLauncher.UsvfsX86Host.exe" = $x86Host
 }
 

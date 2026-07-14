@@ -54,7 +54,8 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
             context.FileLayerPlan,
             context.OverlayManifest,
             profileWorkspace,
-            progress);
+            progress,
+            cancellationToken);
         var launchResolution = _launchPlanResolver.PreviewVirtualFileSystem(profile, context.FileLayerPlan);
         if (!launchResolution.IsReady || launchResolution.Plan is null)
         {
@@ -65,7 +66,7 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
         if (launchTarget.BypassedLauncher)
         {
             progress.Report(
-                $"USVFS Anomaly launcher bypass: starting {Path.GetFileName(launchTarget.ExecutablePath)} directly because AnomalyLauncher.exe is 32-bit.");
+                $"USVFS Anomaly manual engine selection: starting {Path.GetFileName(launchTarget.ExecutablePath)} directly instead of AnomalyLauncher.exe.");
         }
 
         progress.Report($"USVFS executable source: {launchTarget.SourceName}.");
@@ -82,6 +83,7 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
 
         var usePhysicalAnomalyRoot = IsAnomalyEngine(launchTarget.ExecutableRelativePath);
         var usePhysicalBaseGameRoot = ShouldUsePhysicalBaseGameRoot(context.FileLayerPlan, launchTarget);
+        var usePhysicalArchiveRoot = RequiresPhysicalArchiveRoot(context.FileLayerPlan);
         UsvfsBootstrapResult? bootstrap = null;
         if (usePhysicalBaseGameRoot)
         {
@@ -98,7 +100,7 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
             MaterializeBootstrapFsgame(profileFsgamePath, bootstrap.RootPath);
         }
 
-        var usePhysicalGameRoot = usePhysicalAnomalyRoot || usePhysicalBaseGameRoot;
+        var usePhysicalGameRoot = usePhysicalAnomalyRoot || usePhysicalBaseGameRoot || usePhysicalArchiveRoot;
         var virtualRoot = usePhysicalGameRoot
             ? context.FileLayerPlan.BaseGame.RootPath
             : bootstrap!.RootPath;
@@ -119,6 +121,8 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
             ? "USVFS root strategy: physical game root for base executable."
             : usePhysicalAnomalyRoot
                 ? "USVFS root strategy: physical Anomaly root."
+                : usePhysicalArchiveRoot
+                    ? "USVFS root strategy: physical game root for X-Ray archive directories."
                 : "USVFS root strategy: isolated bootstrap root.");
         progress.Report($"USVFS virtual root: {mappingPlan.VirtualRoot}");
 
@@ -161,6 +165,29 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
         var fileName = Path.GetFileName(executableRelativePath);
         return fileName.StartsWith("AnomalyDX", StringComparison.OrdinalIgnoreCase) &&
                fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool RequiresPhysicalArchiveRoot(FileLayerPlan layerPlan)
+    {
+        var fsgame = layerPlan.FindFinalFile("fsgame.ltx");
+        if (fsgame is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            // X-Ray 1.6 discovers patch/resource archives through these root directories.
+            // Keeping the real game root preserves that discovery order while USVFS overlays mods on top.
+            return File.ReadLines(fsgame.FullPath, XRayTextEncoding.Config)
+                .Any(line => line.TrimStart().StartsWith(
+                    "$arch_dir_",
+                    StringComparison.OrdinalIgnoreCase));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     private static bool ShouldUsePhysicalBaseGameRoot(

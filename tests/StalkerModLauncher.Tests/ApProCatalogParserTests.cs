@@ -73,7 +73,7 @@ public sealed class ApProCatalogParserTests
 
         await service.LoadPageAsync(ApProCatalogCategory.ShadowOfChernobyl, 1);
 
-        Assert.StartsWith("StalkerModLauncher/1.2.1", userAgent);
+        Assert.StartsWith("StalkerModLauncher/1.2.2", userAgent);
         Assert.Contains("github.com/ITzSYUK/StalkerModLauncher", userAgent);
         Assert.DoesNotContain("Mozilla", userAgent);
     }

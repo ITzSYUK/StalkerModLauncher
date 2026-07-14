@@ -80,6 +80,33 @@ public sealed class ModListEditorTests
         Assert.Equal([1, 2, 3], profile.Mods.Select(mod => mod.Order));
     }
 
+    [Fact]
+    public void MoveManyToInsertionIndex_MovesSelectionAsOrderedBlock()
+    {
+        var profile = CreateProfile("First", "Second", "Third", "Fourth", "Fifth");
+        var selected = new[] { profile.Mods[1], profile.Mods[3] };
+
+        var moved = _editor.MoveManyToInsertionIndex(profile, selected, 5);
+
+        Assert.True(moved);
+        Assert.Equal(["First", "Third", "Fifth", "Second", "Fourth"], profile.Mods.Select(mod => mod.Name));
+        Assert.Equal([1, 2, 3, 4, 5], profile.Mods.Select(mod => mod.Order));
+    }
+
+    [Fact]
+    public void MoveManyToStartAndEnd_PreserveRelativeOrder()
+    {
+        var profile = CreateProfile("First", "Second", "Third", "Fourth", "Fifth");
+        var selected = new[] { profile.Mods[1], profile.Mods[3] };
+
+        Assert.True(_editor.MoveManyToStart(profile, selected));
+        Assert.Equal(["Second", "Fourth", "First", "Third", "Fifth"], profile.Mods.Select(mod => mod.Name));
+
+        Assert.True(_editor.MoveManyToEnd(profile, selected));
+        Assert.Equal(["First", "Third", "Fifth", "Second", "Fourth"], profile.Mods.Select(mod => mod.Name));
+        Assert.Equal([1, 2, 3, 4, 5], profile.Mods.Select(mod => mod.Order));
+    }
+
     private static ModProfile CreateProfile(params string[] names)
     {
         var profile = new ModProfile();

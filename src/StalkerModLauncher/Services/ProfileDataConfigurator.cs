@@ -2,7 +2,15 @@ namespace StalkerModLauncher.Services;
 
 internal sealed class ProfileDataConfigurator
 {
-    public string Configure(string gamePath, string currentWorkspace, string profileWorkspace, IProgress<string> progress)
+    private readonly ProfileShaderCacheSeeder _shaderCacheSeeder = new();
+
+    public string Configure(
+        string gamePath,
+        string currentWorkspace,
+        string profileWorkspace,
+        IProgress<string> progress,
+        FileLayerPlan? layerPlan = null,
+        CancellationToken cancellationToken = default)
     {
         var fsgameDir = FindFileDirectory(currentWorkspace, "fsgame.ltx");
         if (fsgameDir is null)
@@ -20,7 +28,18 @@ internal sealed class ProfileDataConfigurator
 
         var profileDataPath = Path.Combine(profileWorkspace, "userdata");
         Directory.CreateDirectory(profileDataPath);
-        EnsureProfileUserLtx(gamePath, profileDataPath, progress);
+        if (layerPlan is null)
+        {
+            EnsureProfileUserLtx(gamePath, profileDataPath, progress);
+        }
+        else
+        {
+            EnsureProfileUserLtx(layerPlan, profileDataPath, progress);
+        }
+        if (layerPlan is not null)
+        {
+            _shaderCacheSeeder.Seed(layerPlan, profileDataPath, progress, cancellationToken);
+        }
 
         var fsgamePath = Path.Combine(fsgameDir, "fsgame.ltx");
         var lines = File.ReadAllLines(fsgamePath, XRayTextEncoding.Config);
@@ -57,51 +76,120 @@ internal sealed class ProfileDataConfigurator
 
     public void EnsureProfileUserLtx(string gamePath, string profileDataPath, IProgress<string>? progress)
     {
-        var searchPaths = new List<string>();
-        var gameFsgame = FindFileDirectory(gamePath, "fsgame.ltx");
-        if (gameFsgame is not null)
+        EnsureProfileUserLtx(
+            [("base game", ProfileAppDataSourceLocator.EnumerateRoots(gamePath))],
+            profileDataPath,
+            progress);
+    }
+
+    public void EnsureProfileUserLtx(
+        FileLayerPlan layerPlan,
+        string profileDataPath,
+        IProgress<string>? progress)
+    {
+        var sources = layerPlan.SourceLayers
+            .OrderByDescending(layer => layer.Order)
+            .Select(layer => (
+                FileLayerPlan.GetDisplayName(layer),
+                ProfileAppDataSourceLocator.EnumerateRoots(layer)));
+        EnsureProfileUserLtx(sources, profileDataPath, progress);
+    }
+
+    private static void EnsureProfileUserLtx(
+        IEnumerable<(string SourceName, IEnumerable<string> Roots)> sources,
+        string profileDataPath,
+        IProgress<string>? progress)
+    {
+        var destination = Path.Combine(profileDataPath, "user.ltx");
+        var candidates = sources
+            .SelectMany(source => source.Roots.Select(root => new UserLtxSource(
+                Path.Combine(root, "user.ltx"),
+                source.SourceName)))
+            .Where(source => File.Exists(source.Path))
+            .ToArray();
+        if (candidates.Length == 0)
         {
-            foreach (var line in File.ReadAllLines(Path.Combine(gameFsgame, "fsgame.ltx"), XRayTextEncoding.Config))
+            return;
+        }
+
+        var selected = candidates[0];
+        if (File.Exists(destination))
+        {
+            if (FilesAreEqual(selected.Path, destination))
             {
-                if (!line.TrimStart().StartsWith("$app_data_root$", StringComparison.OrdinalIgnoreCase)) continue;
-                var parts = line.Split('|', StringSplitOptions.TrimEntries);
-                if (parts.Length >= 3)
-                {
-                    var resolved = Path.GetFullPath(Path.Combine(gameFsgame, parts[2].Trim()));
-                    if (Directory.Exists(resolved)) searchPaths.Add(resolved);
-                }
-                break;
+                progress?.Report("Keeping existing profile-local user.ltx.");
+                return;
+            }
+
+            var stillMatchesLowerLayer = candidates
+                .Skip(1)
+                .Any(candidate => FilesAreEqual(candidate.Path, destination));
+            if (!stillMatchesLowerLayer)
+            {
+                progress?.Report("Keeping modified profile-local user.ltx.");
+                return;
             }
         }
 
-        searchPaths.AddRange([
-            Path.Combine(gamePath, "appdata"),
-            Path.Combine(gamePath, "userdata"),
-            Path.Combine(gamePath, "bin", "_appdata_")
-        ]);
-
-        foreach (var directory in searchPaths.Where(Directory.Exists))
+        try
         {
-            var source = Path.Combine(directory, "user.ltx");
-            if (!File.Exists(source)) continue;
-
+            Directory.CreateDirectory(profileDataPath);
+            var temporary = destination + $".launcher-{Guid.NewGuid():N}.tmp";
             try
             {
-                var destination = Path.Combine(profileDataPath, "user.ltx");
-                if (File.Exists(destination))
-                {
-                    progress?.Report("Keeping existing profile-local user.ltx.");
-                    return;
-                }
-
-                File.Copy(source, destination, overwrite: false);
-                progress?.Report($"Copied user.ltx from {source}");
-                return;
+                File.Copy(selected.Path, temporary, overwrite: false);
+                File.Move(temporary, destination, overwrite: true);
             }
-            catch (Exception ex)
+            finally
             {
-                progress?.Report($"Warning: could not copy user.ltx from {source}: {ex.Message}");
+                if (File.Exists(temporary))
+                {
+                    File.Delete(temporary);
+                }
+            }
+
+            progress?.Report($"Profile user.ltx prepared from {selected.SourceName}: {selected.Path}");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            progress?.Report($"Warning: could not copy user.ltx from {selected.Path}: {ex.Message}");
+        }
+    }
+
+    private static bool FilesAreEqual(string first, string second)
+    {
+        var firstInfo = new FileInfo(first);
+        var secondInfo = new FileInfo(second);
+        if (!firstInfo.Exists || !secondInfo.Exists || firstInfo.Length != secondInfo.Length)
+        {
+            return false;
+        }
+
+        const int bufferSize = 64 * 1024;
+        using var firstStream = new FileStream(first, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize);
+        using var secondStream = new FileStream(second, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize);
+        var firstBuffer = new byte[bufferSize];
+        var secondBuffer = new byte[bufferSize];
+        while (true)
+        {
+            var firstRead = firstStream.Read(firstBuffer, 0, firstBuffer.Length);
+            var secondRead = secondStream.Read(secondBuffer, 0, secondBuffer.Length);
+            if (firstRead != secondRead)
+            {
+                return false;
+            }
+
+            if (firstRead == 0)
+            {
+                return true;
+            }
+
+            if (!firstBuffer.AsSpan(0, firstRead).SequenceEqual(secondBuffer.AsSpan(0, secondRead)))
+            {
+                return false;
             }
         }
     }
+
+    private sealed record UserLtxSource(string Path, string SourceName);
 }

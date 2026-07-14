@@ -2,7 +2,7 @@
 
 [English version](TECHNICAL_EN.md) | [Русская версия](TECHNICAL_RU.md)
 
-This document describes the architecture of S.T.A.L.K.E.R. Mod Launcher `v1.2.1`, its data storage, launch modes, and safety constraints.
+This document describes the architecture of S.T.A.L.K.E.R. Mod Launcher `v1.2.2`, its data storage, launch modes, and safety constraints.
 
 ## Purpose and compatibility
 
@@ -36,6 +36,8 @@ base game -> mod 1 -> mod 2 -> ... -> profile writable files
 ```
 
 A mod lower in the list has higher priority. If two layers contain the same relative path, the game receives the file from the last enabled layer.
+
+Multiple selected mods can be moved as one group. Importing `modlist.txt` transfers the order and enabled state of mods already added to the profile; MO2's highest-first order is converted to the launcher's display order automatically.
 
 ## Shared overlay model
 
@@ -95,6 +97,7 @@ Runtime files placed next to the launcher:
 usvfs_x64.dll
 usvfs_proxy_x64.exe
 usvfs_x86.dll
+usvfs_proxy_x86.exe
 StalkerModLauncher.UsvfsX86Host.exe
 ```
 
@@ -102,7 +105,7 @@ x64 games are started through the managed adapter and `usvfs_x64.dll`. x86 games
 
 When a mod provides the engine, the launcher creates a small `userdata\usvfs-bootstrap`. It physically contains the selected EXE, required loader-time DLLs, and the profile `fsgame.ltx`. When a base-game executable is selected, USVFS may use the physical game root without a bootstrap copy of the engine.
 
-Anomaly Launcher is a 32-bit shell, so USVFS starts the selected `AnomalyDX*.exe` directly. In **Auto** mode the renderer is read from `AnomalyLauncher.cfg`; DX8, DX9, DX10, DX11, and AVX choices are also available. A relative executable is resolved through `FileLayerPlan`, so a higher-priority mod executable replaces a base file with the same relative path.
+Anomaly Launcher is a 32-bit shell and is started through the separate x86 USVFS host; the engine process it creates inherits the virtual overlay. A manually selected renderer starts the corresponding `AnomalyDX*.exe` directly. A relative executable is resolved through `FileLayerPlan`, so a higher-priority mod executable replaces a base file with the same relative path.
 
 Deeper research notes and proofs of concept are available in [USVFS_RESEARCH_EN.md](https://github.com/ITzSYUK/StalkerModLauncher/blob/main/docs/USVFS_RESEARCH_EN.md).
 
@@ -123,7 +126,9 @@ userdata\overwrite
 
 `writable-game-files` is used for known configuration files that an engine expects inside the game tree, for example Anomaly `gamedata\configs\localization.ltx`. `overwrite` is intended for new or changed files produced by a USVFS profile. Original game and mod folders remain read-only sources.
 
-An existing profile `user.ltx` is not overwritten. On first launch, the launcher may import the source `user.ltx`; the profile copy is independent afterward.
+On first launch, `user.ltx` is imported from the highest-priority layer that provides it. A profile copy modified by the user or game is preserved; an unchanged lower-layer copy can be safely upgraded when a patch supplies a newer file.
+
+If the game or a mod provides a prepared `shaders_cache`, the final cache files are seeded into `userdata\shaders_cache`. This is required by some Anomaly builds and does not modify the source cache in the game or mod folders.
 
 ## File safety
 
@@ -183,13 +188,13 @@ dotnet test .\StalkerModLauncher.sln -c Release
 dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 ```
 
-Release `v1.2.1` is packaged with:
+Release `v1.2.2` is packaged with:
 
 ```powershell
-.\scripts\Build-Release.ps1 -Version 1.2.1
+.\scripts\Build-Release.ps1 -Version 1.2.2
 ```
 
-The script creates two ZIP packages in `publish\release\v1.2.1`:
+The script creates two ZIP packages in `publish\release\v1.2.2`:
 
 - framework-dependent: requires .NET 8 Desktop Runtime x64;
 - standalone: .NET is included in `StalkerModLauncher-Standalone.exe`.
@@ -223,7 +228,7 @@ research/
 tests/StalkerModLauncher.Tests/
 ```
 
-## Known limitations in v1.2.1
+## Known limitations in v1.2.2
 
 - USVFS remains experimental; unusual wrappers and individual engines may require Workspace mode.
 - USVFS requires the Microsoft Visual C++ 2015-2022 Redistributable matching the game architecture.

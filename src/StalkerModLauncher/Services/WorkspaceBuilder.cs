@@ -86,7 +86,13 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         {
             _writableGameFileStore.EnsureWorkspaceDirectories(currentWorkspace);
             _writableGameFileStore.RestoreToCachedWorkspace(currentWorkspace, workspaceRoot, progress);
-            var cachedWorkingDirectoryRelative = _dataConfigurator.Configure(gamePath, currentWorkspace, workspaceRoot, progress);
+            var cachedWorkingDirectoryRelative = _dataConfigurator.Configure(
+                gamePath,
+                currentWorkspace,
+                workspaceRoot,
+                progress,
+                fileLayerPlan,
+                cancellationToken);
             _writableGameFileStore.CaptureFromWorkspace(currentWorkspace, workspaceRoot, progress);
             progress.Report($"Проверка источников: {FormatElapsed(scanTimer.Elapsed)}. Пересборка не требуется.");
             return new WorkspaceBuildResult(
@@ -123,7 +129,13 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         modsTimer.Stop();
 
         var configurationTimer = Stopwatch.StartNew();
-        var workingDirectoryRelative = _dataConfigurator.Configure(gamePath, currentWorkspace, workspaceRoot, progress);
+        var workingDirectoryRelative = _dataConfigurator.Configure(
+            gamePath,
+            currentWorkspace,
+            workspaceRoot,
+            progress,
+            fileLayerPlan,
+            cancellationToken);
         _writableGameFileStore.RestoreToWorkspace(currentWorkspace, workspaceRoot, stats, progress);
         ApplyPinnedExecutableSource(profile, currentWorkspace, progress, stats);
         configurationTimer.Stop();

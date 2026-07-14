@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "1.2.1"
+    [string]$Version = "1.2.2"
 )
 
 $ErrorActionPreference = "Stop"
@@ -15,6 +15,7 @@ $runtimeFiles = @{
     "usvfs_x64.dll" = Join-Path $usvfsRoot "lib\usvfs_x64.dll"
     "usvfs_proxy_x64.exe" = Join-Path $usvfsRoot "bin\usvfs_proxy_x64.exe"
     "usvfs_x86.dll" = Join-Path $usvfsRoot "lib\usvfs_x86.dll"
+    "usvfs_proxy_x86.exe" = Join-Path $usvfsRoot "bin\usvfs_proxy_x86.exe"
     "StalkerModLauncher.UsvfsX86Host.exe" = $x86Host
 }
 

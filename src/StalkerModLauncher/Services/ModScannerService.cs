@@ -99,6 +99,12 @@ public sealed class ModScannerService
             detectedBy.Add("gamedata");
         }
 
+        var archivePath = FindXRayArchive(directoryPath);
+        if (archivePath is not null)
+        {
+            detectedBy.Add($"archive: {Path.GetRelativePath(directoryPath, archivePath)}");
+        }
+
         foreach (var binName in new[] { "bin", "bin_x64" })
         {
             var binPath = Path.Combine(directoryPath, binName);
@@ -117,9 +123,54 @@ public sealed class ModScannerService
         return detectedBy;
     }
 
+    private static string? FindXRayArchive(string directoryPath)
+    {
+        var rootArchive = Directory
+            .EnumerateFiles(directoryPath, "*", SafeEnumerationOptions)
+            .FirstOrDefault(IsXRayArchive);
+        if (rootArchive is not null)
+        {
+            return rootArchive;
+        }
+
+        foreach (var archiveDirectoryName in new[] { "db", "patches" })
+        {
+            var archiveDirectoryPath = Path.Combine(directoryPath, archiveDirectoryName);
+            if (!Directory.Exists(archiveDirectoryPath))
+            {
+                continue;
+            }
+
+            var nestedArchive = Directory
+                .EnumerateFiles(archiveDirectoryPath, "*", RecursiveSafeEnumerationOptions)
+                .FirstOrDefault(IsXRayArchive);
+            if (nestedArchive is not null)
+            {
+                return nestedArchive;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsXRayArchive(string path)
+    {
+        var extension = Path.GetExtension(path);
+        return extension.Length >= 3 &&
+               extension.StartsWith(".db", StringComparison.OrdinalIgnoreCase) &&
+               extension[3..].All(char.IsLetterOrDigit);
+    }
+
     private static EnumerationOptions SafeEnumerationOptions { get; } = new()
     {
         RecurseSubdirectories = false,
+        IgnoreInaccessible = true,
+        AttributesToSkip = FileAttributes.ReparsePoint
+    };
+
+    private static EnumerationOptions RecursiveSafeEnumerationOptions { get; } = new()
+    {
+        RecurseSubdirectories = true,
         IgnoreInaccessible = true,
         AttributesToSkip = FileAttributes.ReparsePoint
     };

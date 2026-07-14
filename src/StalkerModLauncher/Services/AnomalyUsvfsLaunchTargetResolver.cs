@@ -53,36 +53,16 @@ internal sealed class AnomalyUsvfsLaunchTargetResolver
                 BypassedLauncher: false);
         }
 
-        var configuration = layerPlan.FindFinalFile("AnomalyLauncher.cfg")
-            ?? throw new InvalidOperationException(
-                "AnomalyLauncher.cfg was not found. Select a 64-bit AnomalyDX executable manually for USVFS mode.");
-        var lines = File.ReadAllLines(configuration.FullPath)
-            .Select(line => line.Trim())
-            .Where(line => line.Length > 0)
-            .ToArray();
-        if (lines.Length < 2)
-        {
-            throw new InvalidOperationException(
-                "AnomalyLauncher.cfg is incomplete. Select a 64-bit AnomalyDX executable manually for USVFS mode.");
-        }
-
-        var renderer = NormalizeToken(lines[0], "renderer");
-        var instructionSet = lines[1].Equals("AVX", StringComparison.OrdinalIgnoreCase) ? "AVX" : string.Empty;
-        var candidates = instructionSet.Length > 0
-            ? new[]
-            {
-                Path.Combine("bin", $"Anomaly{renderer}{instructionSet}.exe"),
-                Path.Combine("bin", $"Anomaly{renderer}.exe")
-            }
-            : new[] { Path.Combine("bin", $"Anomaly{renderer}.exe") };
-
-        var engine = candidates
-            .Select(layerPlan.FindFinalFile)
-            .FirstOrDefault(candidate => candidate is not null)
-            ?? throw new FileNotFoundException(
-                $"The Anomaly engine selected in AnomalyLauncher.cfg was not found: {string.Join(" or ", candidates)}");
-
-        return CreateEngineTarget(profile, layerPlan, plan, engine, BypassedLauncher: true);
+        // The official USVFS hook follows child processes and uses its cross-bitness
+        // proxy when this x86 launcher starts an x64 Anomaly engine. A manually chosen
+        // AnomalyDX executable above remains the explicit direct-launch option.
+        return new UsvfsLaunchTarget(
+            plan.ExecutablePath,
+            executable.RelativePath,
+            plan.Arguments,
+            plan.WorkingDirectory,
+            executable.SourceName,
+            BypassedLauncher: false);
     }
 
     private static UsvfsLaunchTarget CreateEngineTarget(
@@ -104,16 +84,6 @@ internal sealed class AnomalyUsvfsLaunchTargetResolver
             plan.WorkingDirectory,
             engine.SourceName,
             BypassedLauncher);
-    }
-
-    private static string NormalizeToken(string value, string fieldName)
-    {
-        if (value.Length == 0 || value.Any(character => !char.IsLetterOrDigit(character)))
-        {
-            throw new InvalidOperationException($"Anomaly launcher {fieldName} value is invalid: '{value}'.");
-        }
-
-        return value.ToUpperInvariant();
     }
 
     private static string CombineArguments(string first, string second)

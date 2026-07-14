@@ -40,6 +40,36 @@ public sealed class ModScannerServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ScanFolderAsync_FindsAnomalyArchiveModInsideDbMods()
+    {
+        CreateFile("Осень/db/mods/anomaly-autumn-dark.db0");
+        CreateFile("Осень/meta.ini");
+        var scanner = new ModScannerService();
+
+        var result = await scanner.ScanFolderAsync(_root);
+
+        var mod = Assert.Single(result);
+        Assert.Equal("Осень", mod.Name);
+        Assert.Contains("anomaly-autumn-dark.db0", mod.DetectedBy);
+    }
+
+    [Fact]
+    public async Task ScanFolderAsync_UsesPatchRootForArchiveInsidePatchesDirectory()
+    {
+        CreateFile("SNW Patch 1.09b (db)/patches/xpatch_03_snw8.db");
+        var scanner = new ModScannerService();
+
+        var result = await scanner.ScanFolderAsync(_root);
+
+        var mod = Assert.Single(result);
+        Assert.Equal("SNW Patch 1.09b (db)", mod.Name);
+        Assert.Equal(
+            Path.Combine(_root, "SNW Patch 1.09b (db)"),
+            mod.Path);
+        Assert.Contains(Path.Combine("patches", "xpatch_03_snw8.db"), mod.DetectedBy);
+    }
+
+    [Fact]
     public async Task ScanFolderAsync_ReturnsEmptyForMissingFolder()
     {
         var scanner = new ModScannerService();
