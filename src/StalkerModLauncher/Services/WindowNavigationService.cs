@@ -15,6 +15,7 @@ public sealed class WindowNavigationService
     private readonly IScreenshotClipboardService _screenshotClipboardService;
     private readonly ApProCatalogService _apProCatalogService;
     private readonly WindowSystemIntegrationService _windowSystemIntegrationService;
+    private readonly LauncherUpdateService _launcherUpdateService;
 
     public WindowNavigationService(
         DialogService dialogService,
@@ -24,7 +25,8 @@ public sealed class WindowNavigationService
         ScreenshotScannerService screenshotScannerService,
         IScreenshotClipboardService screenshotClipboardService,
         ApProCatalogService apProCatalogService,
-        WindowSystemIntegrationService windowSystemIntegrationService)
+        WindowSystemIntegrationService windowSystemIntegrationService,
+        LauncherUpdateService launcherUpdateService)
     {
         _dialogService = dialogService;
         _settingsStore = settingsStore;
@@ -34,6 +36,7 @@ public sealed class WindowNavigationService
         _screenshotClipboardService = screenshotClipboardService;
         _apProCatalogService = apProCatalogService;
         _windowSystemIntegrationService = windowSystemIntegrationService;
+        _launcherUpdateService = launcherUpdateService;
     }
 
     public void ShowProfileCreation(Window owner, MainViewModel mainViewModel)
@@ -81,7 +84,10 @@ public sealed class WindowNavigationService
             return;
         }
 
-        var aboutWindow = new AboutWindow
+        var aboutWindow = new AboutWindow(
+            _launcherUpdateService,
+            _dialogService,
+            _windowSystemIntegrationService)
         {
             DontShowAgain = settings.DontShowAboutOnStartup,
             Owner = owner

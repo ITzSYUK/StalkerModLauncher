@@ -1,12 +1,18 @@
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using StalkerModLauncher.Services;
 
 namespace StalkerModLauncher.Views;
 
 public partial class AboutWindow : Window
 {
+    private readonly LauncherUpdateService _launcherUpdateService;
+    private readonly DialogService _dialogService;
+    private readonly WindowSystemIntegrationService _windowSystemIntegrationService;
+
     public static readonly DependencyProperty DontShowAgainProperty =
         DependencyProperty.Register(nameof(DontShowAgain), typeof(bool), typeof(AboutWindow), new PropertyMetadata(false));
 
@@ -16,9 +22,15 @@ public partial class AboutWindow : Window
         set => SetValue(DontShowAgainProperty, value);
     }
 
-    public AboutWindow()
+    public AboutWindow(
+        LauncherUpdateService launcherUpdateService,
+        DialogService dialogService,
+        WindowSystemIntegrationService windowSystemIntegrationService)
     {
         InitializeComponent();
+        _launcherUpdateService = launcherUpdateService;
+        _dialogService = dialogService;
+        _windowSystemIntegrationService = windowSystemIntegrationService;
         VersionTextBlock.Text = GetVersionText();
     }
 
@@ -40,6 +52,60 @@ public partial class AboutWindow : Window
     private void CloseButton_OnClick(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private async void CheckUpdatesButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        CheckUpdatesButton.IsEnabled = false;
+        CheckUpdatesButton.Content = "Проверяем...";
+
+        try
+        {
+            var result = await _launcherUpdateService.CheckAsync();
+            if (!result.IsUpdateAvailable)
+            {
+                _dialogService.ShowInfo(
+                    "Проверка обновлений",
+                    $"Установлена актуальная версия лаунчера: {result.CurrentVersion}.");
+                return;
+            }
+
+            var updateWindow = new UpdateAvailableWindow(
+                result.CurrentVersion,
+                result.LatestVersion,
+                _windowSystemIntegrationService)
+            {
+                Owner = this
+            };
+
+            if (updateWindow.ShowDialog() == true)
+            {
+                _dialogService.OpenUrl(result.ReleaseUrl);
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            _dialogService.ShowError(
+                "Проверка обновлений",
+                "GitHub не ответил вовремя. Проверьте подключение к интернету и повторите попытку.");
+        }
+        catch (HttpRequestException)
+        {
+            _dialogService.ShowError(
+                "Проверка обновлений",
+                "Не удалось получить информацию о последнем релизе с GitHub. Проверьте подключение к интернету и повторите попытку.");
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowError(
+                "Проверка обновлений",
+                $"Не удалось проверить обновления: {ex.Message}");
+        }
+        finally
+        {
+            CheckUpdatesButton.Content = "Проверить обновления";
+            CheckUpdatesButton.IsEnabled = true;
+        }
     }
 
     private void ApplyDarkWindowFrame()

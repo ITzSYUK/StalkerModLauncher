@@ -10,6 +10,7 @@ public sealed class AppServices
         SettingsStore = new SettingsStore(Paths);
         DialogService = new DialogService();
         WindowSystemIntegrationService = new WindowSystemIntegrationService();
+        LauncherUpdateService = new LauncherUpdateService();
 
         var workspaceBuilder = new WorkspaceBuilder(Paths);
         WorkspaceManagementService = new WorkspaceManagementService(workspaceBuilder);
@@ -52,13 +53,15 @@ public sealed class AppServices
             ScreenshotScannerService,
             ScreenshotClipboardService,
             ApProCatalogService,
-            WindowSystemIntegrationService);
+            WindowSystemIntegrationService,
+            LauncherUpdateService);
     }
 
     public AppPaths Paths { get; }
     public SettingsStore SettingsStore { get; }
     public DialogService DialogService { get; }
     public WindowSystemIntegrationService WindowSystemIntegrationService { get; }
+    public LauncherUpdateService LauncherUpdateService { get; }
     public ProfileManager ProfileManager { get; }
     public LaunchCoordinator LaunchCoordinator { get; }
     public GameInstallationValidator GameValidator { get; }
