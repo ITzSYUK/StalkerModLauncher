@@ -10,8 +10,60 @@
 </p>
 
 <p align="center">
-  <a href="#english">English</a> | <a href="#russian">Русский</a>
+  <a href="#russian">Русский</a> | <a href="#english">English</a>
 </p>
+
+---
+
+<a id="russian"></a>
+
+## Русский
+
+**S.T.A.L.K.E.R. Mod Launcher** — Windows-лаунчер для локальных модификаций S.T.A.L.K.E.R. и автономных сборок на базе X-Ray. Он разделяет профили, сохранения, логи и настройки, не изменяя исходные папки игры и модов.
+
+Создаваемые профили не копируют игру целиком. Стабильный режим Workspace подключает исходные файлы NTFS-ссылками, а экспериментальный USVFS использует виртуальную файловую систему Mod Organizer 2.
+
+### Возможности
+
+- Обычные профили: базовая игра и упорядоченный список папок модов.
+- Автономные профили для готовых сборок со своим исполняемым файлом.
+- Групповое перетаскивание модов и быстрое перемещение выделения в начало или конец списка.
+- Импорт порядка и состояния модов из `modlist.txt` Mod Organizer 2.
+- Автоматический поиск EXE с возможностью ручного выбора.
+- Отдельные сохранения, логи, скриншоты и настройки каждого профиля.
+- Стабильный backend Workspace и экспериментальный USVFS для x64 и x86.
+- Проверка готовности профиля, состояние workspace, последний лог и crash dump.
+- Импорт, экспорт и копирование профилей.
+- Браузер модификаций AP-PRO для ТЧ, ЧН и ЗП.
+- Необязательный Discord Rich Presence.
+
+### Быстрый старт
+
+1. Нажмите **Создать** и выберите обычный или автономный профиль.
+2. Выберите или перетащите базовую игру и папки модов либо одну папку готовой автономной сборки.
+3. Проверьте найденный EXE и порядок модов.
+4. Оставьте **Workspace — стабильный**, если не собираетесь осознанно тестировать USVFS.
+5. Нажмите **Запустить**.
+
+### Варианты релиза
+
+- `StalkerModLauncher.exe` требует .NET 8 Desktop Runtime x64.
+- `StalkerModLauncher-Standalone.exe` содержит .NET и не требует отдельной установки runtime.
+- Для экспериментального USVFS также нужен Microsoft Visual C++ 2015-2022 Redistributable для запуска x64- и x86-игр.
+
+Требуется Windows 10/11 x64. .NET 8 SDK нужен только для сборки из исходного кода.
+
+### Сборка из исходного кода
+
+```powershell
+dotnet build .\StalkerModLauncher.sln
+dotnet test .\StalkerModLauncher.sln -c Release
+dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
+```
+
+Пошаговое руководство для игрока находится в [docs/USER_GUIDE_RU.md](https://github.com/ITzSYUK/StalkerModLauncher/blob/main/docs/USER_GUIDE_RU.md).
+
+Архитектура, безопасность workspace, USVFS, настройки и подготовка релиза описаны в [docs/TECHNICAL_RU.md](https://github.com/ITzSYUK/StalkerModLauncher/blob/main/docs/TECHNICAL_RU.md).
 
 ---
 
@@ -62,56 +114,6 @@ dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 ```
 
 Architecture, workspace safety, USVFS, settings and release packaging are described in [docs/TECHNICAL_EN.md](https://github.com/ITzSYUK/StalkerModLauncher/blob/main/docs/TECHNICAL_EN.md).
-
----
-
-<a id="russian"></a>
-
-## Русский
-
-**S.T.A.L.K.E.R. Mod Launcher** — Windows-лаунчер для локальных модификаций S.T.A.L.K.E.R. и автономных сборок на базе X-Ray. Он разделяет профили, сохранения, логи и настройки, не изменяя исходные папки игры и модов.
-
-Создаваемые профили не копируют игру целиком. Стабильный режим Workspace подключает исходные файлы NTFS-ссылками, а экспериментальный USVFS использует виртуальную файловую систему Mod Organizer 2.
-
-### Возможности
-
-- Обычные профили: базовая игра и упорядоченный список папок модов.
-- Автономные профили для готовых сборок со своим исполняемым файлом.
-- Групповое перетаскивание модов и быстрое перемещение выделения в начало или конец списка.
-- Импорт порядка и состояния модов из `modlist.txt` Mod Organizer 2.
-- Автоматический поиск EXE с возможностью ручного выбора.
-- Отдельные сохранения, логи, скриншоты и настройки каждого профиля.
-- Стабильный backend Workspace и экспериментальный USVFS для x64 и x86.
-- Проверка готовности профиля, состояние workspace, последний лог и crash dump.
-- Импорт, экспорт и копирование профилей.
-- Браузер модификаций AP-PRO для ТЧ, ЧН и ЗП.
-- Необязательный Discord Rich Presence.
-
-### Быстрый старт
-
-1. Нажмите **Создать** и выберите обычный или автономный профиль.
-2. Выберите или перетащите базовую игру и папки модов либо одну папку готовой автономной сборки.
-3. Проверьте найденный EXE и порядок модов.
-4. Оставьте **Workspace — стабильный**, если не собираетесь осознанно тестировать USVFS.
-5. Нажмите **Запустить**.
-
-### Варианты релиза
-
-- `StalkerModLauncher.exe` требует .NET 8 Desktop Runtime x64.
-- `StalkerModLauncher-Standalone.exe` содержит .NET и не требует отдельной установки runtime.
-- Для экспериментального USVFS также нужен Microsoft Visual C++ 2015-2022 Redistributable для запуска x64- и x86-игр.
-
-Требуется Windows 10/11 x64. .NET 8 SDK нужен только для сборки из исходного кода.
-
-### Сборка из исходного кода
-
-```powershell
-dotnet build .\StalkerModLauncher.sln
-dotnet test .\StalkerModLauncher.sln -c Release
-dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
-```
-
-Архитектура, безопасность workspace, USVFS, настройки и подготовка релиза описаны в [docs/TECHNICAL_RU.md](https://github.com/ITzSYUK/StalkerModLauncher/blob/main/docs/TECHNICAL_RU.md).
 
 ---
 
