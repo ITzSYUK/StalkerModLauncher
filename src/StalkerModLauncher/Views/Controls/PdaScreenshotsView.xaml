@@ -37,8 +37,9 @@
 
         <Grid Visibility="{Binding ShowFullScreenView, Converter={StaticResource BooleanToVisibilityConverter}}"
               PreviewMouseWheel="FullScreenGrid_OnPreviewMouseWheel">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="44"/><ColumnDefinition Width="*"/><ColumnDefinition Width="68"/></Grid.ColumnDefinitions>
-            <Button Content="◀" Command="{Binding GoPreviousCommand}" IsEnabled="{Binding CanGoPrevious}" VerticalAlignment="Center" Height="42" Padding="0"/>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="68"/><ColumnDefinition Width="*"/><ColumnDefinition Width="68"/></Grid.ColumnDefinitions>
+            <Button Content="◀" Command="{Binding GoPreviousCommand}" IsEnabled="{Binding CanGoPrevious}"
+                    Width="44" Height="42" Padding="0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             <Image Grid.Column="1" Source="{Binding SelectedScreenshot}" Stretch="Uniform" Margin="8"
                    MouseLeftButtonDown="FullScreenImage_OnMouseLeftButtonDown">
                 <Image.ContextMenu>
@@ -61,7 +62,8 @@
                     </Button>
                     <Button Content="×" Command="{Binding CloseFullScreenCommand}" Width="30" Height="30" Padding="0"/>
                 </StackPanel>
-                <Button Grid.Row="1" Content="▶" Command="{Binding GoNextCommand}" IsEnabled="{Binding CanGoNext}" VerticalAlignment="Center" Height="42" Padding="0"/>
+                <Button Grid.Row="1" Content="▶" Command="{Binding GoNextCommand}" IsEnabled="{Binding CanGoNext}"
+                        Width="44" Height="42" Padding="0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Grid>
         </Grid>
 
