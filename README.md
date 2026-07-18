@@ -27,6 +27,7 @@
 
 - Обычные профили: базовая игра и упорядоченный список папок модов.
 - Автономные профили для готовых сборок со своим исполняемым файлом.
+- Классический интерфейс и альтернативный интерфейс в стиле КПК S.T.A.L.K.E.R.
 - Групповое перетаскивание модов и быстрое перемещение выделения в начало или конец списка.
 - Импорт порядка и состояния модов из `modlist.txt` Mod Organizer 2.
 - Автоматический поиск EXE с возможностью ручного выбора.
@@ -79,6 +80,7 @@ Regular profiles do not copy the whole game. The stable Workspace mode connects 
 
 - Regular profiles: base game plus ordered mod folders.
 - Standalone profiles for ready-to-play builds with their own executable.
+- Classic interface and an alternative S.T.A.L.K.E.R.-inspired PDA interface.
 - Multi-select drag-and-drop mod priority with quick move-to-start/end actions.
 - Import of mod order and enabled state from Mod Organizer 2 `modlist.txt`.
 - Automatic executable detection with a manual override.

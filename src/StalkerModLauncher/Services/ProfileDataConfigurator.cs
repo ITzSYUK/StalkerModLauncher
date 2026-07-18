@@ -67,9 +67,11 @@ internal sealed class ProfileDataConfigurator
             if (File.Exists(Path.Combine(dir, fileName))) return dir;
         }
         foreach (var dir in Directory.EnumerateDirectories(searchRoot, "*", SearchOption.TopDirectoryOnly))
-        foreach (var subDir in Directory.EnumerateDirectories(dir, "*", SearchOption.TopDirectoryOnly))
         {
-            if (File.Exists(Path.Combine(subDir, fileName))) return subDir;
+            foreach (var subDir in Directory.EnumerateDirectories(dir, "*", SearchOption.TopDirectoryOnly))
+            {
+                if (File.Exists(Path.Combine(subDir, fileName))) return subDir;
+            }
         }
         return null;
     }

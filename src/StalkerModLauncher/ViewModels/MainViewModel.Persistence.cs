@@ -12,6 +12,8 @@ public sealed partial class MainViewModel
         {
             var settings = await _settingsStore.LoadAsync();
             _lastBrowsedGamePath = settings.LastBrowsedGamePath;
+            _isPdaInterfaceEnabled = settings.IsPdaInterfaceEnabled;
+            OnPropertyChanged(nameof(IsPdaInterfaceEnabled));
             OnPropertyChanged(nameof(GameInstallPath));
             ActivityLog.Load([], settings.IsLogVisible);
 
@@ -53,6 +55,7 @@ public sealed partial class MainViewModel
                 Profiles = Profiles.ToList(),
                 DontShowAboutOnStartup = existing.DontShowAboutOnStartup,
                 IsLogVisible = ActivityLog.IsVisible,
+                IsPdaInterfaceEnabled = IsPdaInterfaceEnabled,
                 DiscordClientId = existing.DiscordClientId
             });
             Log("Settings saved.");

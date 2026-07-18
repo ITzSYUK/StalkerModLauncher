@@ -9,6 +9,24 @@ namespace StalkerModLauncher.Views.Controls;
 
 public partial class ModPanelView : UserControl
 {
+    public static readonly DependencyProperty ShowStandaloneToggleProperty = DependencyProperty.Register(
+        nameof(ShowStandaloneToggle),
+        typeof(bool),
+        typeof(ModPanelView),
+        new PropertyMetadata(true));
+
+    public static readonly DependencyProperty UseCompactHeaderProperty = DependencyProperty.Register(
+        nameof(UseCompactHeader),
+        typeof(bool),
+        typeof(ModPanelView),
+        new PropertyMetadata(false));
+
+    public static readonly DependencyProperty UsePdaThemeProperty = DependencyProperty.Register(
+        nameof(UsePdaTheme),
+        typeof(bool),
+        typeof(ModPanelView),
+        new PropertyMetadata(false, OnUsePdaThemeChanged));
+
     private sealed record ModDragPayload(IReadOnlyList<ModEntry> Mods);
 
     private Point _dragStartPoint;
@@ -17,10 +35,51 @@ public partial class ModPanelView : UserControl
     private bool _dropAfter;
     private bool _preserveSelectionForPotentialDrag;
     private bool _dragInProgress;
+    private ResourceDictionary? _pdaTheme;
 
     public ModPanelView()
     {
         InitializeComponent();
+    }
+
+    public bool ShowStandaloneToggle
+    {
+        get => (bool)GetValue(ShowStandaloneToggleProperty);
+        set => SetValue(ShowStandaloneToggleProperty, value);
+    }
+
+    public bool UseCompactHeader
+    {
+        get => (bool)GetValue(UseCompactHeaderProperty);
+        set => SetValue(UseCompactHeaderProperty, value);
+    }
+
+    public bool UsePdaTheme
+    {
+        get => (bool)GetValue(UsePdaThemeProperty);
+        set => SetValue(UsePdaThemeProperty, value);
+    }
+
+    private static void OnUsePdaThemeChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs e)
+    {
+        ((ModPanelView)dependencyObject).UpdatePdaTheme((bool)e.NewValue);
+    }
+
+    private void UpdatePdaTheme(bool enabled)
+    {
+        if (enabled && _pdaTheme is null)
+        {
+            _pdaTheme = new ResourceDictionary
+            {
+                Source = new Uri("/StalkerModLauncher;component/Themes/PdaTheme.xaml", UriKind.RelativeOrAbsolute)
+            };
+            Resources.MergedDictionaries.Add(_pdaTheme);
+        }
+        else if (!enabled && _pdaTheme is not null)
+        {
+            Resources.MergedDictionaries.Remove(_pdaTheme);
+            _pdaTheme = null;
+        }
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;

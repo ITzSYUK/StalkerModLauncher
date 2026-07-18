@@ -11,6 +11,9 @@ namespace StalkerModLauncher.Views;
 public partial class MainWindow : Window
 {
     private bool _isClosingAfterCleanup;
+    private bool _initialInterfaceReady;
+    private bool _isSwitchingToClassic;
+    private PdaWindow? _pdaWindow;
     private readonly WindowNavigationService _navigation;
     private readonly WindowSystemIntegrationService _windowSystemIntegration;
 
@@ -23,13 +26,14 @@ public partial class MainWindow : Window
         _navigation = navigation;
         _windowSystemIntegration = windowSystemIntegration;
         viewModel.ActivityLog.PropertyChanged += ActivityLog_PropertyChanged;
+        viewModel.PropertyChanged += ViewModel_PropertyChanged;
         viewModel.ProfileCreationRequested += ViewModel_ProfileCreationRequested;
         DataContext = viewModel;
     }
 
     private void ViewModel_ProfileCreationRequested(object? sender, EventArgs e)
     {
-        if (ViewModel is null)
+        if (ViewModel is null || _pdaWindow is not null)
         {
             return;
         }
@@ -53,6 +57,26 @@ public partial class MainWindow : Window
     private void Window_OnSourceInitialized(object? sender, EventArgs e)
     {
         _windowSystemIntegration.Initialize(this);
+    }
+
+    public async Task<bool> ShowInitialInterfaceAsync()
+    {
+        if (ViewModel is null)
+        {
+            Show();
+            return false;
+        }
+
+        await ViewModel.Initialization;
+        _initialInterfaceReady = true;
+        if (ViewModel.IsPdaInterfaceEnabled)
+        {
+            ShowPdaWindow();
+            return true;
+        }
+
+        Show();
+        return false;
     }
 
     private void EditProfileButton_OnClick(object sender, RoutedEventArgs e)
@@ -98,6 +122,65 @@ public partial class MainWindow : Window
         await _navigation.ShowAboutAsync(this);
     }
 
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (!_initialInterfaceReady || e.PropertyName != nameof(MainViewModel.IsPdaInterfaceEnabled) || ViewModel is null)
+        {
+            return;
+        }
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (ViewModel.IsPdaInterfaceEnabled)
+            {
+                ShowPdaWindow();
+            }
+            else
+            {
+                if (_pdaWindow is not null)
+                {
+                    _isSwitchingToClassic = true;
+                    _pdaWindow.Close();
+                }
+                else if (!IsVisible)
+                {
+                    Show();
+                    Activate();
+                }
+            }
+        });
+    }
+
+    private void ShowPdaWindow()
+    {
+        if (ViewModel is null || _pdaWindow is not null)
+        {
+            return;
+        }
+
+        _pdaWindow = new PdaWindow(ViewModel, _navigation);
+        _pdaWindow.Closed += (_, _) =>
+        {
+            _pdaWindow = null;
+            if (_isClosingAfterCleanup)
+            {
+                return;
+            }
+
+            if (_isSwitchingToClassic)
+            {
+                _isSwitchingToClassic = false;
+                Show();
+                Activate();
+                return;
+            }
+
+            Close();
+        };
+        _pdaWindow.Show();
+        Hide();
+    }
+
     private async void Window_OnClosing(object? sender, CancelEventArgs e)
     {
         if (_isClosingAfterCleanup)
@@ -112,6 +195,7 @@ public partial class MainWindow : Window
         }
 
         _isClosingAfterCleanup = true;
+        _pdaWindow?.Close();
         Close();
     }
 

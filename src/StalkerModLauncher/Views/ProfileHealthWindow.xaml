@@ -1,6 +1,7 @@
 <Window x:Class="StalkerModLauncher.Views.ProfileHealthWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:infrastructure="clr-namespace:StalkerModLauncher.Infrastructure"
         Title="Состояние профиля"
         Width="900"
         Height="650"
@@ -161,6 +162,8 @@
                 <ListBox Grid.Row="1"
                          ItemsSource="{Binding Checks}"
                          BorderThickness="0"
+                         infrastructure:SmoothScrollBehavior.IsEnabled="True"
+                         ScrollViewer.CanContentScroll="False"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">

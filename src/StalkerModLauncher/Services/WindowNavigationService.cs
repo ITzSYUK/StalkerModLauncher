@@ -41,12 +41,14 @@ public sealed class WindowNavigationService
 
     public void ShowProfileCreation(Window owner, MainViewModel mainViewModel)
     {
-        var wizard = new ProfileCreationWindow(new ProfileCreationViewModel(_dialogService)) { Owner = owner };
+        var wizard = new ProfileCreationWindow(CreateProfileCreationViewModel()) { Owner = owner };
         if (wizard.ShowDialog() == true && wizard.CreatedProfile is not null)
         {
             mainViewModel.AddCreatedProfile(wizard.CreatedProfile);
         }
     }
+
+    public ProfileCreationViewModel CreateProfileCreationViewModel() => new(_dialogService);
 
     public void ShowProfileSettings(Window owner, ProfileSettingsViewModel viewModel)
     {
@@ -59,11 +61,17 @@ public sealed class WindowNavigationService
         new ScreenshotsWindow(viewModel) { Owner = owner }.ShowDialog();
     }
 
+    public ScreenshotsViewModel CreateScreenshotsViewModel(ModProfile profile) =>
+        new(profile, _screenshotScannerService, _screenshotClipboardService);
+
     public void ShowModCatalog(Window owner)
     {
         var viewModel = new ModCatalogViewModel(_apProCatalogService, _dialogService);
         new ModCatalogWindow(viewModel, _windowSystemIntegrationService) { Owner = owner }.ShowDialog();
     }
+
+    public ModCatalogViewModel CreateModCatalogViewModel() =>
+        new(_apProCatalogService, _dialogService);
 
     public void ShowProfileHealth(Window owner, ModProfile profile, Action<string>? log = null)
     {
@@ -76,6 +84,14 @@ public sealed class WindowNavigationService
         new ProfileHealthWindow(viewModel) { Owner = owner }.ShowDialog();
     }
 
+    public ProfileHealthViewModel CreateProfileHealthViewModel(ModProfile profile, Action<string>? log = null) =>
+        new(profile, _profileHealthService, _dialogService, _workspaceManagementService, log);
+
+    public Task<LauncherUpdateResult> CheckForUpdatesAsync(CancellationToken cancellationToken = default) =>
+        _launcherUpdateService.CheckAsync(cancellationToken);
+
+    public void OpenUrl(string url) => _dialogService.OpenUrl(url);
+
     public async Task ShowAboutAsync(Window? owner = null, bool onlyIfNeeded = false)
     {
         var settings = await _settingsStore.LoadAsync();
@@ -87,7 +103,10 @@ public sealed class WindowNavigationService
         var aboutWindow = new AboutWindow(
             _launcherUpdateService,
             _dialogService,
-            _windowSystemIntegrationService)
+            _windowSystemIntegrationService,
+            owner?.DataContext is MainViewModel mainViewModel
+                ? () => mainViewModel.ToggleInterfaceCommand.Execute(null)
+                : null)
         {
             DontShowAgain = settings.DontShowAboutOnStartup,
             Owner = owner

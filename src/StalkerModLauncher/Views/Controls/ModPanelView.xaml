@@ -1,4 +1,5 @@
 <UserControl x:Class="StalkerModLauncher.Views.Controls.ModPanelView"
+             x:Name="Root"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="Transparent">
@@ -9,11 +10,30 @@
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding UseCompactHeader, ElementName=Root}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0" Margin="22,0,0,0">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Visible"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding UseCompactHeader, ElementName=Root}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
                 <TextBlock Text="Моды"
                            FontSize="18"
                            FontWeight="SemiBold"/>
@@ -28,6 +48,7 @@
                               IsEnabled="{Binding CanEditSelectedProfile}"
                               Style="{StaticResource ProfileToggleButtonStyle}"
                               Margin="0,0,8,8"
+                              Visibility="{Binding ShowStandaloneToggle, ElementName=Root, Converter={StaticResource BooleanToVisibilityConverter}}"
                               ToolTipService.InitialShowDelay="600">
                     <ToggleButton.ToolTip>
                         <ToolTip>
@@ -93,14 +114,27 @@
         </Grid>
 
         <Border Grid.Row="1"
-                Background="{StaticResource FieldBackgroundBrush}"
-                BorderBrush="{StaticResource StrokeBrush}"
+                Background="{DynamicResource FieldBackgroundBrush}"
+                BorderBrush="{DynamicResource StrokeBrush}"
                 BorderThickness="1"
                 CornerRadius="6"
                 Padding="12"
-                Margin="0,12,0,0">
+                >
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Margin" Value="0,12,0,0"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding UseCompactHeader, ElementName=Root}" Value="True">
+                            <Setter Property="Margin" Value="0"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <ListView x:Name="ModsList"
                       Margin="0"
+                      Background="Transparent"
+                      BorderThickness="0"
+                      FocusVisualStyle="{x:Null}"
                       SizeChanged="ModsList_SizeChanged"
                       ItemsSource="{Binding SelectedProfile.Mods}"
                       SelectedItem="{Binding SelectedMod}"

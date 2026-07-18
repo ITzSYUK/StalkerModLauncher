@@ -29,6 +29,7 @@ public sealed partial class MainViewModel : ObservableObject
     private string _validationSummary = "Выберите папку с установленной игрой.";
     private bool _isGameValid;
     private bool _isBuilding;
+    private bool _isPdaInterfaceEnabled;
     private string _buildProgressText = string.Empty;
 
     public MainViewModel(
@@ -103,6 +104,7 @@ public sealed partial class MainViewModel : ObservableObject
         ScanForModsCommand = new AsyncRelayCommand(
             ScanForModsAsync,
             () => CanEditSelectedProfile && SelectedProfile is { IsStandalone: false });
+        ToggleInterfaceCommand = new RelayCommand(() => IsPdaInterfaceEnabled = !IsPdaInterfaceEnabled);
         Initialization = LoadAsync();
     }
 
@@ -113,6 +115,18 @@ public sealed partial class MainViewModel : ObservableObject
     public Task Initialization { get; }
 
     public bool HasProfiles => Profiles.Count > 0;
+
+    public bool IsPdaInterfaceEnabled
+    {
+        get => _isPdaInterfaceEnabled;
+        set
+        {
+            if (SetProperty(ref _isPdaInterfaceEnabled, value))
+            {
+                _autoSave.Schedule();
+            }
+        }
+    }
 
     public event EventHandler? ProfileCreationRequested;
 
@@ -252,6 +266,7 @@ public sealed partial class MainViewModel : ObservableObject
     public RelayCommand ExportProfileCommand { get; }
     public RelayCommand ImportProfileCommand { get; }
     public AsyncRelayCommand ScanForModsCommand { get; }
+    public RelayCommand ToggleInterfaceCommand { get; }
 
     public void AppendLog(string message) => Log(message);
 

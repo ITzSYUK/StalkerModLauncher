@@ -1,0 +1,79 @@
+<UserControl x:Class="StalkerModLauncher.Views.Controls.PdaScreenshotsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#080D14"
+             PreviewKeyDown="PdaScreenshotsView_OnPreviewKeyDown">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/StalkerModLauncher;component/Themes/PdaTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid Margin="9">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto"
+                      Visibility="{Binding ShowThumbnailGrid, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ItemsControl ItemsSource="{Binding Screenshots}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Command="{Binding DataContext.OpenScreenshotCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                Margin="5" Padding="3" Background="#111925" BorderBrush="#3B4755">
+                            <Button.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Скопировать в буфер обмена"
+                                              Click="CopyScreenshotMenuItem_OnClick"
+                                              CommandParameter="{Binding}"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                            <Image Source="{Binding Thumbnail}" Width="190" Height="108" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <Grid Visibility="{Binding ShowFullScreenView, Converter={StaticResource BooleanToVisibilityConverter}}"
+              PreviewMouseWheel="FullScreenGrid_OnPreviewMouseWheel">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="44"/><ColumnDefinition Width="*"/><ColumnDefinition Width="68"/></Grid.ColumnDefinitions>
+            <Button Content="◀" Command="{Binding GoPreviousCommand}" IsEnabled="{Binding CanGoPrevious}" VerticalAlignment="Center" Height="42" Padding="0"/>
+            <Image Grid.Column="1" Source="{Binding SelectedScreenshot}" Stretch="Uniform" Margin="8"
+                   MouseLeftButtonDown="FullScreenImage_OnMouseLeftButtonDown">
+                <Image.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Скопировать в буфер обмена"
+                                  Click="CopyScreenshotMenuItem_OnClick"/>
+                    </ContextMenu>
+                </Image.ContextMenu>
+            </Image>
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Width="30"
+                            Height="30"
+                            Padding="0"
+                            Margin="0,0,4,0"
+                            ToolTip="Открыть в полный экран"
+                            Click="OpenExternalFullScreenButton_OnClick">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="14" Text="&#xE740;"/>
+                    </Button>
+                    <Button Content="×" Command="{Binding CloseFullScreenCommand}" Width="30" Height="30" Padding="0"/>
+                </StackPanel>
+                <Button Grid.Row="1" Content="▶" Command="{Binding GoNextCommand}" IsEnabled="{Binding CanGoNext}" VerticalAlignment="Center" Height="42" Padding="0"/>
+            </Grid>
+        </Grid>
+
+        <TextBlock Text="Поиск скриншотов..." Foreground="#929B88" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        <TextBlock Text="Скриншоты не найдены." Foreground="#929B88" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Visibility="{Binding HasNoScreenshots, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Padding="9,4" Background="#172230" BorderBrush="#3B4755" BorderThickness="1">
+            <TextBlock Text="{Binding StatusText}" Foreground="#C9C7B8"/>
+            <Border.Style>
+                <Style TargetType="Border"><Style.Triggers><DataTrigger Binding="{Binding StatusText}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style>
+            </Border.Style>
+        </Border>
+    </Grid>
+</UserControl>

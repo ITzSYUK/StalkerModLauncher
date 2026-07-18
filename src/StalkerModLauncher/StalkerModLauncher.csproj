@@ -10,10 +10,10 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>..\..\assets\app\icon.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <Version>1.2.2</Version>
-    <FileVersion>1.2.2.0</FileVersion>
-    <AssemblyVersion>1.2.2.0</AssemblyVersion>
-    <InformationalVersion>1.2.2</InformationalVersion>
+    <Version>1.2.3</Version>
+    <FileVersion>1.2.3.0</FileVersion>
+    <AssemblyVersion>1.2.3.0</AssemblyVersion>
+    <InformationalVersion>1.2.3</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>S.T.A.L.K.E.R. Mod Launcher</Product>
     <Authors>ITzSYUK</Authors>
@@ -22,6 +22,9 @@
   <ItemGroup>
     <Resource Include="..\..\assets\icons\mod-actions\add_mods.png" Link="Resources\add_mods.png" />
     <Resource Include="..\..\assets\icons\mod-actions\scan_add_mods.png" Link="Resources\scan_add_mods.png" />
+    <Resource Include="..\..\assets\ui\pda\PdaShell.HD.png" Link="Resources\PdaShell.HD.png" />
+    <Resource Include="..\..\assets\ui\pda\PdaUiAtlas.png" Link="Resources\PdaUiAtlas.png" />
+    <Resource Include="..\..\assets\ui\pda\PdaDialogAtlas.png" Link="Resources\PdaDialogAtlas.png" />
     <EmbeddedResource Include="Resources\ModLauncherLogo.png" />
     <EmbeddedResource Include="..\..\assets\sounds\pda\pda_btn_press.ogg" LogicalName="StalkerModLauncher.Resources.Sounds.pda_btn_press.ogg" />
     <EmbeddedResource Include="..\..\assets\sounds\pda\pda_guide.ogg" LogicalName="StalkerModLauncher.Resources.Sounds.pda_guide.ogg" />

@@ -73,7 +73,8 @@ public sealed class ApProCatalogParserTests
 
         await service.LoadPageAsync(ApProCatalogCategory.ShadowOfChernobyl, 1);
 
-        Assert.StartsWith("StalkerModLauncher/1.2.2", userAgent);
+        var assemblyVersion = typeof(ApProCatalogService).Assembly.GetName().Version?.ToString(3);
+        Assert.StartsWith($"StalkerModLauncher/{assemblyVersion}", userAgent);
         Assert.Contains("github.com/ITzSYUK/StalkerModLauncher", userAgent);
         Assert.DoesNotContain("Mozilla", userAgent);
     }
@@ -153,6 +154,29 @@ public sealed class ApProCatalogParserTests
 
         Assert.All(results, result => Assert.NotNull(result));
         Assert.InRange(maximumActiveRequests, 1, 2);
+    }
+
+    [Fact]
+    public async Task LoadPageAsync_CacheSupportsConcurrentRefreshes()
+    {
+        var handler = new StubHttpMessageHandler(async (_, cancellationToken) =>
+        {
+            await Task.Yield();
+            cancellationToken.ThrowIfCancellationRequested();
+            return CreateResponse(HttpStatusCode.OK, "<html></html>");
+        });
+        var service = new ApProCatalogService(handler, TimeSpan.Zero);
+
+        var loads = Enumerable.Range(0, 40)
+            .Select(index => service.LoadPageAsync(
+                ApProCatalogCategory.ShadowOfChernobyl,
+                index % 3 + 1,
+                forceRefresh: index % 7 == 0));
+
+        var pages = await Task.WhenAll(loads);
+
+        Assert.Equal(40, pages.Length);
+        Assert.All(pages, page => Assert.InRange(page.PageNumber, 1, 3));
     }
 
     private static HttpResponseMessage CreateResponse(HttpStatusCode statusCode, string content) => new(statusCode)

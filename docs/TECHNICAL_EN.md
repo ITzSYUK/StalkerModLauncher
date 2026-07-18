@@ -2,7 +2,7 @@
 
 [English version](TECHNICAL_EN.md) | [Русская версия](TECHNICAL_RU.md) | [Russian user guide](USER_GUIDE_RU.md)
 
-This document describes the current architecture of S.T.A.L.K.E.R. Mod Launcher `v1.2.2`: how profiles are stored, how the winning file is selected, how Workspace differs from USVFS, where profile data is kept, and which checks protect original game and mod folders.
+This document describes the current architecture of S.T.A.L.K.E.R. Mod Launcher `v1.2.3`: how profiles are stored, how the winning file is selected, how Workspace differs from USVFS, where profile data is kept, and which checks protect original game and mod folders.
 
 The detailed USVFS research history and experimental prototypes are available in [USVFS_RESEARCH_EN.md](USVFS_RESEARCH_EN.md).
 
@@ -410,6 +410,8 @@ At application startup, one shared module creates the required components. Works
 
 The UI follows MVVM without an external dependency-injection container. Main-screen logic is divided by user scenario, and major areas of the window are separate controls.
 
+The classic and PDA interfaces share the same data model and commands. In PDA mode, settings, profile status, the catalog, log, screenshots, and the profile creation wizard are hosted inside one shell; only the true fullscreen screenshot viewer opens a separate monitor-sized window.
+
 ## 16. Build, tests, and release packaging
 
 .NET 8 SDK is required for development:
@@ -423,8 +425,10 @@ dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 Complete release packaging:
 
 ```powershell
-.\scripts\Build-Release.ps1 -Version 1.2.2
+.\scripts\Build-Release.ps1
 ```
+
+The script reads the version from the project file and verifies formatting, the Release build, and all unit tests before packaging. The manual smoke test for both interfaces and real game profiles is documented in [RELEASE_SMOKE_TEST_EN.md](RELEASE_SMOKE_TEST_EN.md).
 
 The script creates two ZIP archives:
 

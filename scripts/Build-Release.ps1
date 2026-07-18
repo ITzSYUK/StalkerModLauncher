@@ -1,11 +1,28 @@
 param(
-    [string]$Version = "1.2.2"
+    [string]$Version
 )
 
 $ErrorActionPreference = "Stop"
 
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repositoryRoot "src\StalkerModLauncher\StalkerModLauncher.csproj"
+$verificationScript = Join-Path $PSScriptRoot "Verify-Release.ps1"
+
+[xml]$projectFile = Get-Content -LiteralPath $project -Raw
+$versionPropertyGroup = @($projectFile.Project.PropertyGroup) |
+    Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_.Version) } |
+    Select-Object -First 1
+$projectVersion = [string]$versionPropertyGroup.Version
+if ([string]::IsNullOrWhiteSpace($projectVersion)) {
+    throw "The application version is missing from $project."
+}
+
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $Version = $projectVersion
+} elseif ($Version -ne $projectVersion) {
+    throw "Requested release version '$Version' does not match project version '$projectVersion'."
+}
+
 $releaseRoot = Join-Path $repositoryRoot "publish\release\v$Version"
 $stagingRoot = Join-Path $repositoryRoot "publish\release\.staging-v$Version"
 $usvfsRoot = Join-Path $repositoryRoot ".external\usvfs"
@@ -23,6 +40,11 @@ foreach ($entry in $runtimeFiles.GetEnumerator()) {
     if (-not (Test-Path -LiteralPath $entry.Value -PathType Leaf)) {
         throw "Missing release dependency '$($entry.Key)': $($entry.Value)"
     }
+}
+
+& $verificationScript -ExpectedVersion $Version
+if ($LASTEXITCODE -ne 0) {
+    throw "Release verification failed."
 }
 
 foreach ($path in @($releaseRoot, $stagingRoot)) {

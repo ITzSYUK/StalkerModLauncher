@@ -1,0 +1,119 @@
+<UserControl x:Class="StalkerModLauncher.Views.Controls.PdaProfileSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#080D14">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/StalkerModLauncher;component/Themes/PdaTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="НАСТРОЙКИ ПРОФИЛЯ"
+                   FontFamily="Bahnschrift SemiCondensed"
+                   FontSize="17"
+                   Foreground="#E2DDC9"
+                   Margin="0,0,0,8"/>
+
+        <Border Grid.Row="1"
+                Background="#0D141E"
+                BorderBrush="#3B4755"
+                BorderThickness="1"
+                Padding="12">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="0,0,8,0">
+                    <TextBlock Text="Название профиля" Foreground="#929B88" FontSize="11"/>
+                    <TextBox Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}" Margin="0,3,0,9"/>
+
+                    <TextBlock Text="Описание" Foreground="#929B88" FontSize="11"/>
+                    <TextBox Text="{Binding ProfileDescription, UpdateSourceTrigger=PropertyChanged}"
+                             Height="48" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,3,0,10"/>
+
+                    <CheckBox IsChecked="{Binding IsStandalone}" Margin="0,0,0,9">
+                        <TextBlock Text="Автономная сборка"/>
+                    </CheckBox>
+
+                    <TextBlock Text="Система запуска" Foreground="#929B88" FontSize="11" Margin="0,0,0,4"/>
+                    <WrapPanel Margin="0,0,0,5">
+                        <RadioButton Content="Workspace — стабильный"
+                                     GroupName="PdaLaunchBackend"
+                                     IsChecked="{Binding UseLinkedWorkspace, Mode=TwoWay}"
+                                     Margin="0,0,18,0"/>
+                        <RadioButton Content="USVFS — экспериментальный"
+                                     GroupName="PdaLaunchBackend"
+                                     IsChecked="{Binding UseVirtualFileSystem, Mode=TwoWay}"
+                                     IsEnabled="{Binding CanUseUsvfs}"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding UsvfsAvailabilityText}"
+                               Foreground="#727B6D" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,9"/>
+
+                    <StackPanel Margin="0,0,0,9"
+                                Visibility="{Binding IsAnomalyUsvfsOptionsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Text="Движок Anomaly" Foreground="#929B88" FontSize="11" Margin="0,0,0,4"/>
+                        <WrapPanel>
+                            <RadioButton Content="Авто" GroupName="PdaAnomalyRenderer" IsChecked="{Binding UseAutomaticAnomalyRenderer}" Margin="0,0,10,0"/>
+                            <RadioButton Content="DX8" GroupName="PdaAnomalyRenderer" IsChecked="{Binding UseAnomalyDx8}" Margin="0,0,10,0"/>
+                            <RadioButton Content="DX9" GroupName="PdaAnomalyRenderer" IsChecked="{Binding UseAnomalyDx9}" Margin="0,0,10,0"/>
+                            <RadioButton Content="DX10" GroupName="PdaAnomalyRenderer" IsChecked="{Binding UseAnomalyDx10}" Margin="0,0,10,0"/>
+                            <RadioButton Content="DX11" GroupName="PdaAnomalyRenderer" IsChecked="{Binding UseAnomalyDx11}" Margin="0,0,14,0"/>
+                            <CheckBox Content="AVX" IsChecked="{Binding AnomalyUseAvx}" IsEnabled="{Binding HasManualAnomalyRenderer}"/>
+                        </WrapPanel>
+                    </StackPanel>
+
+                    <TextBlock Text="Файл запуска (.exe)" Foreground="#929B88" FontSize="11"/>
+                    <Grid Margin="0,3,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding ExecutableRelativePath, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Grid.Column="1" Content="Обзор..." Command="{Binding BrowseExecutableCommand}" Margin="7,0,0,0" MinWidth="82"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,9">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding ExecutableSourceDisplay}" Foreground="#727B6D" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                        <Button Grid.Column="1" Content="Автовыбор" Command="{Binding ClearExecutableSourceCommand}" Margin="7,0,0,0" Padding="8,2">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasManualExecutableSource}" Value="False">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
+
+                    <TextBlock Text="Параметры запуска" Foreground="#929B88" FontSize="11"/>
+                    <TextBox Text="{Binding LaunchArguments, UpdateSourceTrigger=PropertyChanged}" Margin="0,3,0,9"/>
+
+                    <ToggleButton Content="Показывать статус профиля в Discord"
+                                  IsChecked="{Binding IsDiscordStatusEnabled}"
+                                  Style="{StaticResource ProfileToggleButtonStyle}"
+                                  HorizontalAlignment="Left"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button Content="Импорт порядка MO2..." Command="{Binding ImportMo2ModListCommand}"/>
+            <Button Grid.Column="2" Content="Сохранить" Click="SaveButton_OnClick" Style="{StaticResource PrimaryButtonStyle}" MinWidth="100"/>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -7,6 +7,7 @@
     <SolidColorBrush x:Key="PanelAltBrush" Color="#272B20"/>
     <SolidColorBrush x:Key="PanelHoverBrush" Color="#323729"/>
     <SolidColorBrush x:Key="PanelPressedBrush" Color="#3C422F"/>
+    <SolidColorBrush x:Key="ModSelectionBrush" Color="#3A3325"/>
     <SolidColorBrush x:Key="StrokeBrush" Color="#4A4E3A"/>
     <SolidColorBrush x:Key="TextBrush" Color="#F0E8C8"/>
     <SolidColorBrush x:Key="MutedTextBrush" Color="#B2AD91"/>

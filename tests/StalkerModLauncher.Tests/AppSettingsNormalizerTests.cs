@@ -44,4 +44,14 @@ public sealed class AppSettingsNormalizerTests
 
         Assert.Empty(normalized.Profiles[0].UsvfsExecutableOverrideRelativePath);
     }
+
+    [Fact]
+    public void Normalize_PreservesPdaInterfacePreference()
+    {
+        var settings = new AppSettings { IsPdaInterfaceEnabled = true };
+
+        var normalized = AppSettingsNormalizer.Normalize(settings);
+
+        Assert.True(normalized.IsPdaInterfaceEnabled);
+    }
 }

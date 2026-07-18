@@ -54,15 +54,14 @@ public partial class App : Application
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
+            _services.ApplicationLogService.Write($"Splash screen loading failed: {ex}");
         }
 
         if (bitmap is null)
         {
-            var main = CreateMainWindow();
-            main.Show();
-            _ = ShowAboutIfNeededAsync(main);
+            _ = ShowLauncherSafelyAsync();
             return;
         }
 
@@ -96,10 +95,17 @@ public partial class App : Application
             var timer = new DoubleAnimation(1, 1, TimeSpan.FromMilliseconds(1500));
             timer.Completed += async (_, _) =>
             {
-                var main = CreateMainWindow();
-                main.Show();
-                splash.Close();
-                await ShowAboutIfNeededAsync(main);
+                try
+                {
+                    await ShowLauncherSafelyAsync(() => splash.Close());
+                }
+                finally
+                {
+                    if (splash.IsVisible)
+                    {
+                        splash.Close();
+                    }
+                }
             };
             splash.BeginAnimation(UIElement.OpacityProperty, timer);
         };
@@ -149,6 +155,36 @@ public partial class App : Application
             _services.CreateMainViewModel(),
             _services.WindowNavigationService,
             _services.WindowSystemIntegrationService);
+    }
+
+    private async Task ShowLauncherAsync(Action? launcherShown = null)
+    {
+        var main = CreateMainWindow();
+        MainWindow = main;
+        var pdaIsActive = await main.ShowInitialInterfaceAsync();
+        launcherShown?.Invoke();
+        if (!pdaIsActive)
+        {
+            await ShowAboutIfNeededAsync(main);
+        }
+    }
+
+    private async Task ShowLauncherSafelyAsync(Action? launcherShown = null)
+    {
+        try
+        {
+            await ShowLauncherAsync(launcherShown);
+        }
+        catch (Exception ex)
+        {
+            _services.ApplicationLogService.Write($"Launcher UI startup failed: {ex}");
+            MessageBox.Show(
+                $"Не удалось открыть окно лаунчера. Подробности записаны в журнал.\n\n{ex.Message}",
+                "Ошибка запуска лаунчера",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Shutdown(-1);
+        }
     }
 
     private async Task ShowAboutIfNeededAsync(Window? owner = null)

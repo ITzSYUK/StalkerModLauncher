@@ -291,7 +291,7 @@
         </Style>
         <Style x:Key="ModListViewItemStyle"
                TargetType="ListViewItem">
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="Padding" Value="4"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
@@ -313,7 +313,7 @@
 
                                     <TextBlock Grid.Row="1"
                                                Text="{Binding OverlaySummary}"
-                                               Foreground="{StaticResource AccentBrush}"
+                                               Foreground="{DynamicResource AccentBrush}"
                                                FontSize="9"
                                                Margin="86,0,0,2"
                                                TextWrapping="Wrap"
@@ -354,19 +354,19 @@
                                                     Margin="0,0,40,0"
                                                     Opacity="0">
                                             <Button Content="Убрать"
-                                                    Style="{StaticResource InlineModActionButtonStyle}"
+                                                    Style="{DynamicResource InlineModActionButtonStyle}"
                                                     Command="{Binding DataContext.InlineRemoveModCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding}"/>
                                             <Button Content="Выше"
-                                                    Style="{StaticResource InlineModActionButtonStyle}"
+                                                    Style="{DynamicResource InlineModActionButtonStyle}"
                                                     Command="{Binding DataContext.InlineMoveModUpCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding}"/>
                                             <Button Content="Ниже"
-                                                    Style="{StaticResource InlineModActionButtonStyle}"
+                                                    Style="{DynamicResource InlineModActionButtonStyle}"
                                                     Command="{Binding DataContext.InlineMoveModDownCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding}"/>
                                             <Button Content="Открыть"
-                                                    Style="{StaticResource InlineModActionButtonStyle}"
+                                                    Style="{DynamicResource InlineModActionButtonStyle}"
                                                     Command="{Binding DataContext.InlineOpenModFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding}"/>
                                         </StackPanel>
@@ -379,14 +379,14 @@
                                                 <Viewbox x:Name="LeftChevron"
                                                          Width="17"
                                                          Height="21">
-                                                    <Path Fill="{StaticResource TextBrush}"
+                                                    <Path Fill="{DynamicResource TextBrush}"
                                                           Data="M335.99,42.42 L336,468.99 C336,492.44 316.98,511.45 293.54,511.45 C282.48,511.45 272.42,507.23 264.86,500.3 L15.37,293.87 C-2.67,278.95 -5.19,252.21 9.73,234.17 C11.22,232.37 12.85,230.71 14.55,229.21 L265.69,10.42 C283.35,-4.96 310.16,-3.09 325.54,14.57 C332.54,22.61 335.97,32.53 335.99,42.42 Z"/>
                                                 </Viewbox>
                                                 <Viewbox x:Name="RightChevron"
                                                          Width="17"
                                                          Height="21"
                                                          Opacity="0">
-                                                    <Path Fill="{StaticResource TextBrush}"
+                                                    <Path Fill="{DynamicResource TextBrush}"
                                                           Data="M0,469 V42.42 C0.02,32.53 3.46,22.61 10.45,14.57 C25.84,-3.09 52.65,-4.96 70.31,10.42 L321.46,229.2 C323.15,230.71 324.78,232.37 326.27,234.17 C341.19,252.21 338.67,278.95 320.63,293.87 L71.14,500.3 C63.58,507.23 53.52,511.46 42.46,511.46 C19.02,511.46 0,492.44 0,469 Z"/>
                                                 </Viewbox>
                                             </Grid>
@@ -397,14 +397,14 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="RowChrome" Property="Background" Value="{StaticResource PanelAltBrush}"/>
+                                <Setter TargetName="RowChrome" Property="Background" Value="{DynamicResource PanelAltBrush}"/>
                                 <Setter TargetName="ActionRail" Property="Opacity" Value="1"/>
                                 <Setter TargetName="ActionRail" Property="IsHitTestVisible" Value="True"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="RowChrome" Property="Background" Value="#3A3325"/>
-                                <Setter TargetName="RowChrome" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-                                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                                <Setter TargetName="RowChrome" Property="Background" Value="{DynamicResource ModSelectionBrush}"/>
+                                <Setter TargetName="RowChrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                             </Trigger>
                             <EventTrigger SourceName="ActionRail" RoutedEvent="MouseEnter">
                                 <BeginStoryboard>

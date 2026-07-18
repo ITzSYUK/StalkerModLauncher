@@ -38,6 +38,7 @@ public sealed class ApProCatalogService
     private readonly TimeSpan _minimumCatalogRequestInterval;
     private readonly SemaphoreSlim _catalogRequestLock = new(1, 1);
     private readonly SemaphoreSlim _thumbnailDownloadLimit;
+    private readonly object _cacheSync = new();
     private readonly Dictionary<CatalogPageKey, CachedCatalog> _cache = new();
     private DateTimeOffset _lastCatalogRequestAt = DateTimeOffset.MinValue;
 
@@ -107,8 +108,13 @@ public sealed class ApProCatalogService
             InvalidateCategory(category);
         }
 
-        if (_cache.TryGetValue(key, out var cached) &&
-            DateTimeOffset.UtcNow - cached.LoadedAt < CacheLifetime)
+        CachedCatalog? cached;
+        lock (_cacheSync)
+        {
+            _cache.TryGetValue(key, out cached);
+        }
+
+        if (cached is not null && DateTimeOffset.UtcNow - cached.LoadedAt < CacheLifetime)
         {
             return cached.Page;
         }
@@ -123,7 +129,11 @@ public sealed class ApProCatalogService
         var items = ApProCatalogParser.Parse(html);
         var totalPages = Math.Max(pageNumber, ApProCatalogParser.GetTotalPageCount(html) ?? pageNumber);
         var page = new ApProCatalogPage(pageNumber, totalPages, items);
-        _cache[key] = new CachedCatalog(DateTimeOffset.UtcNow, page);
+        lock (_cacheSync)
+        {
+            _cache[key] = new CachedCatalog(DateTimeOffset.UtcNow, page);
+        }
+
         return page;
     }
 
@@ -233,9 +243,12 @@ public sealed class ApProCatalogService
 
     private void InvalidateCategory(ApProCatalogCategory category)
     {
-        foreach (var key in _cache.Keys.Where(key => key.Category == category).ToArray())
+        lock (_cacheSync)
         {
-            _cache.Remove(key);
+            foreach (var key in _cache.Keys.Where(key => key.Category == category).ToArray())
+            {
+                _cache.Remove(key);
+            }
         }
     }
 

@@ -12,6 +12,7 @@ public partial class AboutWindow : Window
     private readonly LauncherUpdateService _launcherUpdateService;
     private readonly DialogService _dialogService;
     private readonly WindowSystemIntegrationService _windowSystemIntegrationService;
+    private readonly Action? _openPdaInterface;
 
     public static readonly DependencyProperty DontShowAgainProperty =
         DependencyProperty.Register(nameof(DontShowAgain), typeof(bool), typeof(AboutWindow), new PropertyMetadata(false));
@@ -25,12 +26,14 @@ public partial class AboutWindow : Window
     public AboutWindow(
         LauncherUpdateService launcherUpdateService,
         DialogService dialogService,
-        WindowSystemIntegrationService windowSystemIntegrationService)
+        WindowSystemIntegrationService windowSystemIntegrationService,
+        Action? openPdaInterface = null)
     {
         InitializeComponent();
         _launcherUpdateService = launcherUpdateService;
         _dialogService = dialogService;
         _windowSystemIntegrationService = windowSystemIntegrationService;
+        _openPdaInterface = openPdaInterface;
         VersionTextBlock.Text = GetVersionText();
     }
 
@@ -49,9 +52,10 @@ public partial class AboutWindow : Window
         ApplyDarkWindowFrame();
     }
 
-    private void CloseButton_OnClick(object sender, RoutedEventArgs e)
+    private void PdaInterfaceButton_OnClick(object sender, RoutedEventArgs e)
     {
         Close();
+        _openPdaInterface?.Invoke();
     }
 
     private async void CheckUpdatesButton_OnClick(object sender, RoutedEventArgs e)
