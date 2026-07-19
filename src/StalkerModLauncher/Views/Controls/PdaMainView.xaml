@@ -101,6 +101,42 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="PdaCompactTopTabStyle" TargetType="Button">
+            <Setter Property="Width" Value="38"/>
+            <Setter Property="Height" Value="31"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="-8,0,0,0"/>
+            <Setter Property="Foreground" Value="#E9E5D3"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid Width="38" Height="31" SnapsToDevicePixels="True">
+                            <Path x:Name="Chrome" Data="M12,0 H38 L26,31 H0 Z"
+                                  Fill="#17212D" Stroke="#5B6874" StrokeThickness="1"/>
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="8,2,4,1">
+                                <ContentPresenter.RenderTransform>
+                                    <TranslateTransform X="-2"/>
+                                </ContentPresenter.RenderTransform>
+                            </ContentPresenter>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Fill" Value="#263442"/>
+                                <Setter TargetName="Chrome" Property="Stroke" Value="#8A949D"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Fill" Value="#0B1119"/>
+                                <Setter TargetName="Chrome" Property="Stroke" Value="#A07832"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="PdaNavButtonStyle" TargetType="Button">
             <Setter Property="Height" Value="30"/>
             <Setter Property="Margin" Value="0"/>
@@ -243,9 +279,9 @@
             </Setter>
         </Style>
         <Style x:Key="PdaProfileToolButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="38"/>
-            <Setter Property="Height" Value="38"/>
-            <Setter Property="Padding" Value="6"/>
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="5"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -271,6 +307,26 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="PdaInlineInfoPanelStyle" TargetType="ContentControl">
+            <Setter Property="Height" Value="58"/>
+            <Setter Property="Padding" Value="14,5,7,5"/>
+            <Setter Property="Foreground" Value="#E7E3D3"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContentControl">
+                        <Border Background="{DynamicResource FieldBackgroundBrush}"
+                                BorderBrush="{DynamicResource StrokeBrush}"
+                                BorderThickness="1"
+                                CornerRadius="5"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="Stretch"
+                                              VerticalAlignment="Stretch"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -290,32 +346,36 @@
             </Grid.RowDefinitions>
 
             <Grid Grid.Row="0" Background="#EA101722">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="34"/><ColumnDefinition Width="50"/><ColumnDefinition Width="32"/></Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="50"/><ColumnDefinition Width="32"/></Grid.ColumnDefinitions>
                 <TextBlock Text="S.T.A.L.K.E.R. MOD LAUNCHER" Margin="10,0,8,0" VerticalAlignment="Center"
-                           FontFamily="Bahnschrift SemiCondensed" FontSize="10" Foreground="#7E887B"/>
+                           FontFamily="Bahnschrift SemiCondensed" FontSize="12" Foreground="#7E887B"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button Content="Запустить" Command="{Binding LaunchCommand}" Style="{StaticResource PdaLaunchTabStyle}"/>
                     <Button Content="Профиль" Style="{StaticResource PdaTopTabStyle}" Click="ProfileTab_OnClick"/>
                     <Button Content="Каталог" Style="{StaticResource PdaTopTabStyle}" Click="CatalogTab_OnClick"/>
                     <Button Content="Журнал" Style="{StaticResource PdaTopTabStyle}" Click="LogButton_OnClick"/>
                     <Button Content="О программе" Style="{StaticResource PdaTopTabStyle}" Click="AboutButton_OnClick"/>
+                    <Button Style="{StaticResource PdaCompactTopTabStyle}"
+                            Command="{Binding ToggleInterfaceCommand}"
+                            ToolTip="Вернуться к обычному интерфейсу">
+                        <Viewbox Width="17" Height="17">
+                            <Canvas Width="24" Height="24">
+                                <Rectangle Canvas.Left="4" Canvas.Top="4" Width="16" Height="12"
+                                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.6"/>
+                                <Path Data="M9,20 H15 M12,16 V20 M10,7 L7,10 L10,13 M7,10 H15"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                            </Canvas>
+                        </Viewbox>
+                    </Button>
                 </StackPanel>
-                <Button Grid.Column="2" Style="{StaticResource PdaHeaderIconButtonStyle}"
-                        Command="{Binding ToggleInterfaceCommand}"
-                        ToolTip="Вернуться к обычному интерфейсу">
-                    <Viewbox Width="20" Height="20">
-                        <Canvas Width="24" Height="24">
-                            <Rectangle Canvas.Left="4" Canvas.Top="4" Width="16" Height="12"
-                                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.6"/>
-                            <Path Data="M9,20 H15 M12,16 V20 M10,7 L7,10 L10,13 M7,10 H15"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
-                        </Canvas>
-                    </Viewbox>
-                </Button>
-                <TextBlock x:Name="ClockText" Grid.Column="3" Text="00:00" HorizontalAlignment="Center" VerticalAlignment="Center"
-                           FontFamily="Bahnschrift SemiCondensed" FontSize="14" FontWeight="SemiBold" Foreground="#DFDED0"/>
-                <Button Grid.Column="4" Style="{StaticResource PdaPowerButtonStyle}" Click="PowerButton_OnClick"
+                <TextBlock x:Name="ClockText" Grid.Column="2" Text="00:00" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           FontFamily="Bahnschrift SemiCondensed" FontSize="14" FontWeight="SemiBold" Foreground="#DFDED0">
+                    <TextBlock.RenderTransform>
+                        <TranslateTransform Y="2"/>
+                    </TextBlock.RenderTransform>
+                </TextBlock>
+                <Button Grid.Column="3" Style="{StaticResource PdaPowerButtonStyle}" Click="PowerButton_OnClick"
                         ToolTip="Выключить лаунчер"/>
             </Grid>
 
@@ -356,7 +416,7 @@
                                Margin="8,0" VerticalAlignment="Center" FontFamily="Bahnschrift SemiCondensed" FontSize="17"
                                Foreground="#E6E2D1" TextTrimming="CharacterEllipsis"/>
                     <TextBlock x:Name="PageStatusText" Grid.Column="2" Text="{Binding ValidationSummary}" MaxWidth="270"
-                               VerticalAlignment="Center" FontSize="9" Foreground="#929B88" TextTrimming="CharacterEllipsis"/>
+                               VerticalAlignment="Center" FontSize="11" Foreground="#929B88" TextTrimming="CharacterEllipsis"/>
                 </Grid>
             </Border>
 
@@ -392,36 +452,150 @@
                     <Grid.Style>
                         <Style TargetType="Grid"><Style.Triggers><DataTrigger Binding="{Binding HasProfiles}" Value="False"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style>
                     </Grid.Style>
-                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                     <Grid Grid.Row="0" Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="42"/><ColumnDefinition Width="42"/></Grid.ColumnDefinitions>
-                        <controls:GamePathBar Grid.Column="0" Margin="0,0,7,0" UsePdaTheme="True"/>
-                        <Button Grid.Column="1" Command="{Binding ScanForModsCommand}" Style="{StaticResource PdaProfileToolButtonStyle}"
-                                ToolTip="Найти моды в выбранной папке" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Viewbox Width="25" Height="25">
-                                <Canvas Width="24" Height="24">
-                                    <Path Data="M4,5.5 C4,4.672 4.672,4 5.5,4 H10 L12,6 H18.5 C19.328,6 20,6.672 20,7.5 V10 M11.4,19.5 H5.5 C4.672,19.5 4,18.828 4,18 V8"
-                                          Stroke="{StaticResource TextBrush}" StrokeThickness="1.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
-                                    <Ellipse Canvas.Left="12" Canvas.Top="11" Width="7" Height="7" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.7"/>
-                                    <Path Data="M17.5,16.5 L21,20" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                                </Canvas>
-                            </Viewbox>
-                        </Button>
-                        <Button Grid.Column="2" Command="{Binding AddModCommand}" Style="{StaticResource PdaProfileToolButtonStyle}"
-                                ToolTip="Добавить папку мода" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Viewbox Width="25" Height="25">
-                                <Canvas Width="24" Height="24">
-                                    <Path Data="M4,18 V6.5 C4,5.672 4.672,5 5.5,5 H10 L12,7 H18.5 C19.328,7 20,7.672 20,8.5 V18 C20,18.828 19.328,19.5 18.5,19.5 H5.5 C4.672,19.5 4,18.828 4,18 Z"
-                                          Stroke="{StaticResource TextBrush}" StrokeThickness="1.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
-                                    <Path Data="M12,10 V16 M9,13 H15" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                                </Canvas>
-                            </Viewbox>
-                        </Button>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.08*"/>
+                            <ColumnDefinition Width="4"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <ContentControl Grid.Column="0"
+                                        Padding="14,5,6,5"
+                                        Style="{StaticResource PdaInlineInfoPanelStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="36"/>
+                                    <ColumnDefinition Width="9"/>
+                                    <ColumnDefinition Width="36"/>
+                                    <ColumnDefinition Width="36"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid Grid.Column="0" Margin="0,0,8,0">
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedProfile.IsStandalone}" Value="True">
+                                                    <Setter Property="Opacity" Value="0.35"/>
+                                                    <Setter Property="IsEnabled" Value="False"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="Базовая игра" Foreground="{StaticResource MutedTextBrush}" FontSize="10"/>
+                                    <TextBox Grid.Row="1"
+                                             Text="{Binding SelectedProfile.GameInstallPath, UpdateSourceTrigger=PropertyChanged}"
+                                             BorderThickness="0"
+                                             Padding="0,1,0,0"
+                                             Background="Transparent"
+                                             Foreground="{StaticResource TextBrush}"
+                                             VerticalContentAlignment="Center"/>
+                                </Grid>
+                                <Button Grid.Column="1"
+                                        Command="{Binding ChooseGameFolderCommand}"
+                                        ToolTip="Выбрать базовую игру"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource PdaProfileToolButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedProfile.IsStandalone}" Value="True">
+                                                    <Setter Property="Opacity" Value="0.35"/>
+                                                    <Setter Property="IsEnabled" Value="False"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <Viewbox Width="23" Height="23">
+                                        <Canvas Width="24" Height="24">
+                                            <Path Data="M4,18 V6.5 C4,5.672 4.672,5 5.5,5 H10 L12,7 H18.5 C19.328,7 20,7.672 20,8.5 V18 C20,18.828 19.328,19.5 18.5,19.5 H5.5 C4.672,19.5 4,18.828 4,18 Z"
+                                                  Stroke="{StaticResource TextBrush}" StrokeThickness="1.7"
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                                            <Path Data="M8.5,13 L11,15.5 L16,10.5"
+                                                  Stroke="{StaticResource AccentBrush}" StrokeThickness="1.9"
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                                        </Canvas>
+                                    </Viewbox>
+                                </Button>
+                                <Border Grid.Column="2" Width="1" Height="48" Margin="4,0"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        Background="#52606C"/>
+                                <Button Grid.Column="3" Command="{Binding ScanForModsCommand}" Style="{StaticResource PdaProfileToolButtonStyle}"
+                                        ToolTip="Найти моды в выбранной папке" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Viewbox Width="23" Height="23">
+                                        <Canvas Width="24" Height="24">
+                                            <Path Data="M4,5.5 C4,4.672 4.672,4 5.5,4 H10 L12,6 H18.5 C19.328,6 20,6.672 20,7.5 V10 M11.4,19.5 H5.5 C4.672,19.5 4,18.828 4,18 V8"
+                                                  Stroke="{StaticResource TextBrush}" StrokeThickness="1.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                                            <Ellipse Canvas.Left="12" Canvas.Top="11" Width="7" Height="7" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.7"/>
+                                            <Path Data="M17.5,16.5 L21,20" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                        </Canvas>
+                                    </Viewbox>
+                                </Button>
+                                <Button Grid.Column="4" Command="{Binding AddModCommand}" Style="{StaticResource PdaProfileToolButtonStyle}"
+                                        ToolTip="Добавить папку мода" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Viewbox Width="23" Height="23">
+                                        <Canvas Width="24" Height="24">
+                                            <Path Data="M4,18 V6.5 C4,5.672 4.672,5 5.5,5 H10 L12,7 H18.5 C19.328,7 20,7.672 20,8.5 V18 C20,18.828 19.328,19.5 18.5,19.5 H5.5 C4.672,19.5 4,18.828 4,18 Z"
+                                                  Stroke="{StaticResource TextBrush}" StrokeThickness="1.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                                            <Path Data="M12,10 V16 M9,13 H15" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                        </Canvas>
+                                    </Viewbox>
+                                </Button>
+                            </Grid>
+                        </ContentControl>
+
+                        <ContentControl Grid.Column="2" Style="{StaticResource PdaInlineInfoPanelStyle}">
+                            <Grid>
+                                <Grid.Resources>
+                                    <Style x:Key="InlineSummaryLabelStyle" TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}"/>
+                                        <Setter Property="FontSize" Value="10"/>
+                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                    </Style>
+                                    <Style x:Key="InlineSummaryValueStyle" TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                                        <Setter Property="FontSize" Value="12"/>
+                                        <Setter Property="Margin" Value="0,2,0,0"/>
+                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                    </Style>
+                                </Grid.Resources>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.25*"/>
+                                    <ColumnDefinition Width="0.9*"/>
+                                    <ColumnDefinition Width="0.75*"/>
+                                    <ColumnDefinition Width="1.4*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,9,0">
+                                    <TextBlock Text="Бинарник" Style="{StaticResource InlineSummaryLabelStyle}"/>
+                                    <TextBlock Text="{Binding SelectedProfile.ExecutableRelativePath}" Style="{StaticResource InlineSummaryValueStyle}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="0,0,9,0">
+                                    <TextBlock Text="Аргументы" Style="{StaticResource InlineSummaryLabelStyle}"/>
+                                    <TextBlock Text="{Binding SelectedProfile.LaunchArguments}" Style="{StaticResource InlineSummaryValueStyle}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Margin="0,0,9,0">
+                                    <TextBlock Text="Модов" Style="{StaticResource InlineSummaryLabelStyle}"/>
+                                    <TextBlock Text="{Binding SelectedProfile.Mods.Count}" Style="{StaticResource InlineSummaryValueStyle}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="3">
+                                    <TextBlock Text="Наиграно" Style="{StaticResource InlineSummaryLabelStyle}"/>
+                                    <TextBlock Text="{Binding SelectedProfile.PlaytimeDisplay}"
+                                               Margin="0,2,0,0"
+                                               Foreground="{StaticResource TextBrush}"
+                                               FontSize="12"/>
+                                    <TextBlock Text="{Binding SelectedProfile.LastPlayedDisplay}"
+                                               Foreground="{StaticResource MutedTextBrush}"
+                                               FontSize="10"/>
+                                </StackPanel>
+                            </Grid>
+                        </ContentControl>
+
                     </Grid>
-                    <controls:ProfileSummaryView Grid.Row="1"
-                                                 Margin="0,0,0,6"
-                                                 UseCompactLayout="True"/>
-                    <controls:ModPanelView Grid.Row="2"
+                    <controls:ModPanelView Grid.Row="1"
                                            ShowStandaloneToggle="False"
                                            UseCompactHeader="True"
                                            UsePdaTheme="True"/>

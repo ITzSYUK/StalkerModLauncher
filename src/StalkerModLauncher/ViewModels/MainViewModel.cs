@@ -129,6 +129,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     public event EventHandler? ProfileCreationRequested;
+    public event EventHandler<ModScanSelectionRequest>? ModScanSelectionRequested;
 
     public string GameInstallPath
     {

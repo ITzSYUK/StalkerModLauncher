@@ -2,7 +2,7 @@
 
 [English version](TECHNICAL_EN.md) | [Русская версия](TECHNICAL_RU.md) | [Russian user guide](USER_GUIDE_RU.md)
 
-This document describes the current architecture of S.T.A.L.K.E.R. Mod Launcher `v1.2.3`: how profiles are stored, how the winning file is selected, how Workspace differs from USVFS, where profile data is kept, and which checks protect original game and mod folders.
+This document describes the current architecture of S.T.A.L.K.E.R. Mod Launcher `v1.2.4`: how profiles are stored, how the winning file is selected, how Workspace differs from USVFS, where profile data is kept, and which checks protect original game and mod folders.
 
 The detailed USVFS research history and experimental prototypes are available in [USVFS_RESEARCH_EN.md](USVFS_RESEARCH_EN.md).
 

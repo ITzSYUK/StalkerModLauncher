@@ -10,10 +10,10 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>..\..\assets\app\icon.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <Version>1.2.3</Version>
-    <FileVersion>1.2.3.0</FileVersion>
-    <AssemblyVersion>1.2.3.0</AssemblyVersion>
-    <InformationalVersion>1.2.3</InformationalVersion>
+    <Version>1.2.4</Version>
+    <FileVersion>1.2.4.0</FileVersion>
+    <AssemblyVersion>1.2.4.0</AssemblyVersion>
+    <InformationalVersion>1.2.4</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>S.T.A.L.K.E.R. Mod Launcher</Product>
     <Authors>ITzSYUK</Authors>

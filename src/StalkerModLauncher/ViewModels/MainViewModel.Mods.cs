@@ -148,16 +148,31 @@ public sealed partial class MainViewModel
                 return;
             }
 
-            var window = new Views.ScanResultsWindow();
-            foreach (var mod in discovered)
+            var selectableMods = discovered.Select(SelectableMod.FromDiscovered).ToList();
+            IReadOnlyList<SelectableMod>? selected;
+
+            if (IsPdaInterfaceEnabled && ModScanSelectionRequested is not null)
             {
-                window.Mods.Add(SelectableMod.FromDiscovered(mod));
+                var request = new ModScanSelectionRequest(selectableMods);
+                ModScanSelectionRequested.Invoke(this, request);
+                selected = await request.Completion;
+            }
+            else
+            {
+                var window = new Views.ScanResultsWindow();
+                foreach (var mod in selectableMods)
+                {
+                    window.Mods.Add(mod);
+                }
+
+                selected = window.ShowDialog() == true
+                    ? window.GetSelectedMods()
+                    : null;
             }
 
-            if (window.ShowDialog() == true)
+            if (selected is not null)
             {
-                var selected = window.GetSelectedMods();
-                Log($"Scan results: {window.Mods.Count} total, {selected.Count} selected.");
+                Log($"Scan results: {selectableMods.Count} total, {selected.Count} selected.");
                 if (selected.Count == 0)
                 {
                     Log("No mods selected.");

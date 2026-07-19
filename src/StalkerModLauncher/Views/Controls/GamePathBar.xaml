@@ -27,7 +27,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <TextBlock Text="Папка игры"
+                <TextBlock Text="Базовая игра"
                            Foreground="{DynamicResource MutedTextBrush}"
                            FontSize="11"/>
                 <TextBox Grid.Row="1"

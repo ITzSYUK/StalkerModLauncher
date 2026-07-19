@@ -1,0 +1,153 @@
+<UserControl x:Class="StalkerModLauncher.Views.Controls.PdaScanResultsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:infrastructure="clr-namespace:StalkerModLauncher.Infrastructure"
+             Background="#080D14">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/StalkerModLauncher;component/Themes/PdaTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <infrastructure:BoolToRadiationConverter x:Key="BoolToRadiationConverter"/>
+
+            <Style x:Key="ScanResultItemStyle" TargetType="ListViewItem">
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                <Setter Property="BorderBrush" Value="#263441"/>
+                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListViewItem">
+                            <Border x:Name="Chrome"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Chrome" Property="Background" Value="#172432"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="Chrome" Property="Background" Value="#213346"/>
+                                    <Setter TargetName="Chrome" Property="BorderBrush" Value="#64798B"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="ВЫБЕРИТЕ МОДЫ ДЛЯ ДОБАВЛЕНИЯ"
+                           FontFamily="Bahnschrift SemiCondensed"
+                           FontSize="17"
+                           FontWeight="SemiBold"/>
+                <TextBlock x:Name="SelectionSummaryText"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="11"
+                           Margin="0,2,0,0"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="Отмена" Click="CancelButton_OnClick" Margin="0,0,6,0"/>
+                <Button Content="Добавить выбранные"
+                        Click="AddButton_OnClick"
+                        Style="{StaticResource PrimaryButtonStyle}"/>
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1"
+                Background="#182330"
+                BorderBrush="#3B4B5B"
+                BorderThickness="1,1,1,0"
+                Padding="8,5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="32"/>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="1.15*"/>
+                    <ColumnDefinition Width="3*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="1" Text="Мод" HorizontalAlignment="Center"/>
+                <TextBlock Grid.Column="2" Text="Обнаружено" HorizontalAlignment="Center"/>
+                <TextBlock Grid.Column="3" Text="Папка" HorizontalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="2"
+                Background="#080D14"
+                BorderBrush="#3B4B5B"
+                BorderThickness="1">
+            <ListView x:Name="ModsListView"
+                      Background="Transparent"
+                      BorderThickness="0"
+                      SelectionMode="Extended"
+                      SelectionChanged="ModsListView_SelectionChanged"
+                      ItemContainerStyle="{StaticResource ScanResultItemStyle}"
+                      infrastructure:SmoothScrollBehavior.IsEnabled="True"
+                      ScrollViewer.CanContentScroll="False"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="8,7">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="1.15*"/>
+                                <ColumnDefinition Width="3*"/>
+                            </Grid.ColumnDefinitions>
+                            <Image Width="17"
+                                   Height="17"
+                                   HorizontalAlignment="Left"
+                                   VerticalAlignment="Top"
+                                   Source="{Binding IsSelected, Converter={StaticResource BoolToRadiationConverter}}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Name}"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,10,0"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding DetectedBy}"
+                                       Foreground="{StaticResource MutedTextBrush}"
+                                       Margin="0,0,10,0"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Grid.Column="3"
+                                       Text="{Binding Path}"
+                                       Foreground="{StaticResource TextBrush}"
+                                       TextWrapping="Wrap"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Border>
+
+        <TextBlock x:Name="MessageText"
+                   Grid.Row="3"
+                   Foreground="{StaticResource AccentBrush}"
+                   FontSize="11"
+                   Margin="0,7,0,0"
+                   Visibility="Collapsed"/>
+    </Grid>
+</UserControl>

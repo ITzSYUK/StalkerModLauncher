@@ -16,7 +16,12 @@ public partial class PdaWindow : Window
         _navigation = navigation;
         DataContext = viewModel;
         viewModel.ProfileCreationRequested += ViewModel_ProfileCreationRequested;
-        Closed += (_, _) => viewModel.ProfileCreationRequested -= ViewModel_ProfileCreationRequested;
+        viewModel.ModScanSelectionRequested += ViewModel_ModScanSelectionRequested;
+        Closed += (_, _) =>
+        {
+            viewModel.ProfileCreationRequested -= ViewModel_ProfileCreationRequested;
+            viewModel.ModScanSelectionRequested -= ViewModel_ModScanSelectionRequested;
+        };
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
@@ -48,6 +53,22 @@ public partial class PdaWindow : Window
             page.Saved += (_, _) => PdaView.ShowProfilePage();
             PdaView.ShowPage(page, $"Настройки: {settingsVm.ProfileName}", showProfileTypeIcon: true);
         }
+    }
+
+    private void ViewModel_ModScanSelectionRequested(object? sender, ModScanSelectionRequest request)
+    {
+        var page = new PdaScanResultsView(request.Mods);
+        page.Accepted += (_, _) =>
+        {
+            request.Accept(page.GetSelectedMods());
+            PdaView.ShowProfilePage();
+        };
+        page.Cancelled += (_, _) =>
+        {
+            request.Cancel();
+            PdaView.ShowProfilePage();
+        };
+        PdaView.ShowPage(page, "Найденные моды", lifetime: page, showProfileTypeIcon: true);
     }
 
     private void ScreenshotsButton_OnClick(object sender, RoutedEventArgs e)
