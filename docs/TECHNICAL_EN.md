@@ -428,7 +428,7 @@ Complete release packaging:
 .\scripts\Build-Release.ps1
 ```
 
-The script reads the version from the project file and verifies formatting, the Release build, and all unit tests before packaging. The manual smoke test for both interfaces and real game profiles is documented in [RELEASE_SMOKE_TEST_EN.md](RELEASE_SMOKE_TEST_EN.md).
+The script reads the version from the project file and verifies formatting, the Release build, and all unit tests before packaging.
 
 The script creates two ZIP archives:
 

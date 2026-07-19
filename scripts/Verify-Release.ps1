@@ -54,4 +54,4 @@ Invoke-DotNet `
     -Arguments @("test", $tests, "-c", "Release", "--no-build", "--no-restore") `
     -FailureMessage "Release tests failed."
 
-Write-Host "Automated release verification passed. Complete docs/RELEASE_SMOKE_TEST_RU.md before publishing."
+Write-Host "Automated release verification passed."

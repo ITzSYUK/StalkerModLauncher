@@ -430,7 +430,7 @@ dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 .\scripts\Build-Release.ps1
 ```
 
-Скрипт берёт номер версии из файла проекта и до упаковки автоматически проверяет форматирование, Release-сборку и все модульные тесты. Ручной smoke-тест интерфейсов и реальных игровых профилей описан в [RELEASE_SMOKE_TEST_RU.md](RELEASE_SMOKE_TEST_RU.md).
+Скрипт берёт номер версии из файла проекта и до упаковки автоматически проверяет форматирование, Release-сборку и все модульные тесты.
 
 Создаются два ZIP:
 
