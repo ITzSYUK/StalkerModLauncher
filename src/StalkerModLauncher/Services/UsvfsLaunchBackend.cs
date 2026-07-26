@@ -30,11 +30,11 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
         IProgress<string> progress,
         CancellationToken cancellationToken = default)
     {
-        if (!UsvfsFeatureGate.IsEnabled())
+        if (!UsvfsFeatureGate.IsEnabled(_runtimeDirectory))
         {
             throw new InvalidOperationException(
-                $"Official USVFS backend is unavailable. Put {UsvfsRuntimeFiles.DllFileName} and " +
-                $"{UsvfsRuntimeFiles.ProxyFileName} next to the launcher or set " +
+                "Official USVFS backend is unavailable. Put the complete x64/x86 USVFS runtime " +
+                "and StalkerModLauncher.UsvfsX86Host.exe next to the launcher or set " +
                 $"{UsvfsFeatureGate.EnableEnvironmentVariable}=1 for a research build.");
         }
 
@@ -71,32 +71,55 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
 
         progress.Report($"USVFS executable source: {launchTarget.SourceName}.");
         var architecture = WindowsExecutableArchitectureDetector.Detect(launchTarget.ExecutablePath);
+        if (architecture == WindowsExecutableArchitecture.Unknown)
+        {
+            throw new BadImageFormatException(
+                $"Не удалось определить архитектуру USVFS-цели: {launchTarget.ExecutablePath}");
+        }
+
         var runtimeFiles = UsvfsRuntimeFiles.Check(_runtimeDirectory);
         if (!runtimeFiles.IsReadyFor(architecture))
         {
             throw new FileNotFoundException(runtimeFiles.MissingFilesMessage(architecture));
         }
 
+        progress.Report($"USVFS runtime: {runtimeFiles.RuntimeVersion}.");
         progress.Report(architecture == WindowsExecutableArchitecture.X86
             ? "USVFS architecture: x86 target through same-bitness host."
             : "USVFS architecture: x64 target.");
 
+        var useAnomalyLauncherBootstrap = IsAnomalyLauncher(launchTarget.ExecutableRelativePath);
         var usePhysicalAnomalyRoot = IsAnomalyEngine(launchTarget.ExecutableRelativePath);
-        var usePhysicalBaseGameRoot = ShouldUsePhysicalBaseGameRoot(context.FileLayerPlan, launchTarget);
-        var usePhysicalArchiveRoot = RequiresPhysicalArchiveRoot(context.FileLayerPlan);
+        var usePhysicalBaseGameRoot = !useAnomalyLauncherBootstrap &&
+                                      ShouldUsePhysicalBaseGameRoot(context.FileLayerPlan, launchTarget);
+        var usePhysicalArchiveRoot = !useAnomalyLauncherBootstrap &&
+                                     RequiresPhysicalArchiveRoot(context.FileLayerPlan);
+        var bootstrapRoot = UsvfsBootstrapPathResolver.Resolve(
+            profileWorkspace,
+            context.FileLayerPlan.BaseGame.RootPath,
+            profile.Id);
+        UsvfsBootstrapPathResolver.DeleteLegacySharedProfile(
+            profileWorkspace,
+            context.FileLayerPlan.BaseGame.RootPath,
+            profile.Id);
         UsvfsBootstrapResult? bootstrap = null;
-        if (usePhysicalBaseGameRoot)
+        _executableBootstrapper.Clear(profileWorkspace, bootstrapRoot);
+        if (!usePhysicalBaseGameRoot)
         {
-            _executableBootstrapper.Clear(profileWorkspace);
-        }
-        else
-        {
-            bootstrap = _executableBootstrapper.Prepare(
-                context.FileLayerPlan,
-                launchTarget,
-                profileWorkspace,
-                progress,
-                cancellationToken);
+            bootstrap = useAnomalyLauncherBootstrap
+                ? _executableBootstrapper.PrepareAnomalyLauncher(
+                    context.FileLayerPlan,
+                    launchTarget,
+                    bootstrapRoot,
+                    context.OverlayManifest.WriteOverlayRoot,
+                    progress,
+                    cancellationToken)
+                : _executableBootstrapper.Prepare(
+                    context.FileLayerPlan,
+                    launchTarget,
+                    bootstrapRoot,
+                    progress,
+                    cancellationToken);
             MaterializeBootstrapFsgame(profileFsgamePath, bootstrap.RootPath);
         }
 
@@ -104,10 +127,15 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
         var virtualRoot = usePhysicalGameRoot
             ? context.FileLayerPlan.BaseGame.RootPath
             : bootstrap!.RootPath;
-        var mappingPlan = _mappingPlanBuilder.Build(
-            context.FileLayerPlan,
-            context.OverlayManifest,
-            virtualRoot);
+        var mappingPlan = useAnomalyLauncherBootstrap
+            ? _mappingPlanBuilder.BuildAnomalyLauncherBootstrap(
+                context.FileLayerPlan,
+                context.OverlayManifest,
+                virtualRoot)
+            : _mappingPlanBuilder.Build(
+                context.FileLayerPlan,
+                context.OverlayManifest,
+                virtualRoot);
         var workingDirectory = usePhysicalGameRoot
             ? launchTarget.WorkingDirectory
             : ResolveBootstrapWorkingDirectory(
@@ -119,7 +147,9 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
             : bootstrap!.ExecutablePath;
         progress.Report(usePhysicalBaseGameRoot
             ? "USVFS root strategy: physical game root for base executable."
-            : usePhysicalAnomalyRoot
+            : useAnomalyLauncherBootstrap
+                ? "USVFS root strategy: isolated Anomaly launcher bootstrap root."
+                : usePhysicalAnomalyRoot
                 ? "USVFS root strategy: physical Anomaly root."
                 : usePhysicalArchiveRoot
                     ? "USVFS root strategy: physical game root for X-Ray archive directories."
@@ -149,6 +179,9 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
             session,
             processStarter));
     }
+
+    private static bool IsAnomalyLauncher(string executableRelativePath) =>
+        executableRelativePath.Equals("AnomalyLauncher.exe", StringComparison.OrdinalIgnoreCase);
 
     private static void MaterializeBootstrapFsgame(string? profileFsgamePath, string bootstrapRoot)
     {

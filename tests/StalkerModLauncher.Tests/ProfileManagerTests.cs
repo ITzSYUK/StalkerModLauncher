@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using StalkerModLauncher.Models;
 using StalkerModLauncher.Services;
 using Xunit;
@@ -48,7 +50,7 @@ public sealed class ProfileManagerTests
         Assert.Equal("Zona — копия", duplicate.Name);
         Assert.NotEqual(source.Id, duplicate.Id);
         Assert.NotEqual(source.WorkspacePath, duplicate.WorkspacePath);
-        Assert.EndsWith($"Zona — копия-{duplicate.Id[..8]}", duplicate.WorkspacePath);
+        Assert.EndsWith($"profile-{duplicate.Id}", duplicate.WorkspacePath);
         Assert.Equal(0, duplicate.TotalPlaytimeSeconds);
         Assert.Null(duplicate.LastPlayedAt);
         Assert.False(duplicate.IsDiscordStatusEnabled);
@@ -60,16 +62,15 @@ public sealed class ProfileManagerTests
     }
 
     [Fact]
-    public void Duplicate_SanitizesAndLimitsReadableWorkspaceName()
+    public void Duplicate_UsesStableAsciiWorkspaceName()
     {
         var source = new ModProfile { Name = new string('A', 100) + ": invalid." };
 
         var duplicate = _manager.Duplicate([source], source);
         var directoryName = Path.GetFileName(duplicate.WorkspacePath);
 
-        Assert.DoesNotContain(':', directoryName);
-        Assert.True(directoryName.Length <= 89);
-        Assert.EndsWith(duplicate.Id[..8], directoryName);
+        Assert.Equal($"profile-{duplicate.Id}", directoryName);
+        Assert.All(directoryName, character => Assert.True(character <= 0x7F));
     }
 
     [Fact]
@@ -97,6 +98,64 @@ public sealed class ProfileManagerTests
         Assert.Same(remaining, selected);
         Assert.Single(_workspaceManager.DeletedProfiles);
         Assert.Same(removed, _workspaceManager.DeletedProfiles[0]);
+    }
+
+    [Fact]
+    public void Delete_OverlayProfileDeletesItsLocalAndLegacyUsvfsBootstrap()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "StalkerModLauncherProfileDeleteTests",
+            Guid.NewGuid().ToString("N"));
+        try
+        {
+            var paths = new AppPaths(root, Path.Combine(root, "workspaces"), false);
+            var manager = new ProfileManager(paths, _workspaceManager);
+            var game = Path.Combine(root, "game");
+            var removed = new ModProfile
+            {
+                Id = "removed-profile",
+                Name = "Removed",
+                GameInstallPath = game,
+                WorkspacePath = Path.Combine(paths.WorkspaceRoot, "Removed")
+            };
+            var remaining = new ModProfile
+            {
+                Id = "remaining-profile",
+                Name = "Remaining",
+                GameInstallPath = game,
+                WorkspacePath = Path.Combine(paths.WorkspaceRoot, "Remaining")
+            };
+            var removedBootstrap = Path.Combine(removed.WorkspacePath, ".usvfs-bootstrap");
+            var remainingBootstrap = Path.Combine(remaining.WorkspacePath, ".usvfs-bootstrap");
+            var removedLegacyBootstrap = GetSharedUsvfsBootstrapPath(removed.WorkspacePath, removed.Id);
+            var remainingLegacyBootstrap = GetSharedUsvfsBootstrapPath(remaining.WorkspacePath, remaining.Id);
+            Directory.CreateDirectory(removedBootstrap);
+            Directory.CreateDirectory(remainingBootstrap);
+            Directory.CreateDirectory(removedLegacyBootstrap);
+            Directory.CreateDirectory(remainingLegacyBootstrap);
+            File.WriteAllText(Path.Combine(removedBootstrap, "engine.dll"), "removed");
+            File.WriteAllText(Path.Combine(remainingBootstrap, "engine.dll"), "remaining");
+            File.WriteAllText(Path.Combine(removedLegacyBootstrap, "engine.dll"), "removed legacy");
+            File.WriteAllText(Path.Combine(remainingLegacyBootstrap, "engine.dll"), "remaining legacy");
+            var profiles = new List<ModProfile> { removed, remaining };
+
+            manager.Delete(profiles, removed);
+
+            Assert.False(Directory.Exists(removedBootstrap));
+            Assert.True(Directory.Exists(remainingBootstrap));
+            Assert.False(Directory.Exists(removedLegacyBootstrap));
+            Assert.True(Directory.Exists(remainingLegacyBootstrap));
+            Assert.Single(profiles);
+            Assert.Same(remaining, profiles[0]);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
     }
 
     [Fact]
@@ -172,6 +231,17 @@ public sealed class ProfileManagerTests
 
         Assert.True(moved);
         Assert.Equal(["Second", "Third", "First"], profiles.Select(profile => profile.Name));
+    }
+
+    private static string GetSharedUsvfsBootstrapPath(string workspacePath, string profileId)
+    {
+        var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(profileId)))
+            [..16]
+            .ToLowerInvariant();
+        return Path.Combine(
+            Path.GetDirectoryName(workspacePath)!,
+            ".usvfs-bootstrap",
+            key);
     }
 
     private sealed class FakeWorkspaceManager : IProfileWorkspaceManager

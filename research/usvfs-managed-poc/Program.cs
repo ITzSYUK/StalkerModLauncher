@@ -19,16 +19,19 @@ static async Task<int> RunHostAsync(string[] args)
 
     var usvfsRoot = Path.GetFullPath(args[0]);
     CopyUsvfsRuntime(usvfsRoot, AppContext.BaseDirectory);
-    if (args.Length >= 2)
+    CopyRequired(
+        Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "native",
+            "StalkerModLauncher.UsvfsX86Host",
+            "build32",
+            UsvfsRuntimeFiles.X86HostFileName),
+        Path.Combine(AppContext.BaseDirectory, UsvfsRuntimeFiles.X86HostFileName));
+    var runtimeFiles = UsvfsRuntimeFiles.Check(AppContext.BaseDirectory);
+    if (!runtimeFiles.IsReady)
     {
-        CopyRequired(
-            Path.Combine(
-                Directory.GetCurrentDirectory(),
-                "native",
-                "StalkerModLauncher.UsvfsX86Host",
-                "build32",
-                UsvfsRuntimeFiles.X86HostFileName),
-            Path.Combine(AppContext.BaseDirectory, UsvfsRuntimeFiles.X86HostFileName));
+        throw new InvalidOperationException(
+            runtimeFiles.MissingFilesMessage(WindowsExecutableArchitecture.Unknown));
     }
 
     var root = Path.Combine(Path.GetTempPath(), $"stalker-usvfs-managed-poc-{Environment.ProcessId}");

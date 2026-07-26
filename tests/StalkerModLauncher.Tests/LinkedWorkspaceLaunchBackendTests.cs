@@ -32,7 +32,7 @@ public sealed class LinkedWorkspaceLaunchBackendTests : IDisposable
         CreateFile(game, "fsgame.ltx", "$app_data_root$ = true | false | appdata");
         CreateFile(mod, "bin/xr_3da.exe", "mod executable");
 
-        var fileLayerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, Path.Combine(workspaceRoot, $"Backend profile-{profile.Id[..8]}"));
+        var fileLayerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, Path.Combine(workspaceRoot, $"profile-{profile.Id}"));
         var launchContext = new ProfileLaunchBackendContext(game, profile, fileLayerPlan);
 
         var plan = await backend.PrepareAsync(launchContext, new ProgressLog());
@@ -41,7 +41,7 @@ public sealed class LinkedWorkspaceLaunchBackendTests : IDisposable
         Assert.Equal("-nointro -dbg", plan.Arguments);
         Assert.EndsWith(Path.Combine("current", "bin", "xr_3da.exe"), plan.ExecutablePath);
         Assert.EndsWith("current", plan.WorkingDirectory);
-        Assert.EndsWith($"Backend profile-{profile.Id[..8]}", profile.WorkspacePath);
+        Assert.EndsWith($"profile-{profile.Id}", profile.WorkspacePath);
         Assert.Equal(@"bin\xr_3da.exe", profile.ExecutableRelativePath);
         Assert.Empty(profile.WorkingDirectoryRelative);
         Assert.Equal("mod executable", File.ReadAllText(plan.ExecutablePath));

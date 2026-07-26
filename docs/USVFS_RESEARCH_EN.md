@@ -73,8 +73,8 @@ Managed USVFS PoC passed.
 ```
 
 The branch now contains an experimental `UsvfsLaunchBackend`. The backend is
-available when `usvfs_x64.dll` and `usvfs_proxy_x64.exe` are placed next to the
-launcher executable. The environment variable
+available when the complete validated x64/x86 USVFS bundle and x86 host are
+placed next to the launcher executable. The environment variable
 `STALKER_MOD_LAUNCHER_ENABLE_OFFICIAL_USVFS=1` remains available for isolated
 research runs, but is no longer required by the prepared experimental build.
 Each non-standalone profile can select `LinkedWorkspace` or `VirtualFileSystem`
@@ -91,10 +91,11 @@ The helper remains alive while hooked descendants are running, so a short-lived
 launcher such as Gunslinger `Play.exe` cannot tear down USVFS before its
 `xrEngine.exe` child exits.
 
-Anomaly profiles bypass the 32-bit `AnomalyLauncher.exe` and start a selected
-64-bit `AnomalyDX*.exe` directly. `Auto` reads `AnomalyLauncher.cfg`; the profile
-settings also allow DX8, DX9, DX10 or DX11 with optional AVX. This selection is
-stored as a relative path, so `FileLayerPlan` still resolves the executable from
+For Anomaly, `Auto` starts the 32-bit `AnomalyLauncher.exe` through the x86
+helper, and the 64-bit engine it creates inherits USVFS. A manual DX8, DX9,
+DX10 or DX11 selection with optional AVX bypasses the launcher and starts the
+selected `AnomalyDX*.exe` directly. This selection is stored as a relative
+path, so `FileLayerPlan` still resolves the executable from
 the enabled mod with the highest priority.
 
 ## Current integration
@@ -145,7 +146,7 @@ The new direction is narrower:
 ## Manual test workflow
 
 1. Put the USVFS runtime files next to the launcher: `usvfs_x64.dll`,
-   `usvfs_proxy_x64.exe`, `usvfs_x86.dll` and
+   `usvfs_proxy_x64.exe`, `usvfs_x86.dll`, `usvfs_proxy_x86.exe` and
    `StalkerModLauncher.UsvfsX86Host.exe`.
 2. Open profile settings and select `USVFS - experimental`.
 3. For Anomaly, leave `Auto` selected or choose the required renderer.

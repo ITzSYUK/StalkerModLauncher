@@ -44,6 +44,30 @@ public sealed class ProfileHealthServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AnalyzeAsync_CountsScopSavesButNotTheirMetadataOrPreview()
+    {
+        var workspace = Path.Combine(_root, "ixray-workspace");
+        CreateFileAtPath(Path.Combine(workspace, ".stalker-launcher-workspace"));
+        CreateFileAtPath(Path.Combine(workspace, "userdata", "savedgames", "first.scop"));
+        CreateFileAtPath(Path.Combine(workspace, "userdata", "savedgames", "first.scop_data"));
+        CreateFileAtPath(Path.Combine(workspace, "userdata", "savedgames", "first.dds"));
+        CreateFileAtPath(Path.Combine(workspace, "userdata", "savedgames", "second.SCOP"));
+        CreateFileAtPath(Path.Combine(workspace, "userdata", "savedgames", "unrelated.txt"));
+        var profile = new ModProfile
+        {
+            GameInstallPath = CreateGame(),
+            WorkspacePath = workspace
+        };
+
+        var report = await _service.AnalyzeAsync(profile);
+
+        Assert.Contains(
+            report.Checks,
+            check => check.Title == "Сохранения" &&
+                     check.Details.StartsWith("2 файл"));
+    }
+
+    [Fact]
     public async Task AnalyzeAsync_RejectsOverlayProfileWithoutOwnGamePath()
     {
         _ = CreateGame();

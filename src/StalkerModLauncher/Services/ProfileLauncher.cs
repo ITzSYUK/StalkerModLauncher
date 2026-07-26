@@ -75,7 +75,9 @@ public sealed class ProfileLauncher : IProfileLauncher
         var workspace = _profileManager.EnsureProfileFolderPath(profile, progress);
 
         var fileLayerPlan = FileLayerPlan.CreateLinkedWorkspace(gamePath, profile, workspace);
-        var overlayManifest = _overlayManifestBuilder.BuildLinkedWorkspace(profile, fileLayerPlan, workspace);
+        var overlayManifest = profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem
+            ? _overlayManifestBuilder.BuildVirtualFileSystem(profile, fileLayerPlan, workspace)
+            : _overlayManifestBuilder.BuildLinkedWorkspace(profile, fileLayerPlan, workspace);
         return new ProfileLaunchBackendContext(gamePath, profile, fileLayerPlan, overlayManifest);
     }
 

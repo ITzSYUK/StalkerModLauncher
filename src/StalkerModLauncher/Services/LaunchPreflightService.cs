@@ -9,11 +9,17 @@ public sealed class LaunchPreflightService
     private readonly ProfileManager _profileManager;
     private readonly ProfileLaunchPlanResolver _launchPlanResolver = new();
     private readonly OverlayManifestBuilder _overlayManifestBuilder = new();
+    private readonly AnomalyUsvfsLaunchTargetResolver _anomalyUsvfsLaunchTargetResolver = new();
+    private readonly string _usvfsRuntimeDirectory;
 
-    public LaunchPreflightService(GameInstallationValidator gameValidator, ProfileManager profileManager)
+    public LaunchPreflightService(
+        GameInstallationValidator gameValidator,
+        ProfileManager profileManager,
+        string? usvfsRuntimeDirectory = null)
     {
         _gameValidator = gameValidator;
         _profileManager = profileManager;
+        _usvfsRuntimeDirectory = Path.GetFullPath(usvfsRuntimeDirectory ?? AppContext.BaseDirectory);
     }
 
     public Task<LaunchPreflightReport> AnalyzeAsync(ModProfile profile, CancellationToken cancellationToken = default)
@@ -95,6 +101,8 @@ public sealed class LaunchPreflightService
             "fsgame.ltx",
             fsgameSource ?? "Файл не найден. Некоторые движки запускаются без него, но сохранения профиля могут не изолироваться."));
 
+        AddUsvfsRuntimeCheck(checks, profile, fileLayerPlan, launchPlan);
+
         if (!profile.IsStandalone)
         {
             AddWorkspaceChecks(checks, profile);
@@ -120,8 +128,13 @@ public sealed class LaunchPreflightService
         }
 
         var workspace = _profileManager.GetProfileFolderPath(profile);
-        return string.IsNullOrWhiteSpace(workspace)
-            ? null
+        if (string.IsNullOrWhiteSpace(workspace))
+        {
+            return null;
+        }
+
+        return profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem
+            ? _launchPlanResolver.PreviewVirtualFileSystem(profile, fileLayerPlan)
             : _launchPlanResolver.PreviewLinkedWorkspace(profile, fileLayerPlan, workspace);
     }
 
@@ -136,9 +149,22 @@ public sealed class LaunchPreflightService
         }
 
         var workspace = _profileManager.GetProfileFolderPath(profile);
-        return string.IsNullOrWhiteSpace(workspace)
-            ? null
-            : _overlayManifestBuilder.BuildLinkedWorkspace(profile, fileLayerPlan, workspace, cancellationToken: cancellationToken);
+        if (string.IsNullOrWhiteSpace(workspace))
+        {
+            return null;
+        }
+
+        return profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem
+            ? _overlayManifestBuilder.BuildVirtualFileSystem(
+                profile,
+                fileLayerPlan,
+                workspace,
+                cancellationToken: cancellationToken)
+            : _overlayManifestBuilder.BuildLinkedWorkspace(
+                profile,
+                fileLayerPlan,
+                workspace,
+                cancellationToken: cancellationToken);
     }
 
     private FileLayerPlan? TryCreateLinkedFileLayerPlan(ModProfile profile)
@@ -178,6 +204,61 @@ public sealed class LaunchPreflightService
         catch (Exception ex)
         {
             checks.Add(new ProfileHealthCheck(ProfileHealthStatus.Warning, "Свободное место", ex.Message));
+        }
+    }
+
+    private void AddUsvfsRuntimeCheck(
+        List<ProfileHealthCheck> checks,
+        ModProfile profile,
+        FileLayerPlan? fileLayerPlan,
+        LaunchPlanResolution? launchResolution)
+    {
+        if (profile.LaunchBackendKind != LaunchBackendKind.VirtualFileSystem)
+        {
+            return;
+        }
+
+        if (profile.IsStandalone)
+        {
+            checks.Add(Error("USVFS", "USVFS доступен только для обычных многослойных профилей."));
+            return;
+        }
+
+        var runtimeFiles = UsvfsRuntimeFiles.Check(_usvfsRuntimeDirectory);
+        if (!runtimeFiles.IsReady)
+        {
+            checks.Add(Error(
+                "USVFS runtime",
+                runtimeFiles.MissingFilesMessage(WindowsExecutableArchitecture.Unknown)));
+            return;
+        }
+
+        if (fileLayerPlan is null || launchResolution is null || !launchResolution.IsReady)
+        {
+            return;
+        }
+
+        try
+        {
+            var target = _anomalyUsvfsLaunchTargetResolver.Resolve(profile, fileLayerPlan, launchResolution);
+            var architecture = WindowsExecutableArchitectureDetector.Detect(target.ExecutablePath);
+            if (architecture == WindowsExecutableArchitecture.Unknown)
+            {
+                checks.Add(Error(
+                    "USVFS runtime",
+                    $"Не удалось определить архитектуру итогового EXE: {target.ExecutablePath}"));
+                return;
+            }
+
+            checks.Add(new ProfileHealthCheck(
+                ProfileHealthStatus.Healthy,
+                "USVFS runtime",
+                $"Полный комплект USVFS {runtimeFiles.RuntimeVersion} готов. " +
+                $"Цель: {FormatArchitecture(architecture)}, {target.ExecutablePath}"));
+        }
+        catch (Exception ex)
+        {
+            checks.Add(Error("USVFS runtime", ex.Message));
         }
     }
 
@@ -363,6 +444,9 @@ public sealed class LaunchPreflightService
 
     private static ProfileHealthCheck Error(string title, string details) =>
         new(ProfileHealthStatus.Error, title, details);
+
+    private static string FormatArchitecture(WindowsExecutableArchitecture architecture) =>
+        architecture == WindowsExecutableArchitecture.X86 ? "x86" : "x64";
 
     private static EnumerationOptions SafeEnumerationOptions { get; } = new()
     {

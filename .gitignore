@@ -10,6 +10,7 @@ native/**/build*/
 research/**/build*/
 session-ses_*.md
 opencode.txt
+AGENTS.md
 docs/RELEASE_NOTES_v*.md
 /ModLauncherLogo*.png
 /radiation_*.png

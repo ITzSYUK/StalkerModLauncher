@@ -103,7 +103,11 @@ public sealed class ProfileHealthService
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var saveCount = CountFiles(savedGamesPath, "*.sav", cancellationToken);
+        var saveCount = CountFiles(
+            savedGamesPath,
+            cancellationToken,
+            ".sav",
+            ".scop");
         checks.Add(new ProfileHealthCheck(
             Directory.Exists(savedGamesPath) ? ProfileHealthStatus.Healthy : ProfileHealthStatus.Warning,
             "Сохранения",
@@ -160,9 +164,22 @@ public sealed class ProfileHealthService
         string profileFolderPath,
         CancellationToken cancellationToken)
     {
-        return fileLayerPlan is null || string.IsNullOrWhiteSpace(profileFolderPath)
-            ? null
-            : _overlayManifestBuilder.BuildLinkedWorkspace(profile, fileLayerPlan, profileFolderPath, cancellationToken: cancellationToken);
+        if (fileLayerPlan is null || string.IsNullOrWhiteSpace(profileFolderPath))
+        {
+            return null;
+        }
+
+        return profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem
+            ? _overlayManifestBuilder.BuildVirtualFileSystem(
+                profile,
+                fileLayerPlan,
+                profileFolderPath,
+                cancellationToken: cancellationToken)
+            : _overlayManifestBuilder.BuildLinkedWorkspace(
+                profile,
+                fileLayerPlan,
+                profileFolderPath,
+                cancellationToken: cancellationToken);
     }
 
     private static void AddProfileStorageChecks(List<ProfileHealthCheck> checks, ModProfile profile)
@@ -290,16 +307,21 @@ public sealed class ProfileHealthService
             $"Причина выбора: {source.Reason}. Источник: {source.SourceName}.";
     }
 
-    private static int CountFiles(string path, string pattern, CancellationToken cancellationToken)
+    private static int CountFiles(
+        string path,
+        CancellationToken cancellationToken,
+        params string[] extensions)
     {
         try
         {
             return Directory.Exists(path)
-                ? Directory.EnumerateFiles(path, pattern, SearchOption.TopDirectoryOnly)
-                    .Count(_ =>
+                ? Directory.EnumerateFiles(path, "*", SearchOption.TopDirectoryOnly)
+                    .Count(file =>
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        return true;
+                        return extensions.Contains(
+                            Path.GetExtension(file),
+                            StringComparer.OrdinalIgnoreCase);
                     })
                 : 0;
         }

@@ -84,7 +84,7 @@ public sealed class MainViewModelTests
             Assert.NotEqual(source.Id, duplicate.Id);
             Assert.Equal(source.GameInstallPath, duplicate.GameInstallPath);
             Assert.NotEqual(source.WorkspacePath, duplicate.WorkspacePath);
-            Assert.EndsWith($"Anomaly — копия-{duplicate.Id[..8]}", duplicate.WorkspacePath);
+            Assert.EndsWith($"profile-{duplicate.Id}", duplicate.WorkspacePath);
             Assert.Equal(0, duplicate.TotalPlaytimeSeconds);
             Assert.Null(duplicate.LastPlayedAt);
             Assert.Single(duplicate.Mods);
@@ -188,6 +188,77 @@ public sealed class MainViewModelTests
 
             Assert.Single(profile.Mods);
             Assert.Equal(firstMod, profile.Mods[0].SourcePath);
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public async Task ModToggle_RefreshesAutomaticallySelectedExecutable()
+    {
+        await RunWithViewModelAsync((viewModel, root) =>
+        {
+            var gameRoot = CreateValidGameRoot(root);
+            var engineModRoot = Directory.CreateDirectory(Path.Combine(root, "mods", "engine")).FullName;
+            Directory.CreateDirectory(Path.Combine(engineModRoot, "bin_x64"));
+            File.WriteAllText(Path.Combine(engineModRoot, "bin_x64", "xrEngine.exe"), string.Empty);
+            var engineMod = new ModEntry
+            {
+                Name = "Engine",
+                SourcePath = engineModRoot,
+                IsEnabled = true,
+                Order = 1
+            };
+            var profile = new ModProfile
+            {
+                Name = "Automatic executable",
+                GameInstallPath = gameRoot,
+                ExecutableRelativePath = @"bin_x64\xrEngine.exe",
+                ExecutableSourcePath = string.Empty,
+                Mods = { engineMod }
+            };
+            viewModel.AddCreatedProfile(profile);
+
+            engineMod.IsEnabled = false;
+
+            Assert.Equal(@"bin\xr_3da.exe", profile.ExecutableRelativePath);
+
+            engineMod.IsEnabled = true;
+
+            Assert.Equal(@"bin_x64\xrEngine.exe", profile.ExecutableRelativePath);
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public async Task ModToggle_DoesNotReplaceManuallyPinnedExecutable()
+    {
+        await RunWithViewModelAsync((viewModel, root) =>
+        {
+            var gameRoot = CreateValidGameRoot(root);
+            var engineModRoot = Directory.CreateDirectory(Path.Combine(root, "mods", "engine")).FullName;
+            Directory.CreateDirectory(Path.Combine(engineModRoot, "bin_x64"));
+            File.WriteAllText(Path.Combine(engineModRoot, "bin_x64", "xrEngine.exe"), string.Empty);
+            var engineMod = new ModEntry
+            {
+                Name = "Engine",
+                SourcePath = engineModRoot,
+                IsEnabled = true,
+                Order = 1
+            };
+            var profile = new ModProfile
+            {
+                Name = "Pinned executable",
+                GameInstallPath = gameRoot,
+                ExecutableRelativePath = @"bin_x64\xrEngine.exe",
+                ExecutableSourcePath = engineModRoot,
+                Mods = { engineMod }
+            };
+            viewModel.AddCreatedProfile(profile);
+
+            engineMod.IsEnabled = false;
+
+            Assert.Equal(@"bin_x64\xrEngine.exe", profile.ExecutableRelativePath);
+            Assert.Equal(engineModRoot, profile.ExecutableSourcePath);
             return Task.CompletedTask;
         });
     }

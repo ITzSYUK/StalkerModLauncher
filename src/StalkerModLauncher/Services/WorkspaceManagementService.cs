@@ -31,16 +31,57 @@ public sealed class WorkspaceManagementService
         profile.WorkingDirectoryRelative = result.WorkingDirectoryRelative;
     }
 
-    public Task MoveAsync(
+    public async Task<WorkspaceMoveResult> MoveAsync(
         ModProfile profile,
         string destinationRoot,
         IProgress<string> progress,
         CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => Move(profile, destinationRoot, progress, cancellationToken), cancellationToken);
+        var result = await Task.Run(
+            () => PrepareMove(profile, destinationRoot, progress, cancellationToken),
+            cancellationToken);
+        if (!result.WasMoved)
+        {
+            return result;
+        }
+
+        // ModProfile is observed by WPF. Change it only after returning to the
+        // caller's synchronization context, never from the Task.Run worker.
+        profile.WorkspacePath = result.DestinationPath;
+
+        var cleanupFailure = await Task.Run(
+            () => TryCleanupOldWorkspace(profile, result.PreviousWorkspacePath),
+            CancellationToken.None);
+        return result with { CleanupFailure = cleanupFailure };
     }
 
-    private void Move(ModProfile profile, string destinationRoot, IProgress<string> progress, CancellationToken cancellationToken)
+    public Task<Exception?> RetryOldWorkspaceCleanupAsync(
+        ModProfile profile,
+        string oldWorkspace,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(oldWorkspace) || !Directory.Exists(oldWorkspace))
+        {
+            return Task.FromResult<Exception?>(null);
+        }
+
+        if (!string.IsNullOrWhiteSpace(profile.WorkspacePath) &&
+            FileSystemSafety.IsSameDirectory(profile.WorkspacePath, oldWorkspace))
+        {
+            return Task.FromResult<Exception?>(new InvalidOperationException(
+                $"Нельзя удалить активный workspace профиля: {oldWorkspace}"));
+        }
+
+        return Task.Run(
+            () => TryCleanupOldWorkspace(profile, oldWorkspace),
+            cancellationToken);
+    }
+
+    private WorkspaceMoveResult PrepareMove(
+        ModProfile profile,
+        string destinationRoot,
+        IProgress<string> progress,
+        CancellationToken cancellationToken)
     {
         if (profile.IsStandalone)
         {
@@ -55,7 +96,7 @@ public sealed class WorkspaceManagementService
         var oldWorkspace = profile.WorkspacePath;
         if (!string.IsNullOrWhiteSpace(oldWorkspace) && FileSystemSafety.IsSameDirectory(oldWorkspace, destination))
         {
-            return;
+            return new WorkspaceMoveResult(destination, oldWorkspace, WasMoved: false);
         }
 
         if (!string.IsNullOrWhiteSpace(oldWorkspace) &&
@@ -94,18 +135,8 @@ public sealed class WorkspaceManagementService
 
             cancellationToken.ThrowIfCancellationRequested();
             Directory.Move(temporary, destination);
-            profile.WorkspacePath = destination;
             progress.Report($"Workspace перенесён: {destination}. Папка current будет пересобрана.");
-
-            if (!string.IsNullOrWhiteSpace(oldWorkspace) && Directory.Exists(oldWorkspace))
-            {
-                var oldProfile = new ModProfile
-                {
-                    WorkspacePath = oldWorkspace,
-                    GameInstallPath = profile.GameInstallPath
-                };
-                _workspaceBuilder.DeleteProfileWorkspace(oldProfile, profile.GameInstallPath);
-            }
+            return new WorkspaceMoveResult(destination, oldWorkspace, WasMoved: true);
         }
         catch
         {
@@ -116,6 +147,52 @@ public sealed class WorkspaceManagementService
 
             throw;
         }
+    }
+
+    private Exception? TryCleanupOldWorkspace(ModProfile profile, string? oldWorkspace)
+    {
+        if (string.IsNullOrWhiteSpace(oldWorkspace) || !Directory.Exists(oldWorkspace))
+        {
+            return null;
+        }
+
+        try
+        {
+            LegacyProfileDataAlias.Delete(oldWorkspace, profile.Id);
+            _workspaceBuilder.DeleteProfileWorkspaceAtPath(
+                CreateCleanupProfile(profile, oldWorkspace),
+                profile.GameInstallPath,
+                oldWorkspace);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
+    }
+
+    private static ModProfile CreateCleanupProfile(ModProfile source, string workspacePath)
+    {
+        var cleanupProfile = new ModProfile
+        {
+            Id = source.Id,
+            Name = source.Name,
+            WorkspacePath = workspacePath,
+            GameInstallPath = source.GameInstallPath
+        };
+
+        foreach (var mod in source.Mods)
+        {
+            cleanupProfile.Mods.Add(new ModEntry
+            {
+                Name = mod.Name,
+                SourcePath = mod.SourcePath,
+                IsEnabled = mod.IsEnabled,
+                Order = mod.Order
+            });
+        }
+
+        return cleanupProfile;
     }
 
     private static void CopyDirectory(
@@ -209,3 +286,9 @@ public sealed class WorkspaceManagementService
         }
     }
 }
+
+public sealed record WorkspaceMoveResult(
+    string DestinationPath,
+    string? PreviousWorkspacePath,
+    bool WasMoved,
+    Exception? CleanupFailure = null);

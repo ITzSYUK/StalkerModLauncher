@@ -8,6 +8,7 @@ $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $solution = Join-Path $repositoryRoot "StalkerModLauncher.sln"
 $project = Join-Path $repositoryRoot "src\StalkerModLauncher\StalkerModLauncher.csproj"
 $tests = Join-Path $repositoryRoot "tests\StalkerModLauncher.Tests\StalkerModLauncher.Tests.csproj"
+$usvfsSmokeScript = Join-Path $PSScriptRoot "Test-UsvfsRuntime.ps1"
 
 [xml]$projectFile = Get-Content -LiteralPath $project -Raw
 $versionPropertyGroup = @($projectFile.Project.PropertyGroup) |
@@ -53,5 +54,7 @@ Invoke-DotNet `
 Invoke-DotNet `
     -Arguments @("test", $tests, "-c", "Release", "--no-build", "--no-restore") `
     -FailureMessage "Release tests failed."
+
+& $usvfsSmokeScript
 
 Write-Host "Automated release verification passed."

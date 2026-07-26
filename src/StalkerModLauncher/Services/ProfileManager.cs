@@ -93,6 +93,14 @@ public sealed class ProfileManager
     {
         if (!profile.IsStandalone)
         {
+            var workspacePath = string.IsNullOrWhiteSpace(profile.WorkspacePath)
+                ? CreateWorkspacePath(profile, profile.GameInstallPath)
+                : profile.WorkspacePath;
+            LegacyProfileDataAlias.Delete(workspacePath, profile.Id);
+            UsvfsBootstrapPathResolver.DeleteProfile(
+                workspacePath,
+                profile.GameInstallPath,
+                profile.Id);
             _workspaceManager.DeleteProfileWorkspace(profile, profile.GameInstallPath);
         }
 
@@ -155,13 +163,18 @@ public sealed class ProfileManager
 
     internal static string CreateWorkspaceDirectoryName(ModProfile profile)
     {
-        var readableName = FileSystemSafety.SanitizeName(profile.Name);
-        if (readableName.Length > 80)
+        var id = profile.Id.Trim();
+        if (id.Length > 64 ||
+            id.Length == 0 ||
+            id.Any(character => character > 0x7F ||
+                                !char.IsLetterOrDigit(character) &&
+                                character is not '-' and not '_'))
         {
-            readableName = readableName[..80].TrimEnd(' ', '.');
+            var bytes = System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(profile.Id));
+            id = Convert.ToHexString(bytes)[..16];
         }
 
-        var shortId = profile.Id.Length > 8 ? profile.Id[..8] : profile.Id;
-        return $"{readableName}-{shortId}";
+        return $"profile-{id.ToLowerInvariant()}";
     }
 }

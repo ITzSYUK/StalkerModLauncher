@@ -1,6 +1,7 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
 using StalkerModLauncher.Models;
+using StalkerModLauncher.Services;
 
 namespace StalkerModLauncher.ViewModels;
 
@@ -143,9 +144,37 @@ public sealed partial class MainViewModel
             return;
         }
 
+        if (e.PropertyName == nameof(ModEntry.IsEnabled) && sender is ModEntry changedMod)
+        {
+            RefreshAutomaticExecutableSelection(changedMod);
+            RecalculateModOverlayInfo();
+        }
+
         RefreshValidation();
         _autoSave.Schedule();
-        if (e.PropertyName == nameof(ModEntry.IsEnabled)) RecalculateModOverlayInfo();
+    }
+
+    private void RefreshAutomaticExecutableSelection(ModEntry changedMod)
+    {
+        var profile = Profiles.FirstOrDefault(candidate => candidate.Mods.Contains(changedMod));
+        if (profile is null ||
+            profile.IsStandalone ||
+            !string.IsNullOrWhiteSpace(profile.ExecutableSourcePath))
+        {
+            return;
+        }
+
+        var selection = ProfileExecutableSourceResolver.DetectAutomaticSelection(
+            profile,
+            includeWorkspace: false);
+        if (selection is null ||
+            profile.ExecutableRelativePath.Equals(selection.RelativePath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        profile.ExecutableRelativePath = selection.RelativePath;
+        Log($"Launch executable auto-detected after mod state change: {selection.RelativePath} from {selection.SourceName}");
     }
 
     public async Task CleanupAsync()

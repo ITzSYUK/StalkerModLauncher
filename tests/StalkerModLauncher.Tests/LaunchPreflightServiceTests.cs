@@ -212,12 +212,115 @@ public sealed class LaunchPreflightServiceTests : IDisposable
             check => check.Title == "Мод пуст: Empty" && check.Status == ProfileHealthStatus.Warning);
     }
 
+    [Fact]
+    public async Task AnalyzeAsync_UsesVirtualFileSystemPreviewAndValidatesRuntime()
+    {
+        var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
+        var builder = new WorkspaceBuilder(paths);
+        var runtimeDirectory = Path.Combine(_root, "usvfs-runtime");
+        CreateUsvfsRuntimeFiles(runtimeDirectory);
+        var service = new LaunchPreflightService(
+            new GameInstallationValidator(),
+            new ProfileManager(paths, builder),
+            runtimeDirectory);
+        var game = Path.Combine(_root, "usvfs-game");
+        CreateFile("usvfs-game/fsgame.ltx");
+        var executable = Path.Combine(game, "bin_x64", "xrEngine.exe");
+        CopyExecutable(executable, WindowsExecutableArchitecture.X64);
+        var profile = new ModProfile
+        {
+            Name = "USVFS",
+            GameInstallPath = game,
+            ExecutableRelativePath = @"bin_x64\xrEngine.exe",
+            LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
+        };
+
+        var report = await service.AnalyzeAsync(profile);
+
+        Assert.True(report.CanLaunch);
+        Assert.Equal(LaunchBackendKind.VirtualFileSystem, report.LaunchPlan?.BackendKind);
+        Assert.Equal(executable, report.LaunchPlan?.ExecutablePath);
+        Assert.Equal(report.LaunchPlan?.BackendKind, report.OverlayManifest?.LaunchPlan?.BackendKind);
+        Assert.Equal(report.LaunchPlan?.ExecutablePath, report.OverlayManifest?.LaunchPlan?.ExecutablePath);
+        Assert.Equal(report.LaunchPlan?.WorkingDirectory, report.OverlayManifest?.LaunchPlan?.WorkingDirectory);
+        Assert.Contains(
+            report.Checks,
+            check => check.Title == "USVFS runtime" &&
+                     check.Status == ProfileHealthStatus.Healthy &&
+                     check.Details.Contains("x64"));
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_BlocksUsvfsWhenRuntimeBundleIsIncomplete()
+    {
+        var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
+        var builder = new WorkspaceBuilder(paths);
+        var runtimeDirectory = Path.Combine(_root, "incomplete-usvfs-runtime");
+        CreateUsvfsRuntimeFiles(runtimeDirectory);
+        File.Delete(Path.Combine(runtimeDirectory, UsvfsRuntimeFiles.X86ProxyFileName));
+        var service = new LaunchPreflightService(
+            new GameInstallationValidator(),
+            new ProfileManager(paths, builder),
+            runtimeDirectory);
+        var game = Path.Combine(_root, "incomplete-usvfs-game");
+        CreateFile("incomplete-usvfs-game/fsgame.ltx");
+        CopyExecutable(
+            Path.Combine(game, "bin_x64", "xrEngine.exe"),
+            WindowsExecutableArchitecture.X64);
+        var profile = new ModProfile
+        {
+            Name = "Incomplete USVFS",
+            GameInstallPath = game,
+            ExecutableRelativePath = @"bin_x64\xrEngine.exe",
+            LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
+        };
+
+        var report = await service.AnalyzeAsync(profile);
+
+        Assert.False(report.CanLaunch);
+        Assert.Contains(
+            report.Checks,
+            check => check.Title == "USVFS runtime" &&
+                     check.Status == ProfileHealthStatus.Error &&
+                     check.Details.Contains(UsvfsRuntimeFiles.X86ProxyFileName));
+    }
+
     private string CreateFile(string relativePath)
     {
         var path = Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, "test");
         return path;
+    }
+
+    private static void CreateUsvfsRuntimeFiles(string directory)
+    {
+        Directory.CreateDirectory(directory);
+        CopyExecutable(
+            Path.Combine(directory, UsvfsRuntimeFiles.ControllerDllFileName),
+            WindowsExecutableArchitecture.X64);
+        CopyExecutable(
+            Path.Combine(directory, UsvfsRuntimeFiles.X64ProxyFileName),
+            WindowsExecutableArchitecture.X64);
+        CopyExecutable(
+            Path.Combine(directory, UsvfsRuntimeFiles.X86DllFileName),
+            WindowsExecutableArchitecture.X86);
+        CopyExecutable(
+            Path.Combine(directory, UsvfsRuntimeFiles.X86ProxyFileName),
+            WindowsExecutableArchitecture.X86);
+        CopyExecutable(
+            Path.Combine(directory, UsvfsRuntimeFiles.X86HostFileName),
+            WindowsExecutableArchitecture.X86);
+    }
+
+    private static void CopyExecutable(string destination, WindowsExecutableArchitecture architecture)
+    {
+        var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        var systemDirectory = architecture == WindowsExecutableArchitecture.X86 ? "SysWOW64" : "System32";
+        var source = Path.Combine(windows, systemDirectory, "cmd.exe");
+        Assert.True(File.Exists(source));
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        File.Copy(source, destination, overwrite: true);
     }
 
     public void Dispose()

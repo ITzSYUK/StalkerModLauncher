@@ -21,6 +21,37 @@ public sealed class OverlayManifestBuilder
         CancellationToken cancellationToken = default)
     {
         var launch = _launchPlanResolver.PreviewLinkedWorkspace(profile, layerPlan, profileWorkspace);
+        return Build(
+            layerPlan,
+            profileWorkspace,
+            launch,
+            includeOverwrites,
+            cancellationToken);
+    }
+
+    public OverlayManifest BuildVirtualFileSystem(
+        ModProfile profile,
+        FileLayerPlan layerPlan,
+        string profileWorkspace,
+        bool includeOverwrites = false,
+        CancellationToken cancellationToken = default)
+    {
+        var launch = _launchPlanResolver.PreviewVirtualFileSystem(profile, layerPlan);
+        return Build(
+            layerPlan,
+            profileWorkspace,
+            launch,
+            includeOverwrites,
+            cancellationToken);
+    }
+
+    private static OverlayManifest Build(
+        FileLayerPlan layerPlan,
+        string profileWorkspace,
+        LaunchPlanResolution launch,
+        bool includeOverwrites,
+        CancellationToken cancellationToken)
+    {
         var executable = launch.Executable is null
             ? null
             : new OverlayExecutableSnapshot(

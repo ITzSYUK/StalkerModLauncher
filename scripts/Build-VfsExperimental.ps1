@@ -71,6 +71,8 @@ foreach ($entry in $runtimeFiles.GetEnumerator()) {
     Copy-Item -LiteralPath $entry.Value -Destination (Join-Path $outputDirectory $entry.Key)
 }
 
+& (Join-Path $PSScriptRoot "Test-UsvfsRuntime.ps1") -RuntimeRoot $usvfsRoot
+
 $unexpected = Get-ChildItem -LiteralPath $outputDirectory -File | Where-Object {
     $_.Extension -in @('.pdb', '.json', '.md')
 }

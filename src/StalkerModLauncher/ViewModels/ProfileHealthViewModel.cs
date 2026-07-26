@@ -269,19 +269,74 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
             IsChecking = true;
             Log($"Перенос workspace запущен из окна «Состояние»: {_profile.Name}");
             var progress = new Progress<string>(ReportWorkspaceProgress);
-            await _workspaceManagementService.MoveAsync(_profile, destination, progress);
+            var result = await _workspaceManagementService.MoveAsync(_profile, destination, progress);
+            if (!result.WasMoved)
+            {
+                Log($"Workspace уже находится в выбранной папке: {result.DestinationPath}");
+                await RefreshAsync();
+                return;
+            }
+
             Log($"Workspace перенесён из окна «Состояние»: {_profile.Name}");
+            if (result.CleanupFailure is not null && result.PreviousWorkspacePath is not null)
+            {
+                await HandleOldWorkspaceCleanupFailureAsync(result, progress);
+            }
+
             await RefreshAsync();
         }
         catch (Exception ex)
         {
-            Log($"Перенос workspace не выполнен: {ex.Message}");
+            Log($"Перенос workspace не выполнен:{Environment.NewLine}{ex}");
             _dialogService.ShowError("Не удалось перенести workspace", ex.Message);
         }
         finally
         {
             IsChecking = false;
         }
+    }
+
+    private async Task HandleOldWorkspaceCleanupFailureAsync(
+        WorkspaceMoveResult result,
+        IProgress<string> progress)
+    {
+        var oldWorkspace = result.PreviousWorkspacePath!;
+        Log(
+            $"Workspace перенесён в {result.DestinationPath}, но старая папка не удалена: {oldWorkspace}" +
+            $"{Environment.NewLine}{result.CleanupFailure}");
+
+        if (!_dialogService.Confirm(
+                "Workspace перенесён",
+                $"Данные профиля перенесены в:{Environment.NewLine}{result.DestinationPath}" +
+                $"{Environment.NewLine}{Environment.NewLine}Не удалось удалить старую папку:" +
+                $"{Environment.NewLine}{oldWorkspace}" +
+                $"{Environment.NewLine}{Environment.NewLine}Повторить только очистку старой папки?"))
+        {
+            return;
+        }
+
+        progress.Report($"Повторная очистка старого workspace: {oldWorkspace}");
+        var retryFailure = await _workspaceManagementService.RetryOldWorkspaceCleanupAsync(
+            _profile,
+            oldWorkspace);
+        if (retryFailure is null)
+        {
+            Log($"Старый workspace удалён после повторной попытки: {oldWorkspace}");
+            _dialogService.ShowInfo(
+                "Перенос завершён",
+                $"Старая папка workspace удалена:{Environment.NewLine}{oldWorkspace}");
+            return;
+        }
+
+        Log(
+            $"Повторная очистка старого workspace не выполнена: {oldWorkspace}" +
+            $"{Environment.NewLine}{retryFailure}");
+        _dialogService.ShowError(
+            "Workspace перенесён, старая папка осталась",
+            $"Профиль уже использует новую папку:{Environment.NewLine}{result.DestinationPath}" +
+            $"{Environment.NewLine}{Environment.NewLine}Не удалось удалить старую папку:" +
+            $"{Environment.NewLine}{oldWorkspace}" +
+            $"{Environment.NewLine}{Environment.NewLine}{retryFailure.Message}");
     }
 
     private void RunAction(Action action)

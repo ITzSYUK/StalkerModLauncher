@@ -11,24 +11,49 @@ public sealed class UsvfsRuntimeFilesTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void Check_DistinguishesX64AndX86RuntimeReadiness()
+    public void Check_RequiresCompleteValidatedRuntime()
     {
         Directory.CreateDirectory(_root);
-        File.WriteAllText(Path.Combine(_root, UsvfsRuntimeFiles.ControllerDllFileName), string.Empty);
-        File.WriteAllText(Path.Combine(_root, UsvfsRuntimeFiles.X64ProxyFileName), string.Empty);
+        CopyRuntimeFile(UsvfsRuntimeFiles.ControllerDllFileName, WindowsExecutableArchitecture.X64);
+        CopyRuntimeFile(UsvfsRuntimeFiles.X64ProxyFileName, WindowsExecutableArchitecture.X64);
 
         var x64Only = UsvfsRuntimeFiles.Check(_root);
 
-        Assert.True(x64Only.IsReadyFor(WindowsExecutableArchitecture.X64));
+        Assert.False(x64Only.IsReadyFor(WindowsExecutableArchitecture.X64));
         Assert.False(x64Only.IsReadyFor(WindowsExecutableArchitecture.X86));
 
-        File.WriteAllText(Path.Combine(_root, UsvfsRuntimeFiles.X86DllFileName), string.Empty);
-        File.WriteAllText(Path.Combine(_root, UsvfsRuntimeFiles.X86HostFileName), string.Empty);
+        CopyRuntimeFile(UsvfsRuntimeFiles.X86DllFileName, WindowsExecutableArchitecture.X86);
+        CopyRuntimeFile(UsvfsRuntimeFiles.X86HostFileName, WindowsExecutableArchitecture.X86);
+        var missingProxy = UsvfsRuntimeFiles.Check(_root);
 
+        Assert.False(missingProxy.IsReady);
+        Assert.Contains(UsvfsRuntimeFiles.X86ProxyFileName, missingProxy.MissingFileNames);
+
+        CopyRuntimeFile(UsvfsRuntimeFiles.X86ProxyFileName, WindowsExecutableArchitecture.X86);
         var complete = UsvfsRuntimeFiles.Check(_root);
 
         Assert.True(complete.IsReadyFor(WindowsExecutableArchitecture.X64));
         Assert.True(complete.IsReadyFor(WindowsExecutableArchitecture.X86));
+        Assert.NotNull(complete.RuntimeVersion);
+        Assert.Empty(complete.ValidationErrors);
+    }
+
+    [Fact]
+    public void Check_RejectsWrongRuntimeArchitecture()
+    {
+        Directory.CreateDirectory(_root);
+        CopyRuntimeFile(UsvfsRuntimeFiles.ControllerDllFileName, WindowsExecutableArchitecture.X64);
+        CopyRuntimeFile(UsvfsRuntimeFiles.X64ProxyFileName, WindowsExecutableArchitecture.X64);
+        CopyRuntimeFile(UsvfsRuntimeFiles.X86DllFileName, WindowsExecutableArchitecture.X86);
+        CopyRuntimeFile(UsvfsRuntimeFiles.X86ProxyFileName, WindowsExecutableArchitecture.X64);
+        CopyRuntimeFile(UsvfsRuntimeFiles.X86HostFileName, WindowsExecutableArchitecture.X86);
+
+        var status = UsvfsRuntimeFiles.Check(_root);
+
+        Assert.False(status.IsReady);
+        Assert.Contains(
+            status.ValidationErrors,
+            error => error.Contains(UsvfsRuntimeFiles.X86ProxyFileName) && error.Contains("ожидалась архитектура x86"));
     }
 
     public void Dispose()
@@ -37,5 +62,14 @@ public sealed class UsvfsRuntimeFilesTests : IDisposable
         {
             Directory.Delete(_root, recursive: true);
         }
+    }
+
+    private void CopyRuntimeFile(string fileName, WindowsExecutableArchitecture architecture)
+    {
+        var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        var systemDirectory = architecture == WindowsExecutableArchitecture.X86 ? "SysWOW64" : "System32";
+        var source = Path.Combine(windows, systemDirectory, "cmd.exe");
+        Assert.True(File.Exists(source));
+        File.Copy(source, Path.Combine(_root, fileName), overwrite: true);
     }
 }

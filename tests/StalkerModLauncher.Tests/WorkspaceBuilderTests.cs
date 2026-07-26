@@ -226,11 +226,12 @@ public sealed class WorkspaceBuilderTests : IDisposable
         var fsgameBytes = File.ReadAllBytes(Path.Combine(result.WorkspaceRoot, "fsgame.ltx"));
         var fsgameText = Encoding.GetEncoding(1251).GetString(fsgameBytes);
         Assert.Contains(Path.Combine(result.ProfileWorkspacePath, "userdata"), fsgameText);
-        Assert.Contains("Аномали-", fsgameText);
+        Assert.Equal($"profile-{profile.Id}", Path.GetFileName(result.ProfileWorkspacePath));
+        Assert.All(fsgameText, character => Assert.True(character <= 0x7F));
     }
 
     [Fact]
-    public async Task BuildAsync_RewritesCachedUtf8FsgameWithWindows1251()
+    public async Task BuildAsync_RewritesCachedUtf8FsgameWithAsciiProfileDataPath()
     {
         var profile = CreateProfile(CreateMod("mod", "mod"));
         profile.Name = "Мой мод";
@@ -245,7 +246,6 @@ public sealed class WorkspaceBuilderTests : IDisposable
         Assert.Equal(first.WorkspaceRoot, second.WorkspaceRoot);
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         var fsgameText = Encoding.GetEncoding(1251).GetString(File.ReadAllBytes(fsgamePath));
-        Assert.Contains("Мой мод-", fsgameText);
         Assert.Contains(appDataPath, fsgameText);
         Assert.DoesNotContain("РњРѕР№", fsgameText);
     }
@@ -388,7 +388,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public void EnsureProfileWorkspace_RecoversExistingUsvfsFolderByProfileId()
+    public void EnsureProfileWorkspace_MigratesLegacyCyrillicFolderToAsciiPath()
     {
         var profile = CreateProfile();
         var legacyWorkspace = Path.Combine(_workspaceRoot, $"Старое имя-{profile.Id[..8]}");
@@ -397,7 +397,9 @@ public sealed class WorkspaceBuilderTests : IDisposable
 
         var recovered = _builder.EnsureProfileWorkspace(profile, _gamePath);
 
-        Assert.Equal(legacyWorkspace, recovered);
+        Assert.Equal(Path.Combine(_workspaceRoot, $"profile-{profile.Id}"), recovered);
+        Assert.False(Directory.Exists(legacyWorkspace));
+        Assert.All(recovered, character => Assert.True(character <= 0x7F));
         Assert.True(File.Exists(Path.Combine(recovered, ".stalker-launcher-workspace")));
         Assert.Equal("save", File.ReadAllText(Path.Combine(recovered, "userdata", "save.dat")));
     }
@@ -500,7 +502,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
 
         Assert.Equal("base", File.ReadAllText(Path.Combine(_gamePath, "gamedata", "config", "shared.ltx")));
         Assert.Equal("mod source", File.ReadAllText(Path.Combine(modPath, "gamedata", "config", "shared.ltx")));
-        var generatedWorkspace = Path.Combine(_workspaceRoot, $"Test profile-{profile.Id[..8]}");
+        var generatedWorkspace = Path.Combine(_workspaceRoot, $"profile-{profile.Id}");
         Assert.False(File.Exists(Path.Combine(generatedWorkspace, "build-manifest.json")));
     }
 
@@ -515,7 +517,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
         Assert.Empty(profile.WorkspacePath);
         Assert.Equal(originalExecutable, profile.ExecutableRelativePath);
         Assert.Empty(profile.WorkingDirectoryRelative);
-        Assert.EndsWith($"Test profile-{profile.Id[..8]}", result.ProfileWorkspacePath);
+        Assert.EndsWith($"profile-{profile.Id}", result.ProfileWorkspacePath);
     }
 
     [Fact]
@@ -527,7 +529,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
 
         var result = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
 
-        Assert.EndsWith($"Тень Чернобыля-{profile.Id[..8]}", result.ProfileWorkspacePath);
+        Assert.EndsWith($"profile-{profile.Id}", result.ProfileWorkspacePath);
         Assert.False(Directory.Exists(profile.WorkspacePath));
     }
 

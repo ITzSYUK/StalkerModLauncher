@@ -2,7 +2,7 @@
 
 [English version](TECHNICAL_EN.md) | [Русская версия](TECHNICAL_RU.md) | [Russian user guide](USER_GUIDE_RU.md)
 
-This document describes the current architecture of S.T.A.L.K.E.R. Mod Launcher `v1.2.4`: how profiles are stored, how the winning file is selected, how Workspace differs from USVFS, where profile data is kept, and which checks protect original game and mod folders.
+This document describes the current architecture of S.T.A.L.K.E.R. Mod Launcher `v1.2.5`: how profiles are stored, how the winning file is selected, how Workspace differs from USVFS, where profile data is kept, and which checks protect original game and mod folders.
 
 The detailed USVFS research history and experimental prototypes are available in [USVFS_RESEARCH_EN.md](USVFS_RESEARCH_EN.md).
 
@@ -125,8 +125,10 @@ If a mod provides the selected renderer at the same relative path, the file from
 The stable mode creates a managed working folder for the profile. By default, its root is placed on the base game's drive:
 
 ```text
-<game drive>\StalkerModLauncher\Workspaces\<name>-<short ID>\
+<game drive>\StalkerModLauncher\Workspaces\profile-<ID>\
 ```
+
+The display name is not part of the filesystem path, so Russian and English profiles use the same ASCII format. When an older managed directory named `<name>-<short ID>` is found, the launcher renames the whole directory before launch while preserving `userdata`, `current`, and service files.
 
 If a drive cannot be resolved, the fallback root is:
 
@@ -200,7 +202,8 @@ Only one USVFS session may run at a time because the official runtime uses share
 The launcher chooses a virtual-root strategy according to the launch layout:
 
 - the physical base-game root is used when its own EXE starts and mods do not provide loader-time files;
-- the physical Anomaly root is preferred for reliable access to loose resources;
+- the physical Anomaly root is preferred when an `AnomalyDX*.exe` is selected directly;
+- Anomaly automatic mode uses an isolated launcher bootstrap so `AnomalyLauncher.exe` can start physically prepared final engine files;
 - a physical X-Ray 1.6 root is used when `$arch_dir_*` entries are present so archives in `patches` and similar directories remain visible;
 - an isolated bootstrap root is used when a mod provides the engine or the selected executable needs its own neighboring DLL set.
 
@@ -208,14 +211,22 @@ The physical game directory is never mapped over itself. Doing so can hide real 
 
 ### usvfs-bootstrap
 
-`userdata\usvfs-bootstrap` contains only files that Windows and the engine must see physically before full virtual lookup is available:
+The bootstrap is created inside the profile's ASCII workspace:
+
+```text
+<workspace>\.usvfs-bootstrap
+```
+
+The directory is created only for launch layouts where Windows and the engine must see physical files before full virtual lookup is available:
 
 - selected EXE;
 - loader-time DLL files from its directory;
 - profile `fsgame.ltx`;
 - the smallest required set of neighboring files.
 
-This directory is a service cache, not a full game copy. It is regenerated and is not treated as valuable profile data during a workspace move.
+For Anomaly automatic mode, the bootstrap also contains the final top-level `bin` files from the active layers. That physical `bin` level is not mapped over again, so a child engine and its loader-time DLLs resolve from one consistent directory; nested folders and the remaining game/mod data stay virtual. `AnomalyLauncher.cfg` and `commandline.txt` are profile-owned files stored in `userdata\overwrite`, so launcher changes persist without modifying the base game.
+
+This directory is a service cache, not a full game copy. It is not created when an unmodified physical base-game EXE can be launched directly. The cache is regenerated instead of being preserved during a workspace move and is removed with the workspace when the profile is deleted.
 
 USVFS runtime files distributed beside the launcher are:
 
@@ -235,7 +246,7 @@ Persistent data for a standard profile is kept in:
 <workspace>\userdata
 ```
 
-The launcher takes the winning `fsgame.ltx`, preserves its encoding, including Windows-1251, and changes `$app_data_root$` to the profile's absolute `userdata` path. Other aliases and mod-specific lines remain intact.
+The launcher takes the winning `fsgame.ltx`, preserves its encoding, including Windows-1251, and changes `$app_data_root$` to the profile's absolute `userdata` path. Other aliases and mod-specific lines remain intact. Managed workspaces always use the ASCII name `profile-<ID>`, so iXray and other engines with limited Unicode support receive a normal path without an extra junction or second data directory.
 
 Common contents include:
 
@@ -247,7 +258,6 @@ userdata\user.ltx
 userdata\shaders_cache
 userdata\writable-game-files
 userdata\overwrite
-userdata\usvfs-bootstrap
 ```
 
 ### user.ltx
@@ -319,7 +329,7 @@ Saving is atomic as far as the file system permits:
 
 Settings reads and writes are performed one at a time, so two operations cannot edit the file concurrently. A second launcher instance is also blocked.
 
-Game and mod paths are absolute. When a source folder is moved, the user must select it again. The workspace move operation first copies `userdata`, changes the stored path only after success, and then removes the old validated workspace.
+Game and mod paths are absolute. When a source folder is moved, the user must select it again. The workspace move operation first copies `userdata`, changes the stored path only after success, and then removes only the explicitly remembered old path without performing a general profile-folder search. The path is changed on the UI thread because WPF observes the profile. If final cleanup fails, the move remains successful: the launcher shows both paths, writes the full exception to the log, and offers to retry only the old-folder cleanup.
 
 ## 11. Validation, status, and diagnostics
 
@@ -328,7 +338,7 @@ Preflight validates:
 - base game and enabled mod folders;
 - final EXE and architecture;
 - working directory and arguments;
-- availability of USVFS runtime files for the target architecture;
+- the complete x64/x86 USVFS bundle, PE architecture of every file, and matching versions of the upstream runtime components;
 - readiness of `fsgame.ltx` and profile data;
 - workspace safety markers;
 - common loader-time DLL files near the selected engine.
@@ -428,7 +438,7 @@ Complete release packaging:
 .\scripts\Build-Release.ps1
 ```
 
-The script reads the version from the project file and verifies formatting, the Release build, and all unit tests before packaging.
+The script reads the version from the project file and verifies formatting, the Release build, all unit tests, and the native x64/x86 USVFS overlay before packaging. The x86 smoke test also verifies overlay inheritance from a short-lived launcher to its child process.
 
 The script creates two ZIP archives:
 
@@ -443,7 +453,9 @@ Experimental VFS publish:
 .\scripts\Build-VfsExperimental.ps1 -CleanPublishRoot
 ```
 
-Official USVFS native artifacts and the x86 host must be prepared locally. Compiled third-party binaries are not stored in Git.
+This is a local test build. After publishing, the script automatically runs the same x64/x86 USVFS smoke tests.
+
+Official USVFS native artifacts and the x86 host must be prepared locally. The automated x86 smoke test also requires locally prepared `research\usvfs-poc\build32\usvfs_overlay_child_x86.exe` and `usvfs_overlay_launcher_x86.exe`. Compiled third-party binaries are not stored in Git.
 
 ## 17. Known limitations
 
