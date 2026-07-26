@@ -4,6 +4,7 @@
 
 | ![Main window](assets/screenshots/launcher_main_screen.png) | ![Modification browser](assets/screenshots/launcher_mods_browser.png) |
 | ---------------------------------------------------------- | -------------------------------------------------------------------- |
+| ![PDA profile window](assets/screenshots/pda_profile_window.png) | ![PDA screenshots window](assets/screenshots/pda_screens_window.png) |
 
 <p align="center">
   <a href="https://github.com/ITzSYUK/StalkerModLauncher/releases/latest"><strong>Download latest release</strong></a>
