@@ -15,8 +15,8 @@ internal sealed class ProfileDataConfigurator
         var fsgameDir = FindFileDirectory(currentWorkspace, "fsgame.ltx");
         if (fsgameDir is null)
         {
-            progress.Report("Warning: fsgame.ltx not found in workspace. The game may not start correctly.");
-            return string.Empty;
+            throw new FileNotFoundException(
+                "fsgame.ltx was not found in the workspace. Profile-local saves and logs cannot be guaranteed.");
         }
 
         var relativeDir = Path.GetRelativePath(currentWorkspace, fsgameDir);
@@ -27,6 +27,8 @@ internal sealed class ProfileDataConfigurator
         }
 
         var profileDataPath = Path.Combine(profileWorkspace, "userdata");
+        var fsgamePath = Path.Combine(fsgameDir, "fsgame.ltx");
+        WriteProfileFsgame(fsgamePath, fsgamePath, profileDataPath);
         Directory.CreateDirectory(profileDataPath);
         if (layerPlan is null)
         {
@@ -41,21 +43,33 @@ internal sealed class ProfileDataConfigurator
             _shaderCacheSeeder.Seed(layerPlan, profileDataPath, progress, cancellationToken);
         }
 
-        var fsgamePath = Path.Combine(fsgameDir, "fsgame.ltx");
-        var lines = File.ReadAllLines(fsgamePath, XRayTextEncoding.Config);
-        for (var index = 0; index < lines.Length; index++)
-        {
-            if (lines[index].TrimStart().StartsWith("$app_data_root$", StringComparison.OrdinalIgnoreCase))
-            {
-                lines[index] = $"$app_data_root$ = true | false| {profileDataPath}";
-                break;
-            }
-        }
-
-        File.Delete(fsgamePath);
-        File.WriteAllLines(fsgamePath, lines, XRayTextEncoding.Config);
         progress.Report("fsgame.ltx rewritten for profile-local saves and logs.");
         return workingDirectoryRelative;
+    }
+
+    internal void WriteProfileFsgame(string sourcePath, string destinationPath, string profileDataPath)
+    {
+        var lines = File.ReadAllLines(sourcePath, XRayTextEncoding.Config);
+        var appDataLineIndex = Array.FindIndex(
+            lines,
+            line => line.TrimStart().StartsWith("$app_data_root$", StringComparison.OrdinalIgnoreCase));
+        if (appDataLineIndex < 0)
+        {
+            throw new InvalidDataException(
+                $"fsgame.ltx does not contain $app_data_root$: {sourcePath}. " +
+                "Profile-local saves and logs cannot be guaranteed, so launch was blocked.");
+        }
+
+        lines[appDataLineIndex] = $"$app_data_root$ = true | false| {profileDataPath}";
+        Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+        if (Path.GetFullPath(sourcePath).Equals(Path.GetFullPath(destinationPath), StringComparison.OrdinalIgnoreCase))
+        {
+            // The workspace entry can be a link to a read-only source. Recreate the entry
+            // instead of ever writing through that link into the game or a mod folder.
+            File.Delete(destinationPath);
+        }
+
+        File.WriteAllLines(destinationPath, lines, XRayTextEncoding.Config);
     }
 
     public string? FindFileDirectory(string searchRoot, string fileName)

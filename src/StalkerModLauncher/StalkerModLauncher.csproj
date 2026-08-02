@@ -31,6 +31,7 @@
     <EmbeddedResource Include="..\..\assets\sounds\pda\pda_guide_2.ogg" LogicalName="StalkerModLauncher.Resources.Sounds.pda_guide_2.ogg" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="AngleSharp" Version="1.5.2" />
     <PackageReference Include="DiscordRichPresence" Version="1.6.1.70" />
     <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
     <PackageReference Include="NAudio.WinMM" Version="2.2.1" />

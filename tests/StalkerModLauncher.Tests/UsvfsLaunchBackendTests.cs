@@ -95,6 +95,36 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     }
 
     [Fact]
+    public async Task PrepareAsync_BlocksLaunchWhenFsgameCannotIsolateProfileData()
+    {
+        var game = CreateDirectory("missing-app-data-root-game");
+        var workspace = CreateDirectory("missing-app-data-root-workspace");
+        File.WriteAllText(Path.Combine(game, "fsgame.ltx"), "$game_data$ = true | true | gamedata\\");
+        Directory.CreateDirectory(Path.Combine(game, "bin_x64"));
+        CopyExecutable(Path.Combine(game, "bin_x64", "xrEngine.exe"), WindowsExecutableArchitecture.X64);
+        CreateUsvfsRuntimeFiles(game);
+        var profile = new ModProfile
+        {
+            Id = "profile-no-app-data-root",
+            Name = "No app data root",
+            GameInstallPath = game,
+            ExecutableRelativePath = @"bin_x64\xrEngine.exe",
+            LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
+        };
+        var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
+        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var backend = new UsvfsLaunchBackend(new RecordingUsvfsRuntime(), game);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => backend.PrepareAsync(
+            new ProfileLaunchBackendContext(game, profile, layerPlan, manifest),
+            new Progress<string>()));
+
+        Assert.Contains("$app_data_root$", error.Message);
+        Assert.Contains("launch was blocked", error.Message);
+        Assert.False(File.Exists(Path.Combine(manifest.WriteOverlayRoot, "fsgame.ltx")));
+    }
+
+    [Fact]
     public async Task PrepareAsync_SeedsFinalLayerShaderCacheIntoProfileUserData()
     {
         var game = CreateDirectory("shader-cache-game");
@@ -432,6 +462,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
         Directory.CreateDirectory(Path.Combine(mod, "bin_x64"));
         File.WriteAllText(
             Path.Combine(game, "fsgame.ltx"),
+            "$app_data_root$ = true | false | $fs_root$ | appdata\\" + Environment.NewLine +
             "$arch_dir_patches$ = false | true | $fs_root$ | patches\\");
         File.WriteAllText(Path.Combine(game, "patches", "xpatch_02.db"), "game patch");
         File.Copy(

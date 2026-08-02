@@ -277,9 +277,21 @@ public sealed class ProfileSettingsViewModel : ObservableObject
             return false;
         }
 
-        ApplyToProfile();
-        await _onSave();
-        return true;
+        var snapshot = ProfileSettingsSnapshot.Capture(_profile);
+        try
+        {
+            ApplyToProfile();
+            await _onSave();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            snapshot.Restore(_profile);
+            _dialogService.ShowError(
+                "Не удалось сохранить настройки профиля",
+                $"Изменения не сохранены. Окно останется открытым.{Environment.NewLine}{Environment.NewLine}{ex.Message}");
+            return false;
+        }
     }
 
     private void ApplyToProfile()
@@ -490,5 +502,47 @@ public sealed class ProfileSettingsViewModel : ObservableObject
                 File.Exists(Path.Combine(profile.GameInstallPath, "AnomalyLauncher.exe"))) ||
                Path.GetFileName(profile.ExecutableRelativePath)
                    .StartsWith("Anomaly", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed record ProfileSettingsSnapshot(
+        string Name,
+        string Description,
+        string ExecutableRelativePath,
+        string ExecutableSourcePath,
+        string LaunchArguments,
+        string WorkspacePath,
+        bool IsEnabled,
+        bool IsDiscordStatusEnabled,
+        bool IsStandalone,
+        LaunchBackendKind LaunchBackendKind,
+        string UsvfsExecutableOverrideRelativePath)
+    {
+        public static ProfileSettingsSnapshot Capture(ModProfile profile) => new(
+            profile.Name,
+            profile.Description,
+            profile.ExecutableRelativePath,
+            profile.ExecutableSourcePath,
+            profile.LaunchArguments,
+            profile.WorkspacePath,
+            profile.IsEnabled,
+            profile.IsDiscordStatusEnabled,
+            profile.IsStandalone,
+            profile.LaunchBackendKind,
+            profile.UsvfsExecutableOverrideRelativePath);
+
+        public void Restore(ModProfile profile)
+        {
+            profile.Name = Name;
+            profile.Description = Description;
+            profile.ExecutableRelativePath = ExecutableRelativePath;
+            profile.ExecutableSourcePath = ExecutableSourcePath;
+            profile.LaunchArguments = LaunchArguments;
+            profile.WorkspacePath = WorkspacePath;
+            profile.IsEnabled = IsEnabled;
+            profile.IsDiscordStatusEnabled = IsDiscordStatusEnabled;
+            profile.IsStandalone = IsStandalone;
+            profile.LaunchBackendKind = LaunchBackendKind;
+            profile.UsvfsExecutableOverrideRelativePath = UsvfsExecutableOverrideRelativePath;
+        }
     }
 }

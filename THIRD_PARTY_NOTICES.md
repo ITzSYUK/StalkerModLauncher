@@ -16,6 +16,7 @@ The release package contains unmodified runtime binaries built from the upstream
 
 ## Managed libraries
 
+- [AngleSharp](https://github.com/AngleSharp/AngleSharp) 1.5.2 — MIT License.
 - [discord-rpc-csharp](https://github.com/Lachee/discord-rpc-csharp), package `DiscordRichPresence` 1.6.1.70 — MIT License.
 - [NAudio.Vorbis](https://github.com/naudio/Vorbis) 1.5.0 — MIT License.
 - [NAudio](https://github.com/naudio/NAudio), package `NAudio.WinMM` 2.2.1 — MIT License.

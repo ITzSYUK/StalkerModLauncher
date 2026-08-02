@@ -1,0 +1,45 @@
+name: Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Restore locked dependencies
+        run: dotnet restore .\StalkerModLauncher.sln --locked-mode
+
+      - name: Verify formatting
+        run: dotnet format .\StalkerModLauncher.sln --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build .\StalkerModLauncher.sln -c Release --no-restore
+
+      - name: Test with coverage
+        run: dotnet test .\StalkerModLauncher.sln -c Release --no-build --collect:"XPlat Code Coverage"
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: '**/TestResults/**/coverage.cobertura.xml'
+          if-no-files-found: error
+          retention-days: 14

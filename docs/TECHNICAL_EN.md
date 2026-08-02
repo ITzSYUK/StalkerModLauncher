@@ -248,6 +248,8 @@ Persistent data for a standard profile is kept in:
 
 The launcher takes the winning `fsgame.ltx`, preserves its encoding, including Windows-1251, and changes `$app_data_root$` to the profile's absolute `userdata` path. Other aliases and mod-specific lines remain intact. Managed workspaces always use the ASCII name `profile-<ID>`, so iXray and other engines with limited Unicode support receive a normal path without an extra junction or second data directory.
 
+For a non-standalone profile, launch is blocked when `fsgame.ltx` is missing or does not contain `$app_data_root$`. Workspace and USVFS therefore never report profile-data isolation as successful when the engine would still use a shared data directory.
+
 Common contents include:
 
 ```text
@@ -331,6 +333,8 @@ If the primary JSON is damaged, it is first copied with a timestamp to `%APPDATA
 
 Settings reads and writes are performed one at a time, so two operations cannot edit the file concurrently. A second launcher instance is also blocked.
 
+An explicit save from the profile settings UI propagates persistence failures back to the window. The window remains open, shows the error, and restores the in-memory profile values instead of presenting unsaved changes as successful.
+
 Game and mod paths are absolute. When a source folder is moved, the user must select it again. The workspace move operation first copies `userdata`, changes the stored path only after success, and then removes only the explicitly remembered old path without performing a general profile-folder search. The path is changed on the UI thread because WPF observes the profile. If final cleanup fails, the move remains successful: the launcher shows both paths, writes the full exception to the log, and offers to retry only the old-folder cleanup.
 
 ## 11. Validation, status, and diagnostics
@@ -387,10 +391,11 @@ Network behavior is deliberately conservative:
 - cancellation of an old category load when the user switches categories;
 - an in-memory cache lasting about 10 minutes;
 - lazy image decoding.
+- a 4 MiB limit for catalog HTML and an 8 MiB limit for each cover image, enforced while streaming even when the server omits `Content-Length`.
 
 Search filters loaded titles and continues to include later pages. The empty-result message appears only after the category load has finished.
 
-The browser remains dependent on AP-PRO availability and HTML structure.
+Catalog pages are parsed as an HTML5 DOM rather than with regular expressions. The browser remains dependent on AP-PRO availability and on the semantic classes and attributes used by the site.
 
 ## 14. Additional features
 
@@ -437,6 +442,8 @@ dotnet build .\StalkerModLauncher.sln -c Release
 dotnet test .\StalkerModLauncher.sln -c Release
 dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 ```
+
+NuGet dependencies are pinned by per-project lock files. Built-in .NET analyzers and warnings-as-errors run during every build; the explicit baseline in `Directory.Build.props` records pre-existing analyzer debt without hiding new warning IDs. GitHub Actions restores in locked mode, verifies formatting, builds Release, runs all tests, and uploads Cobertura coverage on every push to `main` and every pull request.
 
 Complete release packaging:
 

@@ -54,7 +54,11 @@ public sealed partial class MainViewModel
         }
     }
 
-    private async Task SaveAsync()
+    private Task SaveAsync() => SaveCoreAsync(throwOnFailure: false);
+
+    private Task SaveOrThrowAsync() => SaveCoreAsync(throwOnFailure: true);
+
+    private async Task SaveCoreAsync(bool throwOnFailure)
     {
         _autoSave.Cancel();
         try
@@ -78,6 +82,10 @@ public sealed partial class MainViewModel
         catch (Exception ex)
         {
             Log($"Settings save failed: {ex.Message}");
+            if (throwOnFailure)
+            {
+                throw;
+            }
         }
     }
 

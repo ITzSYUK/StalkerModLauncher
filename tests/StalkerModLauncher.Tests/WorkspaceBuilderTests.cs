@@ -550,6 +550,22 @@ public sealed class WorkspaceBuilderTests : IDisposable
         Assert.Equal(Path.Combine(result.WorkspaceRoot, "bin_x64", "xrEngine.exe"), result.ExecutablePath);
     }
 
+    [Fact]
+    public async Task BuildAsync_BlocksLaunchWhenFsgameCannotIsolateProfileData()
+    {
+        var sourceFsgame = Path.Combine(_gamePath, "fsgame.ltx");
+        const string original = "$game_data$ = true | true | gamedata\\";
+        File.WriteAllText(sourceFsgame, original);
+        var profile = CreateProfile(CreateMod("missing-app-data-root", "mod"));
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(
+            () => _builder.BuildAsync(_gamePath, profile, new ProgressLog()));
+
+        Assert.Contains("$app_data_root$", error.Message);
+        Assert.Contains("launch was blocked", error.Message);
+        Assert.Equal(original, File.ReadAllText(sourceFsgame));
+    }
+
     private ModProfile CreateProfile(params string[] modPaths)
     {
         var profile = new ModProfile

@@ -214,7 +214,7 @@ public sealed partial class MainViewModel
         return new ProfileSettingsViewModel(
             profile,
             _dialogService,
-            () => SaveAsync(),
+            () => SaveOrThrowAsync(),
             selectedPath => ProfileExecutableSourceResolver.TryCreateSelection(
                 profile,
                 selectedPath,

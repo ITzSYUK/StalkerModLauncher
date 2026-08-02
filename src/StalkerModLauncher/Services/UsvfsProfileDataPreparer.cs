@@ -17,40 +17,20 @@ internal sealed class UsvfsProfileDataPreparer
         var source = layerPlan.FindFinalFile("fsgame.ltx");
         if (source is null)
         {
-            progress?.Report("USVFS warning: fsgame.ltx was not found in the enabled layers.");
-            return null;
+            throw new FileNotFoundException(
+                "fsgame.ltx was not found in the enabled layers. " +
+                "Profile-local saves and logs cannot be guaranteed.");
         }
 
         var profileDataPath = Path.Combine(profileWorkspace, "userdata");
+        var destination = Path.Combine(manifest.WriteOverlayRoot, "fsgame.ltx");
+        _dataConfigurator.WriteProfileFsgame(source.FullPath, destination, profileDataPath);
         Directory.CreateDirectory(profileDataPath);
         _dataConfigurator.EnsureProfileUserLtx(
             layerPlan,
             profileDataPath,
             progress);
         _shaderCacheSeeder.Seed(layerPlan, profileDataPath, progress, cancellationToken);
-        Directory.CreateDirectory(manifest.WriteOverlayRoot);
-
-        var lines = File.ReadAllLines(source.FullPath, XRayTextEncoding.Config);
-        var appDataLineFound = false;
-        for (var index = 0; index < lines.Length; index++)
-        {
-            if (!lines[index].TrimStart().StartsWith("$app_data_root$", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            lines[index] = $"$app_data_root$ = true | false| {profileDataPath}";
-            appDataLineFound = true;
-            break;
-        }
-
-        if (!appDataLineFound)
-        {
-            progress?.Report("USVFS warning: fsgame.ltx has no $app_data_root$ entry.");
-        }
-
-        var destination = Path.Combine(manifest.WriteOverlayRoot, "fsgame.ltx");
-        File.WriteAllLines(destination, lines, XRayTextEncoding.Config);
         progress?.Report($"USVFS profile fsgame.ltx prepared from {source.SourceName}.");
         return destination;
     }

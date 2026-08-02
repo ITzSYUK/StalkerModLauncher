@@ -6,6 +6,7 @@ namespace StalkerModLauncher.Services;
 internal sealed class WorkspaceManifestStore
 {
     private const string ManifestFileName = "build-manifest.json";
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public string? TryGetCachedExecutable(
         string workspaceRoot,
@@ -69,7 +70,7 @@ internal sealed class WorkspaceManifestStore
         };
         File.WriteAllText(
             Path.Combine(workspaceRoot, ManifestFileName),
-            JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
+            JsonSerializer.Serialize(manifest, JsonOptions));
     }
 }
 

@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>8.0-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Existing analyzer debt stays explicit; every other warning fails the build. -->
+    <NoWarn>$(NoWarn);CA1001;CA1068;CA1305;CA1310;CA1707;CA1710;CA1711;CA1816;CA1822;CA1826;CA1838;CA1859;CA1861;CA2101</NoWarn>
+  </PropertyGroup>
+</Project>

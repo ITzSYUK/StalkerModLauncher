@@ -1,8 +1,12 @@
+using System.Buffers;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
+using AngleSharp.Dom;
+using AngleSharp.Html.Parser;
 
 namespace StalkerModLauncher.Services;
 
@@ -26,6 +30,10 @@ public sealed record ApProCatalogPage(
     int TotalPages,
     IReadOnlyList<ApProModListing> Items);
 
+internal sealed record ApProCatalogPageContent(
+    IReadOnlyList<ApProModListing> Items,
+    int? TotalPageCount);
+
 public sealed class ApProCatalogService
 {
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(10);
@@ -33,11 +41,15 @@ public sealed class ApProCatalogService
     private static readonly TimeSpan DefaultRetryAfterDelay = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan MaximumRetryAfterDelay = TimeSpan.FromSeconds(30);
     private const int MaximumConcurrentThumbnailDownloads = 4;
+    private const int MaximumCatalogPageBytes = 4 * 1024 * 1024;
+    private const int MaximumThumbnailBytes = 8 * 1024 * 1024;
 
     private readonly HttpClient _httpClient;
     private readonly TimeSpan _minimumCatalogRequestInterval;
     private readonly SemaphoreSlim _catalogRequestLock = new(1, 1);
     private readonly SemaphoreSlim _thumbnailDownloadLimit;
+    private readonly int _maximumCatalogPageBytes;
+    private readonly int _maximumThumbnailBytes;
     private readonly object _cacheSync = new();
     private readonly Dictionary<CatalogPageKey, CachedCatalog> _cache = new();
     private DateTimeOffset _lastCatalogRequestAt = DateTimeOffset.MinValue;
@@ -45,15 +57,18 @@ public sealed class ApProCatalogService
     public ApProCatalogService(
         HttpMessageHandler? httpMessageHandler = null,
         TimeSpan? minimumCatalogRequestInterval = null,
-        int maximumConcurrentThumbnailDownloads = MaximumConcurrentThumbnailDownloads)
+        int maximumConcurrentThumbnailDownloads = MaximumConcurrentThumbnailDownloads,
+        int maximumCatalogPageBytes = MaximumCatalogPageBytes,
+        int maximumThumbnailBytes = MaximumThumbnailBytes)
     {
-        if (maximumConcurrentThumbnailDownloads < 1)
-        {
-            throw new ArgumentOutOfRangeException(nameof(maximumConcurrentThumbnailDownloads));
-        }
+        ArgumentOutOfRangeException.ThrowIfLessThan(maximumConcurrentThumbnailDownloads, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maximumCatalogPageBytes, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maximumThumbnailBytes, 1);
 
         _httpClient = CreateHttpClient(httpMessageHandler);
         _minimumCatalogRequestInterval = minimumCatalogRequestInterval ?? MinimumCatalogRequestInterval;
+        _maximumCatalogPageBytes = maximumCatalogPageBytes;
+        _maximumThumbnailBytes = maximumThumbnailBytes;
         _thumbnailDownloadLimit = new SemaphoreSlim(
             maximumConcurrentThumbnailDownloads,
             maximumConcurrentThumbnailDownloads);
@@ -77,10 +92,7 @@ public sealed class ApProCatalogService
 
     public static string GetPageUrl(ApProCatalogCategory category, int pageNumber)
     {
-        if (pageNumber < 1)
-        {
-            throw new ArgumentOutOfRangeException(nameof(pageNumber));
-        }
+        ArgumentOutOfRangeException.ThrowIfLessThan(pageNumber, 1);
 
         var categoryUrl = GetCategoryUrl(category);
         return pageNumber == 1
@@ -126,9 +138,9 @@ public sealed class ApProCatalogService
             throw new HttpRequestException("AP-PRO временно запросил проверку браузера.");
         }
 
-        var items = ApProCatalogParser.Parse(html);
-        var totalPages = Math.Max(pageNumber, ApProCatalogParser.GetTotalPageCount(html) ?? pageNumber);
-        var page = new ApProCatalogPage(pageNumber, totalPages, items);
+        var content = ApProCatalogParser.ParsePage(html);
+        var totalPages = Math.Max(pageNumber, content.TotalPageCount ?? pageNumber);
+        var page = new ApProCatalogPage(pageNumber, totalPages, content.Items);
         lock (_cacheSync)
         {
             _cache[key] = new CachedCatalog(DateTimeOffset.UtcNow, page);
@@ -144,7 +156,11 @@ public sealed class ApProCatalogService
         {
             using var response = await SendWithRetryAfterAsync(thumbnailUrl, cancellationToken);
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            return await ReadContentWithLimitAsync(
+                response.Content,
+                _maximumThumbnailBytes,
+                "AP-PRO thumbnail",
+                cancellationToken);
         }
         catch (HttpRequestException)
         {
@@ -164,7 +180,12 @@ public sealed class ApProCatalogService
             await WaitForCatalogRequestIntervalAsync(cancellationToken);
             using var response = await SendWithRetryAfterAsync(url, cancellationToken);
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsStringAsync(cancellationToken);
+            var bytes = await ReadContentWithLimitAsync(
+                response.Content,
+                _maximumCatalogPageBytes,
+                "AP-PRO catalog page",
+                cancellationToken);
+            return DecodeText(response.Content, bytes);
         }
         finally
         {
@@ -199,6 +220,73 @@ public sealed class ApProCatalogService
         }
 
         return await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+    }
+
+    private static async Task<byte[]> ReadContentWithLimitAsync(
+        HttpContent content,
+        int maximumBytes,
+        string description,
+        CancellationToken cancellationToken)
+    {
+        var contentLength = content.Headers.ContentLength;
+        if (contentLength.HasValue && contentLength.Value > maximumBytes)
+        {
+            throw new HttpRequestException(
+                $"{description} is larger than the allowed {maximumBytes:N0} bytes.");
+        }
+
+        await using var stream = await content.ReadAsStreamAsync(cancellationToken);
+        using var output = new MemoryStream(
+            contentLength is > 0 and <= int.MaxValue
+                ? (int)Math.Min(contentLength.Value, maximumBytes)
+                : 0);
+        var buffer = ArrayPool<byte>.Shared.Rent(64 * 1024);
+        try
+        {
+            while (true)
+            {
+                var read = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
+                if (read == 0)
+                {
+                    return output.ToArray();
+                }
+
+                if (output.Length + read > maximumBytes)
+                {
+                    throw new HttpRequestException(
+                        $"{description} is larger than the allowed {maximumBytes:N0} bytes.");
+                }
+
+                await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+
+    private static string DecodeText(HttpContent content, byte[] bytes)
+    {
+        var encoding = Encoding.UTF8;
+        var charset = content.Headers.ContentType?.CharSet?.Trim('"');
+        if (!string.IsNullOrWhiteSpace(charset))
+        {
+            try
+            {
+                encoding = Encoding.GetEncoding(charset);
+            }
+            catch (ArgumentException)
+            {
+                // Ignore an invalid server charset and fall back to UTF-8.
+            }
+        }
+
+        using var reader = new StreamReader(
+            new MemoryStream(bytes, writable: false),
+            encoding,
+            detectEncodingFromByteOrderMarks: true);
+        return reader.ReadToEnd();
     }
 
     private static TimeSpan GetRetryAfterDelay(RetryConditionHeaderValue? retryAfter)
@@ -258,78 +346,61 @@ public sealed class ApProCatalogService
 
 public static class ApProCatalogParser
 {
-    private static readonly Regex ArticleExpression = new(
-        @"<article\b[^>]*\bcCmsCategoryFeaturedEntry\b[^>]*>(?<article>.*?)</article>",
-        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
-
-    private static readonly Regex TitleExpression = new(
-        "<h1\\b[^>]*>.*?<a\\b[^>]*href=[\\\"'](?<url>[^\\\"']+)[\\\"'][^>]*>(?<title>.*?)</a>",
-        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
-
-    private static readonly Regex ImageExpression = new(
-        "<div\\b[^>]*\\bcCmsRecord_image\\b[^>]*>.*?<img\\b[^>]*src=[\\\"'](?<url>[^\\\"']+)[\\\"']",
-        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
-
-    private static readonly Regex DescriptionExpression = new(
-        @"<section\b[^>]*\bdata-ipsTruncate\b[^>]*>(?<description>.*?)</section>",
-        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
-
-    private static readonly Regex TagsExpression = new(@"<[^>]+>", RegexOptions.Singleline | RegexOptions.CultureInvariant);
     private static readonly Regex WhitespaceExpression = new(@"\s+", RegexOptions.CultureInvariant);
     private static readonly Regex ViewsExpression = new(@"(?<views>[\d\s\u00A0]+просмотров)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    private static readonly Regex PageCountExpression = new("\\bdata-pages=[\\\"'](?<pages>\\d+)[\\\"']", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    public static int? GetTotalPageCount(string html)
-    {
-        var match = PageCountExpression.Match(html);
-        return match.Success && int.TryParse(match.Groups["pages"].Value, out var pageCount) && pageCount > 0
-            ? pageCount
-            : null;
-    }
+    public static int? GetTotalPageCount(string html) => ParsePage(html).TotalPageCount;
 
-    public static IReadOnlyList<ApProModListing> Parse(string html)
+    public static IReadOnlyList<ApProModListing> Parse(string html) => ParsePage(html).Items;
+
+    internal static ApProCatalogPageContent ParsePage(string html)
     {
         if (string.IsNullOrWhiteSpace(html))
         {
-            return Array.Empty<ApProModListing>();
+            return new ApProCatalogPageContent(Array.Empty<ApProModListing>(), null);
         }
 
+        var document = new HtmlParser().ParseDocument(html);
+        var pageCountValue = document.QuerySelector("[data-pages]")?.GetAttribute("data-pages");
+        int? totalPageCount = int.TryParse(pageCountValue, out var pageCount) && pageCount > 0
+            ? pageCount
+            : null;
         var result = new List<ApProModListing>();
-        foreach (Match articleMatch in ArticleExpression.Matches(html))
+        foreach (var article in document.QuerySelectorAll("article.cCmsCategoryFeaturedEntry"))
         {
-            var article = articleMatch.Groups["article"].Value;
-            var titleMatch = TitleExpression.Match(article);
-            if (!titleMatch.Success)
+            var titleLink = article.QuerySelector("h1 a[href]");
+            var detailUrl = ToAbsoluteUrl(titleLink?.GetAttribute("href"));
+            if (titleLink is null || detailUrl is null)
             {
                 continue;
             }
 
-            var detailUrl = ToAbsoluteUrl(titleMatch.Groups["url"].Value);
-            if (detailUrl is null)
-            {
-                continue;
-            }
-
-            var imageMatch = ImageExpression.Match(article);
-            var descriptionMatch = DescriptionExpression.Match(article);
-            var onStars = Regex.Matches(article, @"\bipsRating_on\b", RegexOptions.IgnoreCase).Count;
-            var halfStars = Regex.Matches(article, @"\bipsRating_half\b", RegexOptions.IgnoreCase).Count;
-            var viewsMatch = ViewsExpression.Match(ToPlainText(article));
+            var image = article.QuerySelector(".cCmsRecord_image img");
+            var imageUrl = image?.GetAttribute("src") ?? image?.GetAttribute("data-src");
+            var description = article.QuerySelector("section[data-ipstruncate]");
+            var onStars = article.QuerySelectorAll(".ipsRating_on").Length;
+            var halfStars = article.QuerySelectorAll(".ipsRating_half").Length;
+            var viewsMatch = ViewsExpression.Match(NormalizeWhitespace(article.TextContent));
 
             result.Add(new ApProModListing(
-                ToPlainText(titleMatch.Groups["title"].Value),
-                descriptionMatch.Success ? ToPlainText(descriptionMatch.Groups["description"].Value) : string.Empty,
+                NormalizeWhitespace(titleLink.TextContent),
+                description is null ? string.Empty : NormalizeWhitespace(description.TextContent),
                 detailUrl,
-                imageMatch.Success ? ToAbsoluteUrl(imageMatch.Groups["url"].Value) : null,
+                ToAbsoluteUrl(imageUrl),
                 onStars + halfStars * 0.5d > 0 ? onStars + halfStars * 0.5d : null,
                 viewsMatch.Success ? NormalizeWhitespace(viewsMatch.Groups["views"].Value) : null));
         }
 
-        return result;
+        return new ApProCatalogPageContent(result, totalPageCount);
     }
 
-    private static string? ToAbsoluteUrl(string value)
+    private static string? ToAbsoluteUrl(string? value)
     {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
         if (Uri.TryCreate(value, UriKind.Absolute, out var absolute) &&
             (absolute.Scheme == Uri.UriSchemeHttp || absolute.Scheme == Uri.UriSchemeHttps))
         {
@@ -338,8 +409,6 @@ public static class ApProCatalogParser
 
         return Uri.TryCreate(new Uri("https://ap-pro.ru/"), value, out var relative) ? relative.AbsoluteUri : null;
     }
-
-    private static string ToPlainText(string html) => NormalizeWhitespace(WebUtility.HtmlDecode(TagsExpression.Replace(html, " ")));
 
     private static string NormalizeWhitespace(string value) => WhitespaceExpression.Replace(value.Replace('\u00A0', ' '), " ").Trim();
 }

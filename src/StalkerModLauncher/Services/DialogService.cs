@@ -4,7 +4,7 @@ using System.Windows;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class DialogService
+public class DialogService
 {
     public string? PickFolder(string description, string? initialPath = null)
     {
@@ -51,7 +51,7 @@ public sealed class DialogService
         return MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
     }
 
-    public void ShowError(string title, string message)
+    public virtual void ShowError(string title, string message)
     {
         MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
     }

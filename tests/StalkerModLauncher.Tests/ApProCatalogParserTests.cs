@@ -35,6 +35,24 @@ public sealed class ApProCatalogParserTests
         Assert.Equal("1 234 просмотров", item.Views);
     }
 
+    [Fact]
+    public void Parse_HandlesNestedAndImperfectHtml()
+    {
+        const string html = """
+            <article class="cCmsCategoryFeaturedEntry">
+              <h1><span><a href="/stuff/test/"><b>Nested</b> title</a></span></h1>
+              <div class="cCmsRecord_image"><picture><img data-src="/uploads/lazy.jpg"></picture></div>
+              <section data-ipsTruncate>Description <strong>without a closing tag</section>
+            </article>
+            """;
+
+        var item = Assert.Single(ApProCatalogParser.Parse(html));
+
+        Assert.Equal("Nested title", item.Title);
+        Assert.Equal("Description without a closing tag", item.Description);
+        Assert.Equal("https://ap-pro.ru/uploads/lazy.jpg", item.ThumbnailUrl);
+    }
+
     [Theory]
     [InlineData(ApProCatalogCategory.ShadowOfChernobyl, "https://ap-pro.ru/stuff/ten_chernobylja/")]
     [InlineData(ApProCatalogCategory.ClearSky, "https://ap-pro.ru/stuff/chistoe_nebo/")]
@@ -157,6 +175,40 @@ public sealed class ApProCatalogParserTests
     }
 
     [Fact]
+    public async Task DownloadThumbnailAsync_RejectsOversizedResponse()
+    {
+        var handler = new StubHttpMessageHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StreamContent(new NonSeekableMemoryStream([1, 2, 3, 4]))
+        }));
+        var service = new ApProCatalogService(
+            handler,
+            TimeSpan.Zero,
+            maximumThumbnailBytes: 3);
+
+        var result = await service.DownloadThumbnailAsync("https://ap-pro.ru/uploads/large.jpg");
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task LoadPageAsync_RejectsOversizedResponse()
+    {
+        var handler = new StubHttpMessageHandler((_, _) => Task.FromResult(CreateResponse(
+            HttpStatusCode.OK,
+            "<html></html>")));
+        var service = new ApProCatalogService(
+            handler,
+            TimeSpan.Zero,
+            maximumCatalogPageBytes: 4);
+
+        var error = await Assert.ThrowsAsync<HttpRequestException>(
+            () => service.LoadPageAsync(ApProCatalogCategory.ShadowOfChernobyl, 1));
+
+        Assert.Contains("larger than", error.Message);
+    }
+
+    [Fact]
     public async Task LoadPageAsync_CacheSupportsConcurrentRefreshes()
     {
         var handler = new StubHttpMessageHandler(async (_, cancellationToken) =>
@@ -202,5 +254,10 @@ public sealed class ApProCatalogParserTests
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken) => handler(request, cancellationToken);
+    }
+
+    private sealed class NonSeekableMemoryStream(byte[] buffer) : MemoryStream(buffer)
+    {
+        public override bool CanSeek => false;
     }
 }
