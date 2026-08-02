@@ -29,6 +29,30 @@ public sealed class SettingsStoreTests : IDisposable
         var loaded = await _store.LoadAsync();
 
         Assert.Equal("first", loaded.LastBrowsedGamePath);
+        Assert.True(File.Exists(_paths.SettingsFile));
+        Assert.Equal("first", (await _store.LoadAsync()).LastBrowsedGamePath);
+        var recovered = Assert.Single(Directory.GetFiles(Path.Combine(_paths.ConfigDirectory, "recovery")));
+        Assert.Contains("{ broken json", await File.ReadAllTextAsync(recovered));
+    }
+
+    [Fact]
+    public async Task LoadWithRecoveryAsync_ReportsBackupRecoveryAndPreservesBrokenPrimary()
+    {
+        await _store.SaveAsync(new AppSettings { LastBrowsedGamePath = "backup" });
+        await _store.SaveAsync(new AppSettings { LastBrowsedGamePath = "primary" });
+        await File.WriteAllTextAsync(_paths.SettingsFile, "{ broken primary");
+
+        var result = await _store.LoadWithRecoveryAsync();
+
+        Assert.Equal("backup", result.Settings.LastBrowsedGamePath);
+        Assert.Equal(SettingsRecoveryMode.Backup, result.Recovery?.Mode);
+        var damaged = Assert.Single(result.Recovery!.Files);
+        Assert.Equal(_paths.SettingsFile, damaged.OriginalPath);
+        Assert.True(File.Exists(damaged.RecoveryPath));
+        Assert.Contains("Некорректный JSON", damaged.Error);
+
+        await _store.SaveAsync(new AppSettings { LastBrowsedGamePath = "after-recovery" });
+        Assert.Equal("after-recovery", (await _store.LoadAsync()).LastBrowsedGamePath);
     }
 
     [Fact]
@@ -76,6 +100,108 @@ public sealed class SettingsStoreTests : IDisposable
 
         Assert.Equal(string.Empty, loaded.LastBrowsedGamePath);
         Assert.Empty(loaded.Profiles);
+        Assert.True(File.Exists(_paths.SettingsFile));
+        Assert.False(File.Exists(_paths.SettingsBackupFile));
+        Assert.Equal(2, Directory.GetFiles(Path.Combine(_paths.ConfigDirectory, "recovery")).Length);
+    }
+
+    [Fact]
+    public async Task LoadWithRecoveryAsync_ReportsDefaultsWhenNoValidSettingsRemain()
+    {
+        Directory.CreateDirectory(_paths.ConfigDirectory);
+        await File.WriteAllTextAsync(_paths.SettingsFile, "{ broken primary");
+        await File.WriteAllTextAsync(_paths.SettingsBackupFile, "{ broken backup");
+
+        var result = await _store.LoadWithRecoveryAsync();
+
+        Assert.Equal(SettingsRecoveryMode.Defaults, result.Recovery?.Mode);
+        Assert.Equal(2, result.Recovery!.Files.Count);
+        Assert.All(result.Recovery.Files, file => Assert.True(File.Exists(file.RecoveryPath)));
+    }
+
+    [Fact]
+    public async Task LoadWithRecoveryAsync_RestoresMissingPrimaryFromBackup()
+    {
+        Directory.CreateDirectory(_paths.ConfigDirectory);
+        await File.WriteAllTextAsync(
+            _paths.SettingsBackupFile,
+            """{"LastBrowsedGamePath":"backup"}""");
+
+        var result = await _store.LoadWithRecoveryAsync();
+
+        Assert.Equal("backup", result.Settings.LastBrowsedGamePath);
+        Assert.Equal(SettingsRecoveryMode.Backup, result.Recovery?.Mode);
+        Assert.Empty(result.Recovery!.Files);
+        Assert.True(File.Exists(_paths.SettingsFile));
+    }
+
+    [Fact]
+    public async Task LoadWithRecoveryAsync_DoesNotReplaceTemporarilyLockedSettings()
+    {
+        Directory.CreateDirectory(_paths.ConfigDirectory);
+        await File.WriteAllTextAsync(
+            _paths.SettingsFile,
+            """{"LastBrowsedGamePath":"locked"}""");
+
+        await using (var locked = new FileStream(
+                         _paths.SettingsFile,
+                         FileMode.Open,
+                         FileAccess.ReadWrite,
+                         FileShare.None))
+        {
+            var error = await Assert.ThrowsAsync<SettingsPersistenceException>(
+                () => _store.LoadWithRecoveryAsync());
+
+            Assert.Contains("временно недоступен", error.Message);
+            await Assert.ThrowsAsync<SettingsPersistenceException>(
+                () => _store.SaveAsync(new AppSettings()));
+            Assert.False(Directory.Exists(Path.Combine(_paths.ConfigDirectory, "recovery")));
+            Assert.True(locked.Length > 0);
+        }
+
+        Assert.Equal("locked", (await _store.LoadWithRecoveryAsync()).Settings.LastBrowsedGamePath);
+        await _store.SaveAsync(new AppSettings { LastBrowsedGamePath = "available" });
+        Assert.Equal("available", (await _store.LoadAsync()).LastBrowsedGamePath);
+    }
+
+    [Fact]
+    public async Task LoadWithRecoveryAsync_PreservesRepeatedFailuresWithSameTimestamp()
+    {
+        var fixedTime = new DateTimeOffset(2026, 8, 2, 12, 34, 56, TimeSpan.Zero);
+        var store = new SettingsStore(_paths, new FixedTimeProvider(fixedTime));
+        await store.SaveAsync(new AppSettings { LastBrowsedGamePath = "first" });
+        await store.SaveAsync(new AppSettings { LastBrowsedGamePath = "second" });
+        await File.WriteAllTextAsync(_paths.SettingsFile, "{ broken first");
+        await store.LoadWithRecoveryAsync();
+
+        await store.SaveAsync(new AppSettings { LastBrowsedGamePath = "third" });
+        await store.SaveAsync(new AppSettings { LastBrowsedGamePath = "fourth" });
+        await File.WriteAllTextAsync(_paths.SettingsFile, "{ broken second");
+        await store.LoadWithRecoveryAsync();
+
+        var recovered = Directory.GetFiles(Path.Combine(_paths.ConfigDirectory, "recovery"));
+        Assert.Equal(2, recovered.Length);
+        Assert.Equal(2, recovered.Select(Path.GetFileName).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Contains(recovered, path => Path.GetFileNameWithoutExtension(path).EndsWith("-2"));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_NotifiesWhenItRecoversSettings()
+    {
+        await _store.SaveAsync(new AppSettings { LastBrowsedGamePath = "backup" });
+        await _store.SaveAsync(new AppSettings { LastBrowsedGamePath = "primary" });
+        await File.WriteAllTextAsync(_paths.SettingsFile, "{ broken primary");
+        SettingsRecoveryInfo? reported = null;
+        _store.RecoveryCompleted += (_, recovery) => reported = recovery;
+
+        await _store.UpdateAsync(settings =>
+        {
+            settings.LastBrowsedGamePath = "updated";
+            return settings;
+        });
+
+        Assert.Equal(SettingsRecoveryMode.Backup, reported?.Mode);
+        Assert.Equal("updated", (await _store.LoadAsync()).LastBrowsedGamePath);
     }
 
     [Fact]
@@ -201,5 +327,12 @@ public sealed class SettingsStoreTests : IDisposable
         {
             Directory.Delete(_root, recursive: true);
         }
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset value) : TimeProvider
+    {
+        public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
+
+        public override DateTimeOffset GetUtcNow() => value;
     }
 }

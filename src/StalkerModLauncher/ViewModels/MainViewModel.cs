@@ -64,6 +64,7 @@ public sealed partial class MainViewModel : ObservableObject
         ActivityLog = new ActivityLogViewModel(_applicationLogService, _autoSave.Schedule);
 
         Profiles.CollectionChanged += ProfilesOnCollectionChanged;
+        _settingsStore.RecoveryCompleted += SettingsStoreOnRecoveryCompleted;
 
         ChooseGameFolderCommand = new RelayCommand(ChooseGameFolder);
         NewProfileCommand = new RelayCommand(NewProfile);

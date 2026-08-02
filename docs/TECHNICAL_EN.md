@@ -2,7 +2,7 @@
 
 [English version](TECHNICAL_EN.md) | [Русская версия](TECHNICAL_RU.md) | [Russian user guide](USER_GUIDE_RU.md)
 
-This document describes the current architecture of S.T.A.L.K.E.R. Mod Launcher `v1.2.5`: how profiles are stored, how the winning file is selected, how Workspace differs from USVFS, where profile data is kept, and which checks protect original game and mod folders.
+This document describes the current architecture of S.T.A.L.K.E.R. Mod Launcher `v1.2.6`: how profiles are stored, how the winning file is selected, how Workspace differs from USVFS, where profile data is kept, and which checks protect original game and mod folders.
 
 The detailed USVFS research history and experimental prototypes are available in [USVFS_RESEARCH_EN.md](USVFS_RESEARCH_EN.md).
 
@@ -193,7 +193,7 @@ base game -> mods in order -> known writable files -> profile overwrite
 
 x64 targets are started through the managed adapter and `usvfs_x64.dll`. x86 targets use `StalkerModLauncher.UsvfsX86Host.exe`, which loads `usvfs_x86.dll` in a process with matching architecture.
 
-The x86 host remains alive while injected child processes are active. This is required for launcher applications that exit immediately after starting the actual engine.
+The x86 host remains alive while injected child processes are active. The managed x64 path likewise waits for the USVFS process list to remain empty after the initial EXE exits. This is required for launcher applications that exit immediately after starting the actual engine.
 
 Only one USVFS session may run at a time because the official runtime uses shared process state and a shared namespace.
 
@@ -327,6 +327,8 @@ Saving is atomic as far as the file system permits:
 3. the main file is replaced;
 4. the previous version becomes the backup.
 
+If the primary JSON is damaged, it is first copied with a timestamp to `%APPDATA%\StalkerModLauncher\recovery` and is replaced with a readable backup only after the copy succeeds. If neither file can be read, both originals are preserved in `recovery`, a new configuration is created, and the user receives an explicit notification. A temporarily locked or inaccessible file is not treated as damaged: the launcher leaves it unchanged and blocks further writes until a successful reload. The complete failure reason is written to the launcher log.
+
 Settings reads and writes are performed one at a time, so two operations cannot edit the file concurrently. A second launcher instance is also blocked.
 
 Game and mod paths are absolute. When a source folder is moved, the user must select it again. The workspace move operation first copies `userdata`, changes the stored path only after success, and then removes only the explicitly remembered old path without performing a general profile-folder search. The path is changed on the UI thread because WPF observes the profile. If final cleanup fails, the move remains successful: the launcher shows both paths, writes the full exception to the log, and offers to retry only the old-folder cleanup.
@@ -357,6 +359,10 @@ Application logs are stored at:
 The current log rotates at 1 MB, replacing `launcher.old.log` with the previous log.
 
 Game logs and dumps are searched in profile `userdata` or the common data folders of a standalone build. Diagnostics use the launch timestamp so an old crash dump is not reported as the result of the current session.
+
+After process creation the launcher watches actual readiness for up to 30 seconds: a main window, normal process memory growth, or a fresh game log. When none of these signals appears, the profile remains running, but the user receives a warning and may terminate the related processes or keep waiting.
+
+The internal USVFS message queue is drained continuously outside the game logs into the bounded `<workspace>\diagnostics\usvfs.log` file, rotating to `usvfs.old.log`. This prevents queue saturation from blocking the engine and prevents third-party addons from mistaking the service file for an X-Ray log. The final 30 lines are included in the Status-window report. Legacy `userdata\logs\usvfs*.log` files are moved automatically on the next launch.
 
 ## 12. Mod management
 
@@ -438,7 +444,9 @@ Complete release packaging:
 .\scripts\Build-Release.ps1
 ```
 
-The script reads the version from the project file and verifies formatting, the Release build, all unit tests, and the native x64/x86 USVFS overlay before packaging. The x86 smoke test also verifies overlay inheritance from a short-lived launcher to its child process.
+The script reads the version from the project file and verifies formatting, the Release build, all unit tests, and the native x64/x86 USVFS overlay before packaging. Both smoke scenarios verify a short-lived launcher, its child process, and a changed mod file across five consecutive sessions.
+
+The full local stress test is started with `.\scripts\Test-UsvfsStress.ps1`. By default it performs 50 consecutive x64 and x86 sessions while changing overlay contents between launches.
 
 The script creates two ZIP archives:
 
@@ -446,6 +454,8 @@ The script creates two ZIP archives:
 - a self-contained package with the .NET runtime included.
 
 Both packages contain the official x64/x86 USVFS runtime, x86 host, `LICENSE.txt`, and `THIRD-PARTY-NOTICES.txt`. PDB, JSON, Markdown, and intermediate files are excluded from user ZIP files.
+
+Before packaging, the USVFS source is checked against its pinned revision and tracked patch; `scripts\Prepare-UsvfsSource.ps1` prepares that state. The version and SHA-256 of all four built upstream components are checked against `scripts\UsvfsRuntimeManifest.psd1`. Every package contains a `checksums.txt`, and the release directory contains another checksum file for the ZIP archives. After packaging, both ZIP files are extracted to a temporary directory and compared completely with their prepared packages, including EXE version, source commit, and absence of unexpected files.
 
 Experimental VFS publish:
 

@@ -10,11 +10,11 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>..\..\assets\app\icon.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <Version>1.2.5</Version>
-    <FileVersion>1.2.5.0</FileVersion>
-    <AssemblyVersion>1.2.5.0</AssemblyVersion>
-    <InformationalVersion>1.2.5</InformationalVersion>
-    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Version>1.2.6</Version>
+    <FileVersion>1.2.6.0</FileVersion>
+    <AssemblyVersion>1.2.6.0</AssemblyVersion>
+    <InformationalVersion>1.2.6</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
     <Product>S.T.A.L.K.E.R. Mod Launcher</Product>
     <Authors>ITzSYUK</Authors>
     <Description>Profile-based launcher for local S.T.A.L.K.E.R. games and modifications.</Description>

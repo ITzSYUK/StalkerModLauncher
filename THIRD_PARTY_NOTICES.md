@@ -8,6 +8,9 @@ S.T.A.L.K.E.R. Mod Launcher includes or uses the following third-party component
 - Copyright: Sebastian Herbord and the Mod Organizer 2 Team
 - License: GNU General Public License v3.0 or later
 - Use: experimental virtual filesystem backend for x64 and x86 game processes
+- Runtime version: 0.5.7.2
+- Source revision: `57f1ea5e6ad13f7435a7af184748e6c1312c5637`
+- Build compatibility patch: `scripts/patches/usvfs-msvc-pch.patch`
 
 The release package contains unmodified runtime binaries built from the upstream project. The complete corresponding source is available from the linked repository. The launcher itself is distributed under GNU GPLv3.
 

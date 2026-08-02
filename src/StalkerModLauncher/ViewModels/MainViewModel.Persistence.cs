@@ -11,7 +11,8 @@ public sealed partial class MainViewModel
     {
         try
         {
-            var settings = await _settingsStore.LoadAsync();
+            var loadResult = await _settingsStore.LoadWithRecoveryAsync();
+            var settings = loadResult.Settings;
             _lastBrowsedGamePath = settings.LastBrowsedGamePath;
             _isPdaInterfaceEnabled = settings.IsPdaInterfaceEnabled;
             OnPropertyChanged(nameof(IsPdaInterfaceEnabled));
@@ -33,6 +34,19 @@ public sealed partial class MainViewModel
             SelectedProfile = Profiles.FirstOrDefault();
             RefreshValidation();
             Log("Settings loaded.");
+
+            if (loadResult.Recovery is not null)
+            {
+                ReportSettingsRecovery(loadResult.Recovery);
+            }
+        }
+        catch (SettingsPersistenceException ex)
+        {
+            Log($"Settings load blocked: {ex}");
+            _dialogService.ShowError(
+                "Настройки недоступны",
+                $"{ex.Message}{Environment.NewLine}{Environment.NewLine}" +
+                "Файл не изменён. Закройте программу, которая может удерживать его, и перезапустите лаунчер.");
         }
         catch (Exception ex)
         {
@@ -154,6 +168,34 @@ public sealed partial class MainViewModel
         _autoSave.Schedule();
     }
 
+    private void ReportSettingsRecovery(SettingsRecoveryInfo recovery)
+    {
+        foreach (var file in recovery.Files)
+        {
+            Log($"Settings recovery: {file.OriginalPath} -> {file.RecoveryPath}. {file.Error}");
+        }
+
+        var message = recovery.Mode == SettingsRecoveryMode.Backup
+            ? recovery.Files.Count > 0
+                ? "Основной файл настроек повреждён. Настройки восстановлены из резервной копии."
+                : "Основной файл настроек отсутствовал. Настройки восстановлены из резервной копии."
+            : "Файлы настроек повреждены и не читаются. Создана новая конфигурация; профили автоматически восстановить не удалось.";
+
+        Log(message);
+        var preservedFiles = recovery.Files.Count == 0
+            ? string.Empty
+            : $"{Environment.NewLine}{Environment.NewLine}Повреждённые файлы сохранены:{Environment.NewLine}" +
+              string.Join(Environment.NewLine, recovery.Files.Select(file => file.RecoveryPath));
+        _dialogService.ShowInfo(
+            "Восстановление настроек",
+            message + preservedFiles);
+    }
+
+    private void SettingsStoreOnRecoveryCompleted(object? sender, SettingsRecoveryInfo recovery)
+    {
+        _ = InvokeOnUiAsync(() => ReportSettingsRecovery(recovery));
+    }
+
     private void RefreshAutomaticExecutableSelection(ModEntry changedMod)
     {
         var profile = Profiles.FirstOrDefault(candidate => candidate.Mods.Contains(changedMod));
@@ -179,6 +221,7 @@ public sealed partial class MainViewModel
 
     public async Task CleanupAsync()
     {
+        _settingsStore.RecoveryCompleted -= SettingsStoreOnRecoveryCompleted;
         await SaveAsync();
         _autoSave.Dispose();
         _conflictAnalysisCancellation?.Cancel();

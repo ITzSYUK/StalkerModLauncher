@@ -9,6 +9,13 @@ $solution = Join-Path $repositoryRoot "StalkerModLauncher.sln"
 $project = Join-Path $repositoryRoot "src\StalkerModLauncher\StalkerModLauncher.csproj"
 $tests = Join-Path $repositoryRoot "tests\StalkerModLauncher.Tests\StalkerModLauncher.Tests.csproj"
 $usvfsSmokeScript = Join-Path $PSScriptRoot "Test-UsvfsRuntime.ps1"
+$usvfsRoot = Join-Path $repositoryRoot ".external\usvfs"
+$integrityScript = Join-Path $PSScriptRoot "ReleaseIntegrity.ps1"
+$usvfsManifestPath = Join-Path $PSScriptRoot "UsvfsRuntimeManifest.psd1"
+$usvfsPatchPath = Join-Path $repositoryRoot "scripts\patches\usvfs-msvc-pch.patch"
+
+. $integrityScript
+$usvfsManifest = Import-UsvfsRuntimeManifest -Path $usvfsManifestPath
 
 [xml]$projectFile = Get-Content -LiteralPath $project -Raw
 $versionPropertyGroup = @($projectFile.Project.PropertyGroup) |
@@ -38,6 +45,8 @@ function Invoke-DotNet {
 }
 
 Write-Host "Verifying S.T.A.L.K.E.R. Mod Launcher v$projectVersion..."
+Test-UsvfsSourceProvenance -SourceRoot $usvfsRoot -Manifest $usvfsManifest -PatchPath $usvfsPatchPath
+Test-UsvfsRuntimeIntegrity -RuntimeRoot $usvfsRoot -Manifest $usvfsManifest
 Invoke-DotNet -Arguments @("restore", $solution) -FailureMessage "dotnet restore failed."
 Invoke-DotNet `
     -Arguments @("format", $solution, "--verify-no-changes", "--no-restore") `

@@ -10,6 +10,12 @@ $publishRoot = Join-Path $repositoryRoot "publish"
 $outputDirectory = Join-Path $publishRoot "vfs-experimental"
 $usvfsRoot = Join-Path $repositoryRoot ".external\usvfs"
 $x86Host = Join-Path $repositoryRoot "native\StalkerModLauncher.UsvfsX86Host\build32\StalkerModLauncher.UsvfsX86Host.exe"
+$integrityScript = Join-Path $PSScriptRoot "ReleaseIntegrity.ps1"
+$usvfsManifestPath = Join-Path $PSScriptRoot "UsvfsRuntimeManifest.psd1"
+$usvfsPatchPath = Join-Path $repositoryRoot "scripts\patches\usvfs-msvc-pch.patch"
+
+. $integrityScript
+$usvfsManifest = Import-UsvfsRuntimeManifest -Path $usvfsManifestPath
 
 $runtimeFiles = @{
     "usvfs_x64.dll" = Join-Path $usvfsRoot "lib\usvfs_x64.dll"
@@ -24,6 +30,9 @@ foreach ($entry in $runtimeFiles.GetEnumerator()) {
         throw "Missing USVFS dependency '$($entry.Key)': $($entry.Value)"
     }
 }
+
+Test-UsvfsSourceProvenance -SourceRoot $usvfsRoot -Manifest $usvfsManifest -PatchPath $usvfsPatchPath
+Test-UsvfsRuntimeIntegrity -RuntimeRoot $usvfsRoot -Manifest $usvfsManifest
 
 $resolvedRepositoryRoot = [System.IO.Path]::GetFullPath($repositoryRoot)
 $resolvedPublishRoot = [System.IO.Path]::GetFullPath($publishRoot)

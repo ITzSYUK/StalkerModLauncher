@@ -7,6 +7,26 @@ $ErrorActionPreference = "Stop"
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repositoryRoot "src\StalkerModLauncher\StalkerModLauncher.csproj"
 $verificationScript = Join-Path $PSScriptRoot "Verify-Release.ps1"
+$integrityScript = Join-Path $PSScriptRoot "ReleaseIntegrity.ps1"
+$usvfsManifestPath = Join-Path $PSScriptRoot "UsvfsRuntimeManifest.psd1"
+
+. $integrityScript
+$usvfsManifest = Import-UsvfsRuntimeManifest -Path $usvfsManifestPath
+
+$gitStatus = Invoke-RepositoryGit `
+    -SourceRoot $repositoryRoot `
+    -CommandArguments @("status", "--porcelain", "--untracked-files=no")
+if ($gitStatus.ExitCode -ne 0 -or @($gitStatus.Output).Count -ne 0) {
+    throw "Release packaging requires a clean tracked working tree. Commit the current changes first."
+}
+
+$revisionResult = Invoke-RepositoryGit `
+    -SourceRoot $repositoryRoot `
+    -CommandArguments @("rev-parse", "HEAD")
+$sourceRevision = ($revisionResult.Output -join "").Trim()
+if ($revisionResult.ExitCode -ne 0 -or $sourceRevision -notmatch '^[0-9a-f]{40}$') {
+    throw "Failed to determine the source Git revision for the release."
+}
 
 [xml]$projectFile = Get-Content -LiteralPath $project -Raw
 $versionPropertyGroup = @($projectFile.Project.PropertyGroup) |
@@ -90,6 +110,13 @@ function Publish-Package {
     Copy-Item -LiteralPath (Join-Path $repositoryRoot "LICENSE.md") -Destination (Join-Path $packageDirectory "LICENSE.txt")
     Copy-Item -LiteralPath (Join-Path $repositoryRoot "THIRD_PARTY_NOTICES.md") -Destination (Join-Path $packageDirectory "THIRD-PARTY-NOTICES.txt")
 
+    $packageFiles = Get-ChildItem -LiteralPath $packageDirectory -Recurse -File |
+        Select-Object -ExpandProperty FullName
+    Write-Sha256ChecksumFile `
+        -Paths $packageFiles `
+        -RelativeTo $packageDirectory `
+        -OutputPath (Join-Path $packageDirectory "checksums.txt")
+
     $unexpected = Get-ChildItem -LiteralPath $packageDirectory -File | Where-Object { $_.Extension -in @('.pdb', '.json', '.md') }
     if ($unexpected) {
         throw "Unexpected debug/runtime files in ${PackageName}: $($unexpected.Name -join ', ')"
@@ -97,6 +124,13 @@ function Publish-Package {
 
     $archive = Join-Path $releaseRoot "$PackageName.zip"
     Compress-Archive -Path (Join-Path $packageDirectory '*') -DestinationPath $archive -CompressionLevel Optimal
+    Test-ReleasePackage `
+        -PackageDirectory $packageDirectory `
+        -ArchivePath $archive `
+        -ExecutableName $ExecutableName `
+        -ExpectedVersion $Version `
+        -ExpectedCommit $sourceRevision `
+        -UsvfsManifest $usvfsManifest
 }
 
 Publish-Package `
@@ -108,6 +142,17 @@ Publish-Package `
     -PackageName "StalkerModLauncher-v$Version-win-x64-standalone" `
     -SelfContained $true `
     -ExecutableName "StalkerModLauncher-Standalone.exe"
+
+$archives = Get-ChildItem -LiteralPath $releaseRoot -Filter '*.zip' -File |
+    Select-Object -ExpandProperty FullName
+Write-Sha256ChecksumFile `
+    -Paths $archives `
+    -RelativeTo $releaseRoot `
+    -OutputPath (Join-Path $releaseRoot "checksums.txt")
+Test-Sha256ChecksumFile `
+    -Root $releaseRoot `
+    -ChecksumPath (Join-Path $releaseRoot "checksums.txt") `
+    -ExpectedPaths $archives
 
 Remove-Item -LiteralPath $stagingRoot -Recurse -Force
 Write-Host "Release packages created in $releaseRoot"
