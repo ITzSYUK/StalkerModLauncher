@@ -35,6 +35,7 @@ int wmain(int argc, wchar_t* argv[])
   }
 
   output << "shared=" << readText(root / "shared.txt") << "\n";
+  output << "dynamic=" << readText(root / "dynamic.txt") << "\n";
   output << "base-only=" << readText(root / "base-only.txt") << "\n";
   output << "mod-only=" << readText(root / "mod-only.txt") << "\n";
   output << "nested=" << readText(root / "gamedata" / "config" / "system.ltx") << "\n";

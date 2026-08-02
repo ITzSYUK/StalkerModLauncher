@@ -37,6 +37,61 @@ public sealed class OfficialUsvfsNativeApi : IUsvfsNativeApi
     public void DisconnectVfs() => Native.usvfsDisconnectVFS();
     public void ClearVirtualMappings() => Native.usvfsClearVirtualMappings();
 
+    public IReadOnlyList<int> GetVfsProcessIds()
+    {
+        nuint count = 0;
+        if (!Native.usvfsGetVFSProcessList(ref count, IntPtr.Zero))
+        {
+            throw new Win32Exception(Marshal.GetLastWin32Error(), "usvfsGetVFSProcessList failed.");
+        }
+
+        if (count == 0)
+        {
+            return [];
+        }
+
+        var buffer = Marshal.AllocHGlobal(checked((int)count * sizeof(uint)));
+        try
+        {
+            var capacity = count;
+            if (!Native.usvfsGetVFSProcessList(ref capacity, buffer))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "usvfsGetVFSProcessList failed.");
+            }
+
+            var result = new int[Math.Min(checked((int)capacity), checked((int)count))];
+            for (var index = 0; index < result.Length; index++)
+            {
+                result[index] = Marshal.ReadInt32(buffer, index * sizeof(uint));
+            }
+
+            return result;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+    }
+
+    public bool TryGetLogMessage(out string message)
+    {
+        var buffer = new byte[8192];
+        if (!Native.usvfsGetLogMessages(buffer, (nuint)buffer.Length, blocking: false))
+        {
+            message = string.Empty;
+            return false;
+        }
+
+        var length = Array.IndexOf(buffer, (byte)0);
+        if (length < 0)
+        {
+            length = buffer.Length;
+        }
+
+        message = Encoding.UTF8.GetString(buffer, 0, length);
+        return true;
+    }
+
     public bool LinkDirectoryStatic(string sourcePath, string destinationPath, UsvfsLinkFlags flags)
     {
         return Native.usvfsVirtualLinkDirectoryStatic(sourcePath, destinationPath, flags);
@@ -100,6 +155,8 @@ public sealed class OfficialUsvfsNativeApi : IUsvfsNativeApi
                     throw new Win32Exception(Marshal.GetLastWin32Error(), "GetExitCodeProcess failed.");
                 }
 
+                WaitForVfsProcessTree(cancellationToken);
+
                 return unchecked((int)exitCode);
             }
             finally
@@ -107,7 +164,25 @@ public sealed class OfficialUsvfsNativeApi : IUsvfsNativeApi
                 Native.CloseHandle(processInfo.hThread);
                 Native.CloseHandle(processInfo.hProcess);
             }
-        }, cancellationToken);
+        });
+    }
+
+    private static void WaitForVfsProcessTree(CancellationToken cancellationToken)
+    {
+        const int requiredEmptyPolls = 10;
+        var emptyPolls = 0;
+        while (emptyPolls < requiredEmptyPolls)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            nuint processCount = 0;
+            if (!Native.usvfsGetVFSProcessList(ref processCount, IntPtr.Zero))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "usvfsGetVFSProcessList failed.");
+            }
+
+            emptyPolls = processCount == 0 ? emptyPolls + 1 : 0;
+            Thread.Sleep(100);
+        }
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -177,6 +252,17 @@ public sealed class OfficialUsvfsNativeApi : IUsvfsNativeApi
 
         [DllImport("usvfs_x64.dll", CallingConvention = CallingConvention.StdCall)]
         public static extern void usvfsClearVirtualMappings();
+
+        [DllImport("usvfs_x64.dll", CallingConvention = CallingConvention.StdCall, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool usvfsGetVFSProcessList(ref nuint count, IntPtr processIds);
+
+        [DllImport("usvfs_x64.dll", CallingConvention = CallingConvention.StdCall)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool usvfsGetLogMessages(
+            [Out] byte[] buffer,
+            nuint size,
+            [MarshalAs(UnmanagedType.I1)] bool blocking);
 
         [DllImport("usvfs_x64.dll", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode)]
         [return: MarshalAs(UnmanagedType.Bool)]

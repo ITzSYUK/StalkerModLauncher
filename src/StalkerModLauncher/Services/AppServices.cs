@@ -26,11 +26,13 @@ public sealed class AppServices
                 x86Runtime: new X86UsvfsHostRuntime()));
         }
 
+        ProfileDataPathResolver = new ProfileDataPathResolver();
         LaunchCoordinator = new LaunchCoordinator(
             new ProfileLauncher(
                 launchBackends,
                 profileManager: ProfileManager),
-            new GameSessionTracker());
+            new GameSessionTracker(),
+            new GameLaunchReadinessMonitor(ProfileDataPathResolver));
         GameValidator = new GameInstallationValidator();
         ProfileReadinessService = new ProfileReadinessService(GameValidator);
         LaunchPreflightService = new LaunchPreflightService(GameValidator, ProfileManager);
@@ -39,7 +41,6 @@ public sealed class AppServices
         ProfileTransferService = new ProfileTransferService();
         ModScannerService = new ModScannerService();
         ModListEditor = new ModListEditor();
-        ProfileDataPathResolver = new ProfileDataPathResolver();
         ScreenshotScannerService = new ScreenshotScannerService(ProfileDataPathResolver);
         ScreenshotClipboardService = new ScreenshotClipboardService();
         ApProCatalogService = new ApProCatalogService();

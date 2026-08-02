@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using StalkerModLauncher.Models;
 using StalkerModLauncher.Services;
 using Xunit;
@@ -51,6 +52,7 @@ public sealed class UsvfsRuntimeTests
         Assert.Equal(Environment.ProcessId, result.ProcessId);
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("create-vfs", native.Calls);
+        Assert.True(native.LogToConsole);
         Assert.Contains("clear-mappings", native.Calls);
         Assert.Contains("disconnect", native.Calls);
         Assert.Contains("free-parameters", native.Calls);
@@ -106,6 +108,39 @@ public sealed class UsvfsRuntimeTests
         await using var next = runtime.CreateSession(plan, options);
     }
 
+    [Fact]
+    public async Task CreateSession_DrainsDiagnosticMessagesToProfileLog()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "StalkerModLauncherUsvfsLogTests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var native = new FakeUsvfsNativeApi();
+            native.LogMessages.Enqueue("hooked file: gamedata\\config\\system.ltx");
+            var runtime = new UsvfsRuntime(native);
+            var logPath = Path.Combine(root, "userdata", "logs", "usvfs.log");
+            var plan = new UsvfsMappingPlan(@"C:\virtual", @"C:\overwrite", []);
+
+            await using (runtime.CreateSession(
+                             plan,
+                             new UsvfsRuntimeOptions(
+                                 "test-instance",
+                                 LogToConsole: false,
+                                 DiagnosticLogPath: logPath)))
+            {
+            }
+
+            Assert.False(native.LogToConsole);
+            Assert.Contains("hooked file", await File.ReadAllTextAsync(logPath));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
     private sealed class FakeUsvfsNativeApi : IUsvfsNativeApi
     {
         private static readonly IntPtr Parameters = new(42);
@@ -115,6 +150,8 @@ public sealed class UsvfsRuntimeTests
         public bool FailNextMapping { get; init; }
         public string? CommandLine { get; private set; }
         public string? WorkingDirectory { get; private set; }
+        public bool? LogToConsole { get; private set; }
+        public ConcurrentQueue<string> LogMessages { get; } = new();
 
         public IntPtr CreateParameters()
         {
@@ -138,7 +175,11 @@ public sealed class UsvfsRuntimeTests
         public void SetLogLevel(IntPtr parameters, UsvfsLogLevel level) => Calls.Add("set-log-level");
         public void SetCrashDumpType(IntPtr parameters, UsvfsCrashDumpType type) => Calls.Add("set-dump-type");
         public void SetCrashDumpPath(IntPtr parameters, string path) => Calls.Add("set-dump-path");
-        public void InitLogging(bool toLocal) => Calls.Add("init-logging");
+        public void InitLogging(bool toLocal)
+        {
+            LogToConsole = toLocal;
+            Calls.Add("init-logging");
+        }
 
         public bool CreateVfs(IntPtr parameters)
         {
@@ -148,6 +189,8 @@ public sealed class UsvfsRuntimeTests
 
         public void DisconnectVfs() => Calls.Add("disconnect");
         public void ClearVirtualMappings() => Calls.Add("clear-mappings");
+        public IReadOnlyList<int> GetVfsProcessIds() => [];
+        public bool TryGetLogMessage(out string message) => LogMessages.TryDequeue(out message!);
 
         public bool LinkDirectoryStatic(string sourcePath, string destinationPath, UsvfsLinkFlags flags)
         {

@@ -1,5 +1,7 @@
 param(
-    [string]$RuntimeRoot
+    [string]$RuntimeRoot,
+    [ValidateRange(1, 100)]
+    [int]$Iterations = 5
 )
 
 $ErrorActionPreference = "Stop"
@@ -57,7 +59,7 @@ try {
             "run", "--project", $managedPoc,
             "-c", "Release",
             "--no-build", "--no-restore",
-            "--", $RuntimeRoot
+            "--", $RuntimeRoot, "--iterations", $Iterations
         ) `
         -FailureMessage "x64 USVFS overlay smoke test failed."
 
@@ -67,7 +69,7 @@ try {
             "run", "--project", $managedPoc,
             "-c", "Release",
             "--no-build", "--no-restore",
-            "--", $RuntimeRoot, $x86Child, $x86Launcher
+            "--", $RuntimeRoot, $x86Child, $x86Launcher, "--iterations", $Iterations
         ) `
         -FailureMessage "x86 USVFS launcher-child smoke test failed."
 }
@@ -75,4 +77,4 @@ finally {
     Pop-Location
 }
 
-Write-Host "USVFS native smoke tests passed."
+Write-Host "USVFS native smoke tests passed ($Iterations iteration(s) per architecture)."

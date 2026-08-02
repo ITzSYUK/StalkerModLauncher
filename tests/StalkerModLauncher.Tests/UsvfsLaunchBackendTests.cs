@@ -25,6 +25,9 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
         var game = CreateDirectory("game");
         var mod = CreateDirectory("mod");
         var workspace = CreateDirectory("workspace");
+        var legacyUsvfsLog = Path.Combine(workspace, "userdata", "logs", "usvfs.log");
+        Directory.CreateDirectory(Path.GetDirectoryName(legacyUsvfsLog)!);
+        File.WriteAllText(legacyUsvfsLog, "legacy diagnostics");
         File.WriteAllText(
             Path.Combine(game, "fsgame.ltx"),
             "$app_data_root$ = true | false | $fs_root$ | _appdata_\\");
@@ -74,6 +77,13 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
         Assert.NotNull(plan.RuntimeLease);
         Assert.NotNull(plan.ProcessStarter);
         Assert.NotNull(runtime.MappingPlan);
+        Assert.Equal(
+            Path.Combine(workspace, "diagnostics", "usvfs.log"),
+            runtime.Options?.DiagnosticLogPath);
+        Assert.False(File.Exists(legacyUsvfsLog));
+        Assert.Equal(
+            "legacy diagnostics",
+            File.ReadAllText(Path.Combine(workspace, "diagnostics", "usvfs.log")));
         Assert.Equal(
             [game, mod, manifest.WriteOverlayRoot],
             runtime.MappingPlan.Operations.Select(operation => operation.SourcePath).ToArray());
@@ -649,6 +659,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     private sealed class RecordingUsvfsRuntime : IUsvfsRuntime
     {
         public UsvfsMappingPlan? MappingPlan { get; private set; }
+        public UsvfsRuntimeOptions? Options { get; private set; }
 
         public IUsvfsRuntimeSession CreateSession(
             UsvfsMappingPlan mappingPlan,
@@ -656,6 +667,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             IProgress<string>? progress = null)
         {
             MappingPlan = mappingPlan;
+            Options = options;
             return new FakeUsvfsRuntimeSession();
         }
 
@@ -681,6 +693,8 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
         }
 
         public Task<int> GetExitCodeAsync(CancellationToken cancellationToken = default) => Task.FromResult(0);
+
+        public IReadOnlyList<int> GetActiveProcessIds() => [];
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }

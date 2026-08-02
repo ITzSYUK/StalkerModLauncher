@@ -25,4 +25,6 @@ public interface IUsvfsRuntimeSession : IAsyncDisposable
         CancellationToken cancellationToken = default);
 
     Task<int> GetExitCodeAsync(CancellationToken cancellationToken = default);
+
+    IReadOnlyList<int> GetActiveProcessIds();
 }

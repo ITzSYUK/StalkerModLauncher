@@ -50,9 +50,10 @@ public sealed partial class MainViewModel
 
             var session = await _launchCoordinator.StartAsync(SelectedProfile.GameInstallPath, SelectedProfile, progress);
             await SaveAsync();
-            Log($"Game process started. PID: {session.ProcessId}");
+            Log($"Game process created. PID: {session.ProcessId}");
             SelectedProfile.IsRunning = true;
             RaiseCommandStates();
+            _ = ObserveLaunchReadinessAsync(session, SelectedProfile);
             _ = CompleteGameSessionAsync(session.Completion, SelectedProfile);
         }
         catch (Exception ex)
@@ -65,6 +66,54 @@ public sealed partial class MainViewModel
             IsBuilding = false;
             BuildProgressText = string.Empty;
             RaiseCommandStates();
+        }
+    }
+
+    private async Task ObserveLaunchReadinessAsync(LaunchedGameSession session, ModProfile profile)
+    {
+        try
+        {
+            var readiness = await session.Readiness;
+            if (readiness.Status == GameLaunchReadinessStatus.Ready)
+            {
+                Log($"Game launch ready: {readiness.Details}.");
+                return;
+            }
+
+            if (readiness.Status == GameLaunchReadinessStatus.ExitedBeforeReady)
+            {
+                Log($"Game exited before readiness: {readiness.Details}");
+                return;
+            }
+
+            Log($"Possible game launch hang: {readiness.Details}");
+            var terminate = false;
+            await InvokeOnUiAsync(() =>
+            {
+                if (!profile.IsRunning)
+                {
+                    return;
+                }
+
+                terminate = _dialogService.Confirm(
+                    "Возможное зависание запуска",
+                    readiness.Details + Environment.NewLine + Environment.NewLine +
+                    "Завершить связанные процессы? Нажмите «Нет», чтобы продолжить ожидание.");
+            });
+
+            if (terminate)
+            {
+                Log(session.TryTerminate()
+                    ? "Hung launch processes were terminated by the user."
+                    : "No active launch processes were found to terminate.");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Log($"Launch readiness check failed: {ex.Message}");
         }
     }
 

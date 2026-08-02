@@ -400,7 +400,7 @@ public sealed class MainViewModelTests
 
     private sealed class ThrowingProfileLauncher : IProfileLauncher
     {
-        public Task<Process> LaunchAsync(
+        public Task<ProfileLaunchHandle> LaunchAsync(
             string gamePath,
             ModProfile profile,
             IProgress<string> progress,
@@ -416,7 +416,11 @@ public sealed class MainViewModelTests
         {
         }
 
-        public Task<GameSessionResult> TrackAsync(Process process, string profileName, bool publishDiscordStatus)
+        public Task<GameSessionResult> TrackAsync(
+            Process process,
+            string profileName,
+            bool publishDiscordStatus,
+            Task<int>? sessionCompletion = null)
         {
             throw new NotSupportedException("MainViewModel tests must not track game processes.");
         }

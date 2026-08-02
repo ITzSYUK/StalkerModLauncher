@@ -16,7 +16,8 @@ namespace fs = std::filesystem;
 
 namespace
 {
-constexpr std::uint32_t ConfigMagic = 0x31534656; // VFS1
+constexpr std::uint32_t ConfigMagic = 0x32534656; // VFS2
+constexpr std::uintmax_t MaxLogFileBytes = 2 * 1024 * 1024;
 
 struct Mapping
 {
@@ -32,7 +33,14 @@ struct Config
   std::wstring executable;
   std::wstring arguments;
   std::wstring workingDirectory;
+  std::wstring diagnosticLogPath;
   std::vector<Mapping> mappings;
+};
+
+struct DiagnosticLog
+{
+  fs::path path;
+  std::ofstream output;
 };
 
 std::uint32_t readUInt32(std::ifstream& input)
@@ -96,6 +104,7 @@ Config readConfig(const fs::path& path)
   config.executable = fromUtf8(readUtf8(input));
   config.arguments = fromUtf8(readUtf8(input));
   config.workingDirectory = fromUtf8(readUtf8(input));
+  config.diagnosticLogPath = fromUtf8(readUtf8(input));
 
   const auto mappingCount = readUInt32(input);
   if (mappingCount > 100000) {
@@ -142,7 +151,70 @@ std::wstring quote(const std::wstring& value)
   return result;
 }
 
-void waitForVfsProcessTree()
+void prepareLogFile(const fs::path& path)
+{
+  fs::create_directories(path.parent_path());
+  std::error_code error;
+  if (!fs::exists(path, error) || fs::file_size(path, error) < MaxLogFileBytes) {
+    return;
+  }
+
+  const fs::path oldPath = path.parent_path() /
+      (path.stem().wstring() + L".old" + path.extension().wstring());
+  fs::remove(oldPath, error);
+  error.clear();
+  fs::rename(path, oldPath, error);
+}
+
+void openDiagnosticLog(DiagnosticLog& log, const fs::path& path)
+{
+  log.path = path;
+  prepareLogFile(path);
+  log.output.open(path, std::ios::binary | std::ios::app);
+}
+
+void rotateDiagnosticLog(DiagnosticLog& log)
+{
+  log.output.close();
+  prepareLogFile(log.path);
+  log.output.open(log.path, std::ios::binary | std::ios::app);
+}
+
+void drainLogs(DiagnosticLog* log)
+{
+  if (log == nullptr || !log->output) {
+    return;
+  }
+
+  std::vector<char> buffer(8192, '\0');
+  while (usvfsGetLogMessages(buffer.data(), buffer.size(), false)) {
+    const auto position = log->output.tellp();
+    if (position >= 0 && static_cast<std::uintmax_t>(position) >= MaxLogFileBytes) {
+      rotateDiagnosticLog(*log);
+    }
+    log->output << buffer.data() << '\n';
+  }
+  log->output.flush();
+}
+
+void waitForProcess(HANDLE process, DiagnosticLog* diagnosticLog)
+{
+  while (true) {
+    const DWORD waitResult = WaitForSingleObject(process, 25);
+    if (waitResult == WAIT_OBJECT_0) {
+      break;
+    }
+    if (waitResult != WAIT_TIMEOUT) {
+      throw std::runtime_error(
+          "WaitForSingleObject failed: " + std::to_string(GetLastError()));
+    }
+
+    drainLogs(diagnosticLog);
+  }
+  drainLogs(diagnosticLog);
+}
+
+void waitForVfsProcessTree(DiagnosticLog* diagnosticLog)
 {
   // Launchers such as Gunslinger Play.exe exit immediately after spawning the
   // actual game. Keep the controller alive until every hooked descendant exits.
@@ -156,6 +228,7 @@ void waitForVfsProcessTree()
     }
 
     emptyPolls = processCount == 0 ? emptyPolls + 1 : 0;
+    drainLogs(diagnosticLog);
     Sleep(100);
   }
 }
@@ -168,8 +241,12 @@ int wmain(int argc, wchar_t* argv[])
     return 10;
   }
 
+  DiagnosticLog diagnosticLog;
   try {
     const auto config = readConfig(argv[1]);
+    if (!config.diagnosticLogPath.empty()) {
+      openDiagnosticLog(diagnosticLog, fs::path(config.diagnosticLogPath));
+    }
     std::unique_ptr<usvfsParameters, decltype(&usvfsFreeParameters)> parameters(
         usvfsCreateParameters(), &usvfsFreeParameters);
     if (!parameters) {
@@ -181,7 +258,7 @@ int wmain(int argc, wchar_t* argv[])
     usvfsSetLogLevel(parameters.get(), LogLevel::Info);
     usvfsSetCrashDumpType(parameters.get(), CrashDumpsType::None);
     usvfsSetCrashDumpPath(parameters.get(), "");
-    usvfsInitLogging(false);
+    usvfsInitLogging(config.diagnosticLogPath.empty());
 
     if (!usvfsCreateVFS(parameters.get())) {
       throw std::runtime_error("usvfsCreateVFS failed");
@@ -215,13 +292,14 @@ int wmain(int argc, wchar_t* argv[])
       throw std::runtime_error("usvfsCreateProcessHooked failed: " + std::to_string(GetLastError()));
     }
 
-    WaitForSingleObject(process.hProcess, INFINITE);
+    waitForProcess(process.hProcess, diagnosticLog.output.is_open() ? &diagnosticLog : nullptr);
     DWORD exitCode = 1;
     GetExitCodeProcess(process.hProcess, &exitCode);
     CloseHandle(process.hThread);
     CloseHandle(process.hProcess);
-    waitForVfsProcessTree();
+    waitForVfsProcessTree(diagnosticLog.output.is_open() ? &diagnosticLog : nullptr);
     usvfsDisconnectVFS();
+    drainLogs(diagnosticLog.output.is_open() ? &diagnosticLog : nullptr);
     return static_cast<int>(exitCode);
   } catch (const std::exception& exception) {
     std::cerr << "USVFS x86 host failed: " << exception.what() << "\n";

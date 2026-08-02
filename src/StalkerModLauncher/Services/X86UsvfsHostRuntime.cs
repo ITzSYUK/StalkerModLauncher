@@ -34,7 +34,7 @@ public sealed class X86UsvfsHostRuntime(string? runtimeDirectory = null) : IUsvf
 
     private sealed class Session : IUsvfsRuntimeSession
     {
-        private const uint ConfigMagic = 0x31534656;
+        private const uint ConfigMagic = 0x32534656;
         private readonly string _runtimeDirectory;
         private readonly UsvfsMappingPlan _mappingPlan;
         private readonly UsvfsRuntimeOptions _options;
@@ -97,6 +97,18 @@ public sealed class X86UsvfsHostRuntime(string? runtimeDirectory = null) : IUsvf
             return process.ExitCode;
         }
 
+        public IReadOnlyList<int> GetActiveProcessIds()
+        {
+            try
+            {
+                return _hostProcess is { HasExited: false } process ? [process.Id] : [];
+            }
+            catch (InvalidOperationException)
+            {
+                return [];
+            }
+        }
+
         public ValueTask DisposeAsync()
         {
             if (_disposed)
@@ -139,6 +151,7 @@ public sealed class X86UsvfsHostRuntime(string? runtimeDirectory = null) : IUsvf
             WriteUtf8(writer, request.ExecutablePath);
             WriteUtf8(writer, request.Arguments ?? string.Empty);
             WriteUtf8(writer, request.WorkingDirectory);
+            WriteUtf8(writer, options.DiagnosticLogPath ?? string.Empty);
             var operations = mappingPlan.Operations
                 .OrderBy(operation => operation.Order)
                 .ToArray();

@@ -100,7 +100,7 @@ int wmain()
     usvfsSetCrashDumpType(parameters.get(), CrashDumpsType::None);
     usvfsSetCrashDumpPath(parameters.get(), "");
 
-    usvfsInitLogging(false);
+    usvfsInitLogging(true);
     if (!usvfsCreateVFS(parameters.get())) {
       std::cerr << "usvfsCreateVFS failed\n";
       return 20;

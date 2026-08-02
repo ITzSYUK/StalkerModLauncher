@@ -5,7 +5,7 @@ namespace StalkerModLauncher.Services;
 
 public interface IProfileLauncher
 {
-    Task<Process> LaunchAsync(
+    Task<ProfileLaunchHandle> LaunchAsync(
         string gamePath,
         ModProfile profile,
         IProgress<string> progress,
@@ -34,7 +34,7 @@ public sealed class ProfileLauncher : IProfileLauncher
         _profileManager = profileManager;
     }
 
-    public async Task<Process> LaunchAsync(
+    public async Task<ProfileLaunchHandle> LaunchAsync(
         string gamePath,
         ModProfile profile,
         IProgress<string> progress,
@@ -48,8 +48,22 @@ public sealed class ProfileLauncher : IProfileLauncher
         try
         {
             var process = _launchPlanExecutor.Start(plan, progress);
-            AttachRuntimeLease(process, plan.RuntimeLease);
-            return process;
+            Task<int>? completion = null;
+            if (plan.RuntimeCompletion is not null)
+            {
+                completion = plan.RuntimeCompletion();
+            }
+            else if (plan.RuntimeLease is not null)
+            {
+                completion = WaitForProcessExitAsync(process);
+            }
+
+            if (plan.RuntimeLease is not null && completion is not null)
+            {
+                completion = DisposeRuntimeAfterCompletionAsync(completion, plan.RuntimeLease);
+            }
+
+            return new ProfileLaunchHandle(process, completion, plan.ActiveProcessIds);
         }
         catch
         {
@@ -93,21 +107,22 @@ public sealed class ProfileLauncher : IProfileLauncher
             : $"Система запуска профиля недоступна: {kind}.");
     }
 
-    private static void AttachRuntimeLease(Process process, IAsyncDisposable? runtimeLease)
+    private static async Task<int> WaitForProcessExitAsync(Process process)
     {
-        if (runtimeLease is null)
+        await process.WaitForExitAsync();
+        return process.ExitCode;
+    }
+
+    private static async Task<int> DisposeRuntimeAfterCompletionAsync(
+        Task<int> completion,
+        IAsyncDisposable runtimeLease)
+    {
+        try
         {
-            return;
+            return await completion;
         }
-
-        var disposed = 0;
-        async void DisposeRuntime(object? sender, EventArgs args)
+        finally
         {
-            if (Interlocked.Exchange(ref disposed, 1) != 0)
-            {
-                return;
-            }
-
             try
             {
                 await runtimeLease.DisposeAsync();
@@ -116,13 +131,6 @@ public sealed class ProfileLauncher : IProfileLauncher
             {
                 // Runtime cleanup must not crash the launcher after the game exits.
             }
-        }
-
-        process.EnableRaisingEvents = true;
-        process.Exited += DisposeRuntime;
-        if (process.HasExited)
-        {
-            DisposeRuntime(process, EventArgs.Empty);
         }
     }
 }

@@ -18,7 +18,7 @@ public sealed class ProfileLauncherTests
 
         var launchedProcess = await launcher.LaunchAsync("game", profile, new Progress<string>());
 
-        Assert.Same(process, launchedProcess);
+        Assert.Same(process, launchedProcess.Process);
         Assert.Same(profile, linkedBackend.Profile);
         Assert.Equal(LaunchBackendKind.LinkedWorkspace, executor.Plan?.BackendKind);
     }
@@ -115,6 +115,24 @@ public sealed class ProfileLauncherTests
         Assert.True(runtimeLease.IsDisposed);
     }
 
+    [Fact]
+    public async Task LaunchAsync_KeepsRuntimeLeaseUntilBackendSessionCompletes()
+    {
+        using var process = Process.GetCurrentProcess();
+        var completion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var runtimeLease = new RecordingRuntimeLease();
+        var launcher = new ProfileLauncher(
+            [new RuntimeLeaseLaunchBackend(runtimeLease, completion.Task)],
+            new RecordingLaunchPlanExecutor(process));
+
+        var launch = await launcher.LaunchAsync("game", new ModProfile(), new Progress<string>());
+
+        Assert.False(runtimeLease.IsDisposed);
+        completion.SetResult(17);
+        Assert.Equal(17, await launch.Completion!);
+        Assert.True(runtimeLease.IsDisposed);
+    }
+
     private sealed class RecordingLaunchBackend(LaunchBackendKind kind) : IProfileLaunchBackend
     {
         public LaunchBackendKind Kind { get; } = kind;
@@ -159,7 +177,9 @@ public sealed class ProfileLauncherTests
         }
     }
 
-    private sealed class RuntimeLeaseLaunchBackend(IAsyncDisposable runtimeLease) : IProfileLaunchBackend
+    private sealed class RuntimeLeaseLaunchBackend(
+        IAsyncDisposable runtimeLease,
+        Task<int>? completion = null) : IProfileLaunchBackend
     {
         public LaunchBackendKind Kind => LaunchBackendKind.LinkedWorkspace;
 
@@ -173,7 +193,8 @@ public sealed class ProfileLauncherTests
                 "C:\\Game\\LinkedWorkspace.exe",
                 "-nointro",
                 "C:\\Game",
-                runtimeLease));
+                runtimeLease,
+                runtimeCompletion: completion is null ? null : () => completion));
         }
     }
 

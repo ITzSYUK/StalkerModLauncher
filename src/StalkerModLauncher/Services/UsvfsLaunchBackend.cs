@@ -163,9 +163,13 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
         var selectedRuntime = architecture == WindowsExecutableArchitecture.X86
             ? _x86Runtime
             : _runtime;
+        var diagnosticLogPath = UsvfsDiagnosticPaths.Prepare(profileWorkspace, progress);
         var session = selectedRuntime.CreateSession(
             mappingPlan,
-            new UsvfsRuntimeOptions($"stalker_launcher_{profile.Id[..Math.Min(profile.Id.Length, 8)]}"),
+            new UsvfsRuntimeOptions(
+                $"stalker_launcher_{profile.Id[..Math.Min(profile.Id.Length, 8)]}",
+                LogToConsole: false,
+                DiagnosticLogPath: diagnosticLogPath),
             progress);
 
         var processStarter = new Func<LaunchPlan, IProgress<string>?, System.Diagnostics.Process>(
@@ -177,7 +181,9 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
             launchRequest.Arguments,
             launchRequest.WorkingDirectory,
             session,
-            processStarter));
+            processStarter,
+            () => session.GetExitCodeAsync(),
+            session.GetActiveProcessIds));
     }
 
     private static bool IsAnomalyLauncher(string executableRelativePath) =>

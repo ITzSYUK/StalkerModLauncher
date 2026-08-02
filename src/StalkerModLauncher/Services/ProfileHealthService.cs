@@ -115,7 +115,17 @@ public sealed class ProfileHealthService
 
         var logPaths = _dataPathResolver.GetLogDirectories(profile);
         var latestLog = FindLatest(logPaths, cancellationToken, ".log", ".txt");
+        if (IsUsvfsLog(latestLog))
+        {
+            latestLog = FindLatest(
+                logPaths,
+                cancellationToken,
+                file => !IsUsvfsLog(file),
+                ".log",
+                ".txt");
+        }
         var latestDump = FindLatest(logPaths, cancellationToken, ".mdmp", ".dmp");
+        var usvfsLogPath = UsvfsDiagnosticPaths.Resolve(profileFolderPath);
         checks.Add(new ProfileHealthCheck(
             ProfileHealthStatus.Healthy,
             "Последний лог",
@@ -134,7 +144,8 @@ public sealed class ProfileHealthService
             latestLog,
             latestDump,
             LaunchPlan: launchPlan?.Plan,
-            OverlayManifest: overlayManifest);
+            OverlayManifest: overlayManifest,
+            UsvfsLogPath: File.Exists(usvfsLogPath) ? usvfsLogPath : null);
     }
 
     private LaunchPlanResolution? TryCreateLaunchPlan(
@@ -340,6 +351,15 @@ public sealed class ProfileHealthService
         CancellationToken cancellationToken,
         params string[] extensions)
     {
+        return FindLatest(paths, cancellationToken, _ => true, extensions);
+    }
+
+    private static string? FindLatest(
+        IEnumerable<string> paths,
+        CancellationToken cancellationToken,
+        Func<string, bool> predicate,
+        params string[] extensions)
+    {
         try
         {
             return paths.Where(Directory.Exists)
@@ -347,7 +367,8 @@ public sealed class ProfileHealthService
                 .Where(file =>
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    return extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase);
+                    return predicate(file) &&
+                           extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase);
                 })
                 .OrderByDescending(File.GetLastWriteTimeUtc)
                 .FirstOrDefault();
@@ -361,5 +382,8 @@ public sealed class ProfileHealthService
             return null;
         }
     }
+
+    private static bool IsUsvfsLog(string? path) =>
+        Path.GetFileName(path)?.StartsWith("usvfs", StringComparison.OrdinalIgnoreCase) == true;
 
 }

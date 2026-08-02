@@ -20,7 +20,8 @@ public sealed record ProfileHealthReport(
     string? LatestCrashDumpPath,
     WorkspaceStatus? Workspace = null,
     LaunchPlan? LaunchPlan = null,
-    OverlayManifest? OverlayManifest = null)
+    OverlayManifest? OverlayManifest = null,
+    string? UsvfsLogPath = null)
 {
     public int ErrorCount => Checks.Count(check => check.Status == ProfileHealthStatus.Error);
     public int WarningCount => Checks.Count(check => check.Status == ProfileHealthStatus.Warning);
@@ -45,6 +46,20 @@ public sealed record ProfileHealthReport(
             lines.Add(string.Empty);
             lines.Add($"Workspace: логический размер {workspace.LogicalSizeDisplay}, реально занимает около {workspace.PhysicalSizeDisplay}.");
             lines.Add($"Файлы: {workspace.FileCount:N0}; hardlink: {workspace.HardLinkCount:N0}; symlink: {workspace.SymbolicLinkCount:N0}; локальные: {workspace.LocalFileCount:N0}.");
+        }
+
+        if (File.Exists(UsvfsLogPath))
+        {
+            lines.Add(string.Empty);
+            lines.Add($"Последние сообщения USVFS ({UsvfsLogPath}):");
+            try
+            {
+                lines.AddRange(File.ReadLines(UsvfsLogPath).TakeLast(30));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                lines.Add($"Не удалось прочитать USVFS-лог: {ex.Message}");
+            }
         }
 
         return string.Join(Environment.NewLine, lines);

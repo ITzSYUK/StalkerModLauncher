@@ -61,7 +61,7 @@ public sealed class LaunchCoordinatorTests
         public string? GamePath { get; private set; }
         public ModProfile? Profile { get; private set; }
 
-        public Task<Process> LaunchAsync(
+        public Task<ProfileLaunchHandle> LaunchAsync(
             string gamePath,
             ModProfile profile,
             IProgress<string> progress,
@@ -69,7 +69,7 @@ public sealed class LaunchCoordinatorTests
         {
             GamePath = gamePath;
             Profile = profile;
-            return Task.FromResult(process);
+            return Task.FromResult(new ProfileLaunchHandle(process));
         }
     }
 
@@ -87,7 +87,11 @@ public sealed class LaunchCoordinatorTests
 
         public bool PublishDiscordStatus { get; private set; }
 
-        public Task<GameSessionResult> TrackAsync(Process process, string profileName, bool publishDiscordStatus)
+        public Task<GameSessionResult> TrackAsync(
+            Process process,
+            string profileName,
+            bool publishDiscordStatus,
+            Task<int>? sessionCompletion = null)
         {
             Process = process;
             ProfileName = profileName;

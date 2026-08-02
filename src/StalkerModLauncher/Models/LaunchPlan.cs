@@ -8,7 +8,9 @@ public sealed class LaunchPlan
         string? arguments,
         string workingDirectory,
         IAsyncDisposable? runtimeLease = null,
-        Func<LaunchPlan, IProgress<string>?, System.Diagnostics.Process>? processStarter = null)
+        Func<LaunchPlan, IProgress<string>?, System.Diagnostics.Process>? processStarter = null,
+        Func<Task<int>>? runtimeCompletion = null,
+        Func<IReadOnlyList<int>>? activeProcessIds = null)
     {
         if (string.IsNullOrWhiteSpace(executablePath))
         {
@@ -26,6 +28,8 @@ public sealed class LaunchPlan
         WorkingDirectory = workingDirectory;
         RuntimeLease = runtimeLease;
         ProcessStarter = processStarter;
+        RuntimeCompletion = runtimeCompletion;
+        ActiveProcessIds = activeProcessIds;
     }
 
     public LaunchBackendKind BackendKind { get; }
@@ -34,4 +38,6 @@ public sealed class LaunchPlan
     public string WorkingDirectory { get; }
     public IAsyncDisposable? RuntimeLease { get; }
     public Func<LaunchPlan, IProgress<string>?, System.Diagnostics.Process>? ProcessStarter { get; }
+    public Func<Task<int>>? RuntimeCompletion { get; }
+    public Func<IReadOnlyList<int>>? ActiveProcessIds { get; }
 }

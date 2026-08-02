@@ -6,11 +6,16 @@ public sealed class LaunchCoordinator : IDisposable
 {
     private readonly IProfileLauncher _profileLauncher;
     private readonly IGameSessionTracker _sessionTracker;
+    private readonly GameLaunchReadinessMonitor _readinessMonitor;
 
-    public LaunchCoordinator(IProfileLauncher profileLauncher, IGameSessionTracker sessionTracker)
+    public LaunchCoordinator(
+        IProfileLauncher profileLauncher,
+        IGameSessionTracker sessionTracker,
+        GameLaunchReadinessMonitor? readinessMonitor = null)
     {
         _profileLauncher = profileLauncher;
         _sessionTracker = sessionTracker;
+        _readinessMonitor = readinessMonitor ?? new GameLaunchReadinessMonitor(new ProfileDataPathResolver());
     }
 
     public void ConfigureDiscord(string clientId, Action<string>? diagnostic = null)
@@ -24,10 +29,14 @@ public sealed class LaunchCoordinator : IDisposable
         IProgress<string> progress,
         CancellationToken cancellationToken = default)
     {
-        var process = await _profileLauncher.LaunchAsync(gamePath, profile, progress, cancellationToken);
-        var processId = process.Id;
-        var completion = _sessionTracker.TrackAsync(process, profile.Name, profile.IsDiscordStatusEnabled);
-        return new LaunchedGameSession(processId, completion);
+        var launch = await _profileLauncher.LaunchAsync(gamePath, profile, progress, cancellationToken);
+        var completion = _sessionTracker.TrackAsync(
+            launch.Process,
+            profile.Name,
+            profile.IsDiscordStatusEnabled,
+            launch.Completion);
+        var readiness = _readinessMonitor.MonitorAsync(launch, profile, cancellationToken);
+        return new LaunchedGameSession(launch.ProcessId, readiness, completion, launch.TryTerminate);
     }
 
     public void Dispose()
@@ -36,4 +45,8 @@ public sealed class LaunchCoordinator : IDisposable
     }
 }
 
-public sealed record LaunchedGameSession(int ProcessId, Task<GameSessionResult> Completion);
+public sealed record LaunchedGameSession(
+    int ProcessId,
+    Task<GameLaunchReadinessResult> Readiness,
+    Task<GameSessionResult> Completion,
+    Func<bool> TryTerminate);

@@ -73,6 +73,22 @@ public sealed class GameExitDiagnosticsServiceTests : IDisposable
         Assert.Equal(log, result.LatestLogPath);
     }
 
+    [Fact]
+    public void Analyze_DoesNotTreatUsvfsDiagnosticsAsGameLog()
+    {
+        var started = DateTime.UtcNow.AddSeconds(-5);
+        var logsPath = Path.Combine(_root, "userdata", "logs");
+        var gameLog = CreateFile(logsPath, "xray.log", started.AddSeconds(1));
+        CreateFile(logsPath, "usvfs.log", started.AddSeconds(2));
+        var profile = new ModProfile { WorkspacePath = _root };
+
+        var result = _service.Analyze(
+            profile,
+            new GameSessionResult(TimeSpan.FromSeconds(5), true, -1, started, DateTime.UtcNow));
+
+        Assert.Equal(gameLog, result.LatestLogPath);
+    }
+
     private static string CreateFile(string directory, string name, DateTime lastWriteUtc)
     {
         Directory.CreateDirectory(directory);

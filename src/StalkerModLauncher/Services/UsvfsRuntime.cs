@@ -14,12 +14,18 @@ public sealed class UsvfsRuntime(IUsvfsNativeApi nativeApi) : IUsvfsRuntime
         ArgumentNullException.ThrowIfNull(options);
 
         var parameters = IntPtr.Zero;
+        UsvfsLogCollector? logCollector = null;
         var reservation = UsvfsSessionReservation.Acquire();
         try
         {
             parameters = nativeApi.CreateParameters();
             ConfigureParameters(parameters, options);
-            nativeApi.InitLogging(options.EnableLogging);
+            var collectDiagnostics = !string.IsNullOrWhiteSpace(options.DiagnosticLogPath);
+            nativeApi.InitLogging(collectDiagnostics ? false : options.LogToConsole);
+            if (collectDiagnostics)
+            {
+                logCollector = new UsvfsLogCollector(nativeApi, options.DiagnosticLogPath!);
+            }
 
             if (!nativeApi.CreateVfs(parameters))
             {
@@ -28,12 +34,13 @@ public sealed class UsvfsRuntime(IUsvfsNativeApi nativeApi) : IUsvfsRuntime
 
             nativeApi.ClearVirtualMappings();
             ApplyMappings(mappingPlan, progress);
-            return new UsvfsRuntimeSession(nativeApi, parameters, reservation);
+            return new UsvfsRuntimeSession(nativeApi, parameters, reservation, logCollector);
         }
         catch
         {
             try
             {
+                logCollector?.Dispose();
                 nativeApi.DisconnectVfs();
             }
             finally
@@ -151,6 +158,7 @@ public sealed class UsvfsRuntimeSession : IUsvfsRuntimeSession
     private readonly IUsvfsNativeApi _nativeApi;
     private readonly IntPtr _parameters;
     private readonly UsvfsSessionReservation _reservation;
+    private readonly UsvfsLogCollector? _logCollector;
     private readonly object _sync = new();
     private Task<int>? _exitCodeTask;
     private bool _disposed;
@@ -158,11 +166,13 @@ public sealed class UsvfsRuntimeSession : IUsvfsRuntimeSession
     internal UsvfsRuntimeSession(
         IUsvfsNativeApi nativeApi,
         IntPtr parameters,
-        UsvfsSessionReservation reservation)
+        UsvfsSessionReservation reservation,
+        UsvfsLogCollector? logCollector)
     {
         _nativeApi = nativeApi;
         _parameters = parameters;
         _reservation = reservation;
+        _logCollector = logCollector;
     }
 
     public Process StartProcess(
@@ -210,6 +220,14 @@ public sealed class UsvfsRuntimeSession : IUsvfsRuntimeSession
         return await task.WaitAsync(cancellationToken);
     }
 
+    public IReadOnlyList<int> GetActiveProcessIds()
+    {
+        lock (_sync)
+        {
+            return _disposed ? [] : _nativeApi.GetVfsProcessIds();
+        }
+    }
+
     public ValueTask DisposeAsync()
     {
         lock (_sync)
@@ -224,17 +242,24 @@ public sealed class UsvfsRuntimeSession : IUsvfsRuntimeSession
 
         try
         {
-            _nativeApi.DisconnectVfs();
+            _logCollector?.Dispose();
         }
         finally
         {
             try
             {
-                _nativeApi.FreeParameters(_parameters);
+                _nativeApi.DisconnectVfs();
             }
             finally
             {
-                _reservation.Dispose();
+                try
+                {
+                    _nativeApi.FreeParameters(_parameters);
+                }
+                finally
+                {
+                    _reservation.Dispose();
+                }
             }
         }
 

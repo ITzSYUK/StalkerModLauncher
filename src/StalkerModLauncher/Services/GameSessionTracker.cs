@@ -5,7 +5,11 @@ namespace StalkerModLauncher.Services;
 public interface IGameSessionTracker : IDisposable
 {
     void ConfigureDiscord(string clientId, Action<string>? diagnostic = null);
-    Task<GameSessionResult> TrackAsync(Process process, string profileName, bool publishDiscordStatus);
+    Task<GameSessionResult> TrackAsync(
+        Process process,
+        string profileName,
+        bool publishDiscordStatus,
+        Task<int>? sessionCompletion = null);
 }
 
 public sealed class GameSessionTracker : IGameSessionTracker
@@ -25,7 +29,11 @@ public sealed class GameSessionTracker : IGameSessionTracker
         }
     }
 
-    public async Task<GameSessionResult> TrackAsync(Process process, string profileName, bool publishDiscordStatus)
+    public async Task<GameSessionResult> TrackAsync(
+        Process process,
+        string profileName,
+        bool publishDiscordStatus,
+        Task<int>? sessionCompletion = null)
     {
         var startedAtUtc = DateTime.UtcNow;
         var processId = process.Id;
@@ -40,8 +48,18 @@ public sealed class GameSessionTracker : IGameSessionTracker
 
         try
         {
-            await process.WaitForExitAsync();
-            return CreateResult(startedAtUtc, DateTime.UtcNow, process.ExitCode);
+            int exitCode;
+            if (sessionCompletion is not null)
+            {
+                exitCode = await sessionCompletion;
+            }
+            else
+            {
+                await process.WaitForExitAsync();
+                exitCode = process.ExitCode;
+            }
+
+            return CreateResult(startedAtUtc, DateTime.UtcNow, exitCode);
         }
         finally
         {

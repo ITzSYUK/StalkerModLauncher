@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using StalkerModLauncher.Models;
 using StalkerModLauncher.Services;
 
@@ -6,14 +7,36 @@ if (args.Length > 0 && args[0] == "--child")
     return RunChild(args);
 }
 
+if (args.Length > 0 && args[0] == "--launcher")
+{
+    return RunLauncher(args);
+}
+
 return await RunHostAsync(args);
 
 static async Task<int> RunHostAsync(string[] args)
 {
+    var arguments = args.ToList();
+    var iterations = 1;
+    var iterationsIndex = arguments.IndexOf("--iterations");
+    if (iterationsIndex >= 0)
+    {
+        if (iterationsIndex + 1 >= arguments.Count ||
+            !int.TryParse(arguments[iterationsIndex + 1], out iterations) ||
+            iterations is < 1 or > 100)
+        {
+            Console.Error.WriteLine("--iterations must be between 1 and 100.");
+            return 10;
+        }
+
+        arguments.RemoveRange(iterationsIndex, 2);
+    }
+
+    args = arguments.ToArray();
     if (args.Length is < 1 or > 3)
     {
         Console.Error.WriteLine(
-            "Usage: StalkerUsvfsManagedPoc <built-usvfs-source-root> [x86-child-exe] [x86-launcher-exe]");
+            "Usage: StalkerUsvfsManagedPoc <built-usvfs-source-root> [x86-child-exe] [x86-launcher-exe] [--iterations N]");
         return 10;
     }
 
@@ -50,7 +73,6 @@ static async Task<int> RunHostAsync(string[] args)
     WriteText(Path.Combine(baseRoot, "shared.txt"), "base");
     WriteText(Path.Combine(baseRoot, "base-only.txt"), "base");
     WriteText(Path.Combine(baseRoot, "gamedata", "config", "system.ltx"), "base-system");
-    WriteText(Path.Combine(modRoot, "shared.txt"), "mod");
     WriteText(Path.Combine(modRoot, "mod-only.txt"), "mod");
     WriteText(Path.Combine(modRoot, "gamedata", "config", "system.ltx"), "mod-system");
     WriteText(profileFile, "profile-fsgame");
@@ -81,37 +103,84 @@ static async Task<int> RunHostAsync(string[] args)
         ? $"{Quote(Path.GetFullPath(args[1]))} {Quote(virtualRoot)} {Quote(resultPath)}"
         : args.Length == 2
             ? $"{Quote(virtualRoot)} {Quote(resultPath)}"
-        : $"--child {Quote(virtualRoot)} {Quote(resultPath)}";
+        : $"--launcher {Quote(virtualRoot)} {Quote(resultPath)}";
     IUsvfsRuntime runtime = args.Length >= 2
         ? new X86UsvfsHostRuntime(AppContext.BaseDirectory)
         : new UsvfsRuntime(new OfficialUsvfsNativeApi());
-    var result = await runtime.RunAsync(
-        plan,
-        new UsvfsProcessLaunchRequest(
-            childExecutable,
-            childArguments,
-            AppContext.BaseDirectory),
-        new UsvfsRuntimeOptions("stalker_launcher_managed_usvfs_poc", EnableLogging: true));
-
-    var output = File.Exists(resultPath) ? File.ReadAllText(resultPath) : string.Empty;
-    Console.Write(output);
-
-    var success = result.ExitCode == 0
-                  && output.Contains("shared=mod", StringComparison.Ordinal)
-                  && output.Contains("base-only=base", StringComparison.Ordinal)
-                  && output.Contains("mod-only=mod", StringComparison.Ordinal)
-                  && output.Contains("nested=mod-system", StringComparison.Ordinal)
-                  && output.Contains("bootstrap=bootstrap", StringComparison.Ordinal)
-                  && output.Contains("profile-file=profile-fsgame", StringComparison.Ordinal);
-
-    if (!success)
+    for (var iteration = 1; iteration <= iterations; iteration++)
     {
-        Console.Error.WriteLine($"Managed USVFS PoC failed. ExitCode={result.ExitCode}, ProcessId={result.ProcessId}");
-        Console.Error.WriteLine($"PoC files: {root}");
-        return 20;
+        var expectedModValue = $"mod-{iteration}";
+        WriteText(Path.Combine(modRoot, "shared.txt"), expectedModValue);
+        var dynamicPath = Path.Combine(modRoot, "dynamic.txt");
+        var expectedDynamicValue = (iteration % 3) switch
+        {
+            1 => $"added-{iteration}",
+            2 => $"changed-{iteration}",
+            _ => "<missing>"
+        };
+        if (expectedDynamicValue == "<missing>")
+        {
+            File.Delete(dynamicPath);
+        }
+        else
+        {
+            WriteText(dynamicPath, expectedDynamicValue);
+        }
+
+        File.Delete(resultPath);
+
+        var result = await runtime.RunAsync(
+            plan,
+            new UsvfsProcessLaunchRequest(
+                childExecutable,
+                childArguments,
+                AppContext.BaseDirectory),
+            new UsvfsRuntimeOptions(
+                $"stalker_launcher_managed_usvfs_poc_{iteration}",
+                LogToConsole: false,
+                DiagnosticLogPath: Path.Combine(root, "logs", "usvfs.log")));
+
+        var output = File.Exists(resultPath) ? File.ReadAllText(resultPath) : string.Empty;
+        var success = result.ExitCode == 0
+                      && output.Contains($"shared={expectedModValue}", StringComparison.Ordinal)
+                      && output.Contains($"dynamic={expectedDynamicValue}", StringComparison.Ordinal)
+                      && output.Contains("base-only=base", StringComparison.Ordinal)
+                      && output.Contains("mod-only=mod", StringComparison.Ordinal)
+                      && output.Contains("nested=mod-system", StringComparison.Ordinal)
+                      && output.Contains("bootstrap=bootstrap", StringComparison.Ordinal)
+                      && output.Contains("profile-file=profile-fsgame", StringComparison.Ordinal);
+
+        if (!success)
+        {
+            Console.Error.WriteLine(
+                $"Managed USVFS PoC failed at iteration {iteration}. ExitCode={result.ExitCode}, ProcessId={result.ProcessId}");
+            Console.Error.WriteLine(output);
+            Console.Error.WriteLine($"PoC files: {root}");
+            return 20;
+        }
+
+        Console.WriteLine($"USVFS iteration {iteration}/{iterations} passed ({expectedModValue}).");
     }
 
-    Console.WriteLine($"Managed USVFS PoC passed. Files: {root}");
+    Console.WriteLine($"Managed USVFS PoC passed {iterations} iteration(s). Files: {root}");
+    return 0;
+}
+
+static int RunLauncher(string[] args)
+{
+    if (args.Length != 3)
+    {
+        return 40;
+    }
+
+    var executable = Environment.ProcessPath ?? throw new InvalidOperationException("Process path is unavailable.");
+    Process.Start(new ProcessStartInfo
+    {
+        FileName = executable,
+        Arguments = $"--child {Quote(args[1])} {Quote(args[2])}",
+        WorkingDirectory = AppContext.BaseDirectory,
+        UseShellExecute = false
+    });
     return 0;
 }
 
@@ -125,6 +194,7 @@ static int RunChild(string[] args)
 
     var virtualRoot = args[1];
     var resultPath = args[2];
+    Thread.Sleep(500);
     Directory.CreateDirectory(Path.GetDirectoryName(resultPath)!);
 
     File.WriteAllText(
@@ -133,6 +203,7 @@ static int RunChild(string[] args)
             Environment.NewLine,
             [
                 "shared=" + ReadText(Path.Combine(virtualRoot, "shared.txt")),
+                "dynamic=" + ReadText(Path.Combine(virtualRoot, "dynamic.txt")),
                 "base-only=" + ReadText(Path.Combine(virtualRoot, "base-only.txt")),
                 "mod-only=" + ReadText(Path.Combine(virtualRoot, "mod-only.txt")),
                 "nested=" + ReadText(Path.Combine(virtualRoot, "gamedata", "config", "system.ltx")),

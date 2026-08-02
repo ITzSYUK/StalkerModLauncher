@@ -40,6 +40,8 @@ public interface IUsvfsNativeApi
     bool CreateVfs(IntPtr parameters);
     void DisconnectVfs();
     void ClearVirtualMappings();
+    IReadOnlyList<int> GetVfsProcessIds();
+    bool TryGetLogMessage(out string message);
     bool LinkDirectoryStatic(string sourcePath, string destinationPath, UsvfsLinkFlags flags);
     bool LinkFile(string sourcePath, string destinationPath, UsvfsLinkFlags flags);
 
