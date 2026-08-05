@@ -6,15 +6,10 @@
   <a href="https://github.com/ITzSYUK/StalkerModLauncher/releases/latest"><strong>Download latest release</strong></a>
 </p>
 <p align="center">
-  <a href="#russian">Русский</a> | <a href="#english">English</a>
-</p>
-<p align="center">
   <a href="#Screenshots">Screenshots</a>
 </p>
 
 ---
-
-<a id="russian"></a>
 
 ## STALKER Mod Launcher | Русский
 
@@ -66,8 +61,6 @@ dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 Архитектура, безопасность workspace, USVFS, настройки и подготовка релиза описаны в [docs/TECHNICAL_RU.md](https://github.com/ITzSYUK/StalkerModLauncher/blob/main/docs/TECHNICAL_RU.md).
 
 ---
-
-<a id="english"></a>
 
 ## STALKER Mod Launcher | English
 
