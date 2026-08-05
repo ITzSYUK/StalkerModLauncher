@@ -18,7 +18,7 @@
 
 ## STALKER Mod Launcher | Русский
 
-**Windows-лаунчер для локальных модификаций S.T.A.L.K.E.R. и автономных сборок на базе X-Ray. Он разделяет профили, сохранения, логи и настройки, не изменяя исходные папки игры и модов.
+Windows-лаунчер для локальных модификаций S.T.A.L.K.E.R. и автономных сборок на базе X-Ray. Он разделяет профили, сохранения, логи и настройки, не изменяя исходные папки игры и модов.
 
 Создаваемые профили не копируют игру целиком. Стабильный режим Workspace подключает исходные файлы NTFS-ссылками, а экспериментальный USVFS использует виртуальную файловую систему Mod Organizer 2.
 
@@ -71,7 +71,7 @@ dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 
 ## STALKER Mod Launcher | English
 
-**Windows launcher for local S.T.A.L.K.E.R. modifications and standalone X-Ray builds. It keeps profiles, saves, logs and settings separate without modifying the original game or mod folders.
+Windows launcher for local S.T.A.L.K.E.R. modifications and standalone X-Ray builds. It keeps profiles, saves, logs and settings separate without modifying the original game or mod folders.
 
 Regular profiles do not copy the whole game. The stable Workspace mode connects source files with NTFS links, while the experimental USVFS mode uses the virtual filesystem from Mod Organizer 2.
 
