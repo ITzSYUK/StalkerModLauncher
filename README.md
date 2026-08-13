@@ -2,25 +2,18 @@
   <img src="assets/logo/ml_logo.png" alt="S.T.A.L.K.E.R. Mod Launcher" width="100%">
 </p>
 
-| ![Main window](assets/screenshots/launcher_main_screen.png) | ![Modification browser](assets/screenshots/launcher_mods_browser.png) |
-| ---------------------------------------------------------- | -------------------------------------------------------------------- |
-| ![PDA profile window](assets/screenshots/pda_profile_window.png) | ![PDA screenshots window](assets/screenshots/pda_screens_window.png) |
-
 <p align="center">
   <a href="https://github.com/ITzSYUK/StalkerModLauncher/releases/latest"><strong>Download latest release</strong></a>
 </p>
-
 <p align="center">
-  <a href="#russian">Русский</a> | <a href="#english">English</a>
+  <a href="#Screenshots">Screenshots</a>
 </p>
 
 ---
 
-<a id="russian"></a>
+## STALKER Mod Launcher | Русский
 
-## Русский
-
-**S.T.A.L.K.E.R. Mod Launcher** — Windows-лаунчер для локальных модификаций S.T.A.L.K.E.R. и автономных сборок на базе X-Ray. Он разделяет профили, сохранения, логи и настройки, не изменяя исходные папки игры и модов.
+Windows-лаунчер для локальных модификаций S.T.A.L.K.E.R. и автономных сборок на базе X-Ray. Он разделяет профили, сохранения, логи и настройки, не изменяя исходные папки игры и модов.
 
 Создаваемые профили не копируют игру целиком. Стабильный режим Workspace подключает исходные файлы NTFS-ссылками, а экспериментальный USVFS использует виртуальную файловую систему Mod Organizer 2.
 
@@ -30,8 +23,7 @@
 - Автономные профили для готовых сборок со своим исполняемым файлом.
 - Классический интерфейс и альтернативный интерфейс в стиле КПК S.T.A.L.K.E.R.
 - Групповое перетаскивание модов и быстрое перемещение выделения в начало или конец списка.
-- Перенос сборки из Mod Organizer 2 с автоматическим добавлением папок модов, порядка, состояния, групп и `overwrite`.
-- Отдельное применение порядка и состояния из `modlist.txt` к существующему профилю.
+- Импорт порядка и состояния модов из `modlist.txt` Mod Organizer 2.
 - Автоматический поиск EXE с возможностью ручного выбора.
 - Отдельные сохранения, логи, скриншоты и настройки каждого профиля.
 - Стабильный backend Workspace и экспериментальный USVFS для x64 и x86.
@@ -66,17 +58,13 @@ dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 
 Пошаговое руководство для игрока находится в [docs/USER_GUIDE_RU.md](https://github.com/ITzSYUK/StalkerModLauncher/blob/main/docs/USER_GUIDE_RU.md).
 
-Отдельный гайд по переносу готовой сборки из Mod Organizer 2 находится в [docs/MO2_IMPORT_GUIDE_RU.md](https://github.com/ITzSYUK/StalkerModLauncher/blob/main/docs/MO2_IMPORT_GUIDE_RU.md).
-
 Архитектура, безопасность workspace, USVFS, настройки и подготовка релиза описаны в [docs/TECHNICAL_RU.md](https://github.com/ITzSYUK/StalkerModLauncher/blob/main/docs/TECHNICAL_RU.md).
 
 ---
 
-<a id="english"></a>
+## STALKER Mod Launcher | English
 
-## English
-
-**S.T.A.L.K.E.R. Mod Launcher** is a Windows launcher for local S.T.A.L.K.E.R. modifications and standalone X-Ray builds. It keeps profiles, saves, logs and settings separate without modifying the original game or mod folders.
+Windows launcher for local S.T.A.L.K.E.R. modifications and standalone X-Ray builds. It keeps profiles, saves, logs and settings separate without modifying the original game or mod folders.
 
 Regular profiles do not copy the whole game. The stable Workspace mode connects source files with NTFS links, while the experimental USVFS mode uses the virtual filesystem from Mod Organizer 2.
 
@@ -86,8 +74,7 @@ Regular profiles do not copy the whole game. The stable Workspace mode connects 
 - Standalone profiles for ready-to-play builds with their own executable.
 - Classic interface and an alternative S.T.A.L.K.E.R.-inspired PDA interface.
 - Multi-select drag-and-drop mod priority with quick move-to-start/end actions.
-- Mod Organizer 2 collection transfer with automatic mod folders, order, enabled state, groups and `overwrite`.
-- Separate application of `modlist.txt` order and enabled state to an existing profile.
+- Import of mod order and enabled state from Mod Organizer 2 `modlist.txt`.
 - Automatic executable detection with a manual override.
 - Isolated saves, logs, screenshots and settings per profile.
 - Stable linked Workspace backend and experimental USVFS backend (x64 and x86).
@@ -121,6 +108,15 @@ dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 ```
 
 Architecture, workspace safety, USVFS, settings and release packaging are described in [docs/TECHNICAL_EN.md](https://github.com/ITzSYUK/StalkerModLauncher/blob/main/docs/TECHNICAL_EN.md).
+
+---
+
+<a id="Screenshots"></a>
+## Screenshots
+
+| ![Main window](docs/assets/screenshots/launcher_main_screen.png) | ![Modification browser](docs/assets/screenshots/launcher_mods_browser.png) |
+| ---------------------------------------------------------- | -------------------------------------------------------------------- |
+| ![PDA profile window](docs/assets/screenshots/pda_profile_window.png) | ![PDA screenshots window](docs/assets/screenshots/pda_screens_window.png) |
 
 ---
 
