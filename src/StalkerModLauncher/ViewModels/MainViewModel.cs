@@ -1,12 +1,14 @@
 using System.Collections.ObjectModel;
+using System.Collections;
 using System.ComponentModel;
+using System.Windows.Data;
 using StalkerModLauncher.Infrastructure;
 using StalkerModLauncher.Models;
 using StalkerModLauncher.Services;
 
 namespace StalkerModLauncher.ViewModels;
 
-public sealed partial class MainViewModel : ObservableObject
+public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly AppPaths _paths;
     private readonly SettingsStore _settingsStore;
@@ -16,6 +18,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly ProfileTransferService _profileTransferService;
     private readonly ModScannerService _modScannerService;
     private readonly ModListEditor _modListEditor;
+    private readonly Mo2ImportService _mo2ImportService;
     private readonly ProfileManager _profileManager;
     private readonly GameExitDiagnosticsService _gameExitDiagnosticsService;
     private readonly ProfileReadinessService _profileReadinessService;
@@ -31,6 +34,10 @@ public sealed partial class MainViewModel : ObservableObject
     private bool _isBuilding;
     private bool _isPdaInterfaceEnabled;
     private string _buildProgressText = string.Empty;
+    private ICollectionView? _filteredMods;
+    private string _modSearchText = string.Empty;
+    private ModListFilter _selectedModFilter;
+    private bool _disposed;
 
     public MainViewModel(
         AppPaths paths,
@@ -41,6 +48,7 @@ public sealed partial class MainViewModel : ObservableObject
         ProfileTransferService profileTransferService,
         ModScannerService modScannerService,
         ModListEditor modListEditor,
+        Mo2ImportService mo2ImportService,
         ProfileManager profileManager,
         GameExitDiagnosticsService gameExitDiagnosticsService,
         ProfileReadinessService profileReadinessService,
@@ -55,6 +63,7 @@ public sealed partial class MainViewModel : ObservableObject
         _profileTransferService = profileTransferService;
         _modScannerService = modScannerService;
         _modListEditor = modListEditor;
+        _mo2ImportService = mo2ImportService;
         _profileManager = profileManager;
         _gameExitDiagnosticsService = gameExitDiagnosticsService;
         _profileReadinessService = profileReadinessService;
@@ -102,6 +111,13 @@ public sealed partial class MainViewModel : ObservableObject
         OpenSelectedModFolderCommand = new RelayCommand(OpenSelectedModFolder, () => SelectedMod is not null);
         ExportProfileCommand = new RelayCommand(ExportProfile, () => SelectedProfile is not null);
         ImportProfileCommand = new RelayCommand(ImportProfile);
+        ImportMo2CollectionCommand = new RelayCommand(() => Mo2ImportRequested?.Invoke(this, EventArgs.Empty));
+        ShowSelectedModConflictsCommand = new RelayCommand(
+            parameter => ConflictExplorerRequested?.Invoke(this, parameter as ModEntry ?? SelectedMod),
+            parameter => SelectedProfile is { IsStandalone: false } && (parameter is ModEntry || SelectedMod is not null));
+        ShowFileTreeCommand = new RelayCommand(
+            () => ConflictExplorerRequested?.Invoke(this, SelectedMod),
+            () => SelectedProfile is { IsStandalone: false });
         ScanForModsCommand = new AsyncRelayCommand(
             ScanForModsAsync,
             () => CanEditSelectedProfile && SelectedProfile is { IsStandalone: false });
@@ -130,7 +146,9 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     public event EventHandler? ProfileCreationRequested;
+    public event EventHandler? Mo2ImportRequested;
     public event EventHandler<ModScanSelectionRequest>? ModScanSelectionRequested;
+    public event EventHandler<ModEntry?>? ConflictExplorerRequested;
 
     public string GameInstallPath
     {
@@ -174,6 +192,7 @@ public sealed partial class MainViewModel : ObservableObject
             }
 
             SelectedMod = null;
+            CreateFilteredModsView();
             RecalculateModOverlayInfo();
             RefreshValidation();
             RaiseCommandStates();
@@ -214,7 +233,49 @@ public sealed partial class MainViewModel : ObservableObject
         {
             if (SetProperty(ref _selectedMod, value))
             {
+                UpdateRelatedModHighlights();
                 RaiseCommandStates();
+            }
+        }
+    }
+
+    public ICollectionView? FilteredMods
+    {
+        get => _filteredMods;
+        private set => SetProperty(ref _filteredMods, value);
+    }
+
+    public IReadOnlyList<ModListFilterOption> ModFilterOptions { get; } =
+    [
+        new(ModListFilter.All, "Все моды"),
+        new(ModListFilter.Conflicts, "Конфликтующие"),
+        new(ModListFilter.Overwrite, "Перезаписывающие"),
+        new(ModListFilter.Overwritten, "Перезаписанные"),
+        new(ModListFilter.Mixed, "Смешанные"),
+        new(ModListFilter.Redundant, "Полностью перекрытые"),
+        new(ModListFilter.Binaries, "EXE и DLL")
+    ];
+
+    public string ModSearchText
+    {
+        get => _modSearchText;
+        set
+        {
+            if (SetProperty(ref _modSearchText, value))
+            {
+                FilteredMods?.Refresh();
+            }
+        }
+    }
+
+    public ModListFilter SelectedModFilter
+    {
+        get => _selectedModFilter;
+        set
+        {
+            if (SetProperty(ref _selectedModFilter, value))
+            {
+                FilteredMods?.Refresh();
             }
         }
     }
@@ -267,6 +328,9 @@ public sealed partial class MainViewModel : ObservableObject
     public RelayCommand OpenSelectedModFolderCommand { get; }
     public RelayCommand ExportProfileCommand { get; }
     public RelayCommand ImportProfileCommand { get; }
+    public RelayCommand ImportMo2CollectionCommand { get; }
+    public RelayCommand ShowSelectedModConflictsCommand { get; }
+    public RelayCommand ShowFileTreeCommand { get; }
     public AsyncRelayCommand ScanForModsCommand { get; }
     public RelayCommand ToggleInterfaceCommand { get; }
 
@@ -301,6 +365,9 @@ public sealed partial class MainViewModel : ObservableObject
         OpenSelectedModFolderCommand.RaiseCanExecuteChanged();
         ExportProfileCommand.RaiseCanExecuteChanged();
         ImportProfileCommand.RaiseCanExecuteChanged();
+        ImportMo2CollectionCommand.RaiseCanExecuteChanged();
+        ShowSelectedModConflictsCommand.RaiseCanExecuteChanged();
+        ShowFileTreeCommand.RaiseCanExecuteChanged();
         ScanForModsCommand.RaiseCanExecuteChanged();
     }
 
@@ -314,6 +381,82 @@ public sealed partial class MainViewModel : ObservableObject
         }
 
         app.Dispatcher.Invoke(() => ActivityLog.Append(message));
+    }
+
+    public ConflictExplorerViewModel CreateConflictExplorerViewModel(ModEntry? selectedMod)
+    {
+        if (SelectedProfile is not { IsStandalone: false } profile)
+        {
+            throw new InvalidOperationException("Выберите обычный профиль.");
+        }
+
+        return new ConflictExplorerViewModel(
+            profile,
+            selectedMod,
+            _modConflictAnalyzer,
+            new FileLayerExplorerService(),
+            _dialogService,
+            SaveOrThrowAsync,
+            () =>
+            {
+                _modListEditor.Renumber(profile);
+                RecalculateModOverlayInfo();
+                RefreshValidation();
+                CreateFilteredModsView();
+            });
+    }
+
+    private void CreateFilteredModsView()
+    {
+        if (SelectedProfile is null)
+        {
+            FilteredMods = null;
+            return;
+        }
+
+        var view = new ListCollectionView((IList)SelectedProfile.Mods)
+        {
+            Filter = item => item is ModEntry mod && MatchesModFilter(mod)
+        };
+        FilteredMods = view;
+    }
+
+    private bool MatchesModFilter(ModEntry mod)
+    {
+        var searchMatches = string.IsNullOrWhiteSpace(ModSearchText) ||
+                            mod.Name.Contains(ModSearchText, StringComparison.OrdinalIgnoreCase) ||
+                            mod.SourcePath.Contains(ModSearchText, StringComparison.OrdinalIgnoreCase) ||
+                            mod.GroupName.Contains(ModSearchText, StringComparison.OrdinalIgnoreCase);
+        if (!searchMatches)
+        {
+            return false;
+        }
+
+        return SelectedModFilter switch
+        {
+            ModListFilter.Conflicts => mod.ConflictKind is not ModConflictKind.None and not ModConflictKind.Disabled,
+            ModListFilter.Overwrite => mod.ConflictKind == ModConflictKind.Overwrite,
+            ModListFilter.Overwritten => mod.ConflictKind == ModConflictKind.Overwritten,
+            ModListFilter.Mixed => mod.ConflictKind == ModConflictKind.Mixed,
+            ModListFilter.Redundant => mod.ConflictKind == ModConflictKind.Redundant,
+            ModListFilter.Binaries => mod.OverwrittenBinaryCount > 0 || mod.OverwrittenByBinaryCount > 0 || mod.ProvidesLaunchExecutable,
+            _ => true
+        };
+    }
+
+    private void UpdateRelatedModHighlights()
+    {
+        if (SelectedProfile is null)
+        {
+            return;
+        }
+
+        var related = SelectedMod?.RelatedModIds.ToHashSet(StringComparer.OrdinalIgnoreCase)
+            ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var mod in SelectedProfile.Mods)
+        {
+            mod.IsConflictRelated = related.Contains(mod.Id);
+        }
     }
 
     private static Task InvokeOnUiAsync(Action action)

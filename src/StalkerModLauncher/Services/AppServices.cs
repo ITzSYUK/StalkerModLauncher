@@ -2,8 +2,10 @@ using StalkerModLauncher.ViewModels;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class AppServices
+public sealed class AppServices : IDisposable
 {
+    private bool _disposed;
+
     public AppServices()
     {
         Paths = new AppPaths();
@@ -41,6 +43,7 @@ public sealed class AppServices
         ProfileTransferService = new ProfileTransferService();
         ModScannerService = new ModScannerService();
         ModListEditor = new ModListEditor();
+        Mo2ImportService = new Mo2ImportService();
         ScreenshotScannerService = new ScreenshotScannerService(ProfileDataPathResolver);
         ScreenshotClipboardService = new ScreenshotClipboardService();
         ApProCatalogService = new ApProCatalogService();
@@ -74,6 +77,7 @@ public sealed class AppServices
     public ProfileTransferService ProfileTransferService { get; }
     public ModScannerService ModScannerService { get; }
     public ModListEditor ModListEditor { get; }
+    public Mo2ImportService Mo2ImportService { get; }
     public GameExitDiagnosticsService GameExitDiagnosticsService { get; }
     public ProfileHealthService ProfileHealthService { get; }
     public ProfileDataPathResolver ProfileDataPathResolver { get; }
@@ -84,6 +88,7 @@ public sealed class AppServices
 
     public MainViewModel CreateMainViewModel()
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         return new MainViewModel(
             Paths,
             SettingsStore,
@@ -93,10 +98,23 @@ public sealed class AppServices
             ProfileTransferService,
             ModScannerService,
             ModListEditor,
+            Mo2ImportService,
             ProfileManager,
             GameExitDiagnosticsService,
             ProfileReadinessService,
             LaunchPreflightService,
             ApplicationLogService);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        ApProCatalogService.Dispose();
+        SettingsStore.Dispose();
     }
 }

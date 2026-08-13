@@ -166,6 +166,11 @@
                             </Canvas>
                         </Viewbox>
                     </Button>
+                    <Button Command="{Binding ImportMo2CollectionCommand}"
+                            Style="{StaticResource PdaDrawerActionStyle}"
+                            ToolTip="Перенести сборку из Mod Organizer 2">
+                        <TextBlock Text="MO2" FontSize="9" FontWeight="Bold"/>
+                    </Button>
                     <Button Command="{Binding ImportProfileCommand}"
                             Style="{StaticResource PdaDrawerActionStyle}"
                             ToolTip="Импортировать профиль">

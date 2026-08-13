@@ -69,23 +69,21 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <controls:GamePathBar Grid.Row="0"
-                                              Margin="0,0,0,10"/>
-
-                        <controls:ProfileHeaderView Grid.Row="1"
+                        <controls:ProfileHeaderView Grid.Row="0"
+                                                    Margin="0,0,0,10"
                                                     ProfileHealthRequested="ProfileHealthButton_OnClick"
                                                     ProfileSettingsRequested="EditProfileButton_OnClick"
                                                     ScreenshotsRequested="ScreenshotsButton_OnClick"/>
 
-                        <controls:ProfileSummaryView Grid.Row="2"/>
+                        <controls:ClassicProfileOverviewBar Grid.Row="1"
+                                                            Margin="0,0,0,12"/>
 
-                        <controls:ModPanelView Grid.Row="3"
-                                               Grid.RowSpan="2"/>
+                        <controls:ModPanelView Grid.Row="2"
+                                               ShowStandaloneToggle="False"
+                                               UseCompactHeader="True"/>
                     </Grid>
 
                     <Border Background="{StaticResource FieldBackgroundBrush}"

@@ -1,0 +1,220 @@
+<Window x:Class="StalkerModLauncher.Views.Mo2ImportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Перенести сборку из Mod Organizer 2"
+        Width="940"
+        Height="650"
+        MinWidth="820"
+        MinHeight="560"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterOwner"
+        SourceInitialized="Window_OnSourceInitialized"
+        Background="{StaticResource WindowBackgroundBrush}"
+        Foreground="{StaticResource TextBrush}">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/StalkerModLauncher;component/Themes/Mo2ImportStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Margin="0,0,0,12">
+            <TextBlock Text="Перенести сборку из Mod Organizer 2" FontSize="24" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,4,0,0">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMessageWarning}" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </StackPanel>
+
+        <Border Grid.Row="1" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource StrokeBrush}"
+                BorderThickness="1" CornerRadius="6" Padding="16">
+            <Grid>
+                <StackPanel>
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSourceStep}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock Text="1. Источник MO2" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding SourcePath, Mode=OneWay}" IsReadOnly="True"/>
+                        <Button Grid.Column="1" Content="Выбрать папку" Command="{Binding BrowseSourceFolderCommand}" Margin="8,0,0,0"/>
+                        <Button Grid.Column="2" Content="Выбрать modlist.txt" Command="{Binding BrowseModListCommand}" Margin="8,0,0,0"/>
+                    </Grid>
+
+                    <TextBlock Text="Профиль MO2" Foreground="{StaticResource MutedTextBrush}" Margin="0,14,0,5"/>
+                    <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedMo2Profile}"
+                              DisplayMemberPath="Name" Style="{StaticResource Mo2ComboBoxStyle}"/>
+
+                    <TextBlock Text="Обнаруженные пути" FontSize="15" FontWeight="SemiBold" Margin="0,18,0,8"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="115"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="Базовая игра" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding GamePath}" IsReadOnly="True" Margin="0,0,8,6"/>
+                        <Button Grid.Column="2" Content="Изменить" Command="{Binding BrowseGameCommand}" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="1" Text="Папка mods" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ModsPath}" IsReadOnly="True" Margin="0,0,8,6"/>
+                        <Button Grid.Row="1" Grid.Column="2" Content="Изменить" Command="{Binding BrowseModsCommand}" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="2" Text="Папка overwrite" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding OverwritePath}" IsReadOnly="True" Margin="0,0,8,0"/>
+                        <Button Grid.Row="2" Grid.Column="2" Content="Изменить" Command="{Binding BrowseOverwriteCommand}"/>
+                    </Grid>
+                    <TextBlock Text="Исходные папки игры, mods и overwrite лаунчер не изменяет."
+                               Foreground="{StaticResource MutedTextBrush}" Margin="0,16,0,0"/>
+                </StackPanel>
+
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsPreviewStep}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Новый профиль" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+                    <StackPanel Grid.Row="1" Margin="0,10,0,8">
+                        <TextBlock Text="{Binding PreviewSummary}" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Preview.ExecutableSummary}" Foreground="{StaticResource MutedTextBrush}"
+                                   TextWrapping="Wrap" Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding Preview.OverwriteSummary}" Foreground="{StaticResource MutedTextBrush}"
+                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                    </StackPanel>
+                    <DataGrid Grid.Row="2" ItemsSource="{Binding Preview.Entries}" AutoGenerateColumns="False"
+                              Style="{StaticResource Mo2DataGridStyle}"
+                              IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column"
+                              GridLinesVisibility="Horizontal" SelectionMode="Single">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="#" Binding="{Binding Order}" Width="38"/>
+                            <DataGridCheckBoxColumn Header="Вкл." Binding="{Binding IsEnabled, Mode=OneWay}" Width="48"/>
+                            <DataGridTextColumn Header="Мод" Binding="{Binding Name}" Width="2*"/>
+                            <DataGridTextColumn Header="Группа MO2" Binding="{Binding GroupName}" Width="*"/>
+                            <DataGridTextColumn Header="Состояние" Binding="{Binding Status}" Width="150"/>
+                            <DataGridTemplateColumn Header="Папка" Width="2*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <TextBlock Text="{Binding PathDisplay}" TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasMultipleCandidates}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <ComboBox ItemsSource="{Binding CandidateOptions}"
+                                                      SelectedValuePath="Path"
+                                                      SelectedValue="{Binding SourcePath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      ToolTip="Выберите папку, которая соответствует этому моду">
+                                                <ComboBox.Style>
+                                                    <Style TargetType="ComboBox" BasedOn="{StaticResource Mo2ComboBoxStyle}">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasMultipleCandidates}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ComboBox.Style>
+                                            </ComboBox>
+                                        </Grid>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <CheckBox Grid.Row="3" Content="Подключить файлы из MO2 overwrite отдельным слоем с максимальным приоритетом"
+                              IsChecked="{Binding IncludeOverwrite}" Margin="0,10,0,0"
+                              IsEnabled="{Binding Preview.HasOverwriteContent}"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button Content="Отмена" Click="CancelButton_OnClick" HorizontalAlignment="Left"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="Назад" Command="{Binding BackCommand}" Margin="0,0,8,0"/>
+                <Button Content="Предпросмотр" Command="{Binding NextCommand}" Margin="0,0,8,0">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSourceStep}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button Content="Создать профиль" Command="{Binding ImportCommand}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsPreviewStep}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

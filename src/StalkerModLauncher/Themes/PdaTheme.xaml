@@ -14,6 +14,8 @@
     <SolidColorBrush x:Key="AccentPressedBrush" Color="#A96D1D"/>
     <SolidColorBrush x:Key="AccentGreenBrush" Color="#829A52"/>
     <SolidColorBrush x:Key="ModSelectionBrush" Color="#263544"/>
+    <SolidColorBrush x:Key="ModRelatedBrush" Color="#1B2B35"/>
+    <SolidColorBrush x:Key="ModRelatedStrokeBrush" Color="#557080"/>
 
     <Style x:Key="PdaBaseButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="#151D28"/>

@@ -53,6 +53,23 @@ public sealed class ProfileReadinessServiceTests : IDisposable
     }
 
     [Fact]
+    public void Validate_RejectsMissingMo2OverwriteLayer()
+    {
+        CreateFile("game/fsgame.ltx");
+        CreateFile("game/bin/xr_3da.exe");
+        var profile = new ModProfile
+        {
+            GameInstallPath = Path.Combine(_root, "game"),
+            Mo2OverwritePath = Path.Combine(_root, "missing-overwrite")
+        };
+
+        var result = _service.Validate(profile);
+
+        Assert.False(result.IsValid);
+        Assert.Contains("Папка MO2 overwrite не найдена", result.Summary);
+    }
+
+    [Fact]
     public void Validate_RequiresExactlyOneStandaloneModAndSafeExecutable()
     {
         var modPath = Path.Combine(_root, "mod");
@@ -64,6 +81,26 @@ public sealed class ProfileReadinessServiceTests : IDisposable
 
         Assert.False(result.IsValid);
         Assert.Contains("must not leave", result.Summary);
+    }
+
+    [Fact]
+    public void Validate_RejectsExcludedUniqueFileWithoutFallbackProvider()
+    {
+        CreateFile("game/fsgame.ltx");
+        CreateFile("game/bin/xr_3da.exe");
+        CreateFile("mod/unique.ltx");
+        var profile = new ModProfile { GameInstallPath = Path.Combine(_root, "game") };
+        profile.Mods.Add(new ModEntry
+        {
+            Name = "Mod",
+            SourcePath = Path.Combine(_root, "mod"),
+            ExcludedFiles = ["unique.ltx"]
+        });
+
+        var result = _service.Validate(profile);
+
+        Assert.False(result.IsValid);
+        Assert.Contains("больше не имеет другого поставщика", result.Summary);
     }
 
     [Fact]

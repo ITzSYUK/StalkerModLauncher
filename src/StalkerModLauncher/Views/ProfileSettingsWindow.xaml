@@ -45,6 +45,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0">
@@ -221,7 +222,26 @@
                                    Margin="0,2,0,0"/>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="9" Margin="0,16,0,0">
+                    <Border Grid.Row="9" Background="{StaticResource FieldBackgroundBrush}"
+                            BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1"
+                            CornerRadius="6" Padding="10" Margin="0,14,0,0"
+                            Visibility="{Binding HasMo2Overwrite, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Дополнительный слой MO2 overwrite" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Mo2OverwritePath}" Foreground="{StaticResource MutedTextBrush}"
+                                           FontSize="11" TextTrimming="CharacterEllipsis" ToolTip="{Binding Mo2OverwritePath}"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Отключить" Command="{Binding RemoveMo2OverwriteCommand}"
+                                    Margin="10,0,0,0" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Grid.Row="10" Margin="0,16,0,0">
                         <TextBlock Text="Discord"
                                    Foreground="{StaticResource MutedTextBrush}"
                                    FontSize="12"
@@ -243,9 +263,9 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <Button Grid.Column="0"
-                    Content="Импорт порядка MO2..."
+                    Content="Применить только modlist.txt..."
                     Command="{Binding ImportMo2ModListCommand}"
-                    ToolTip="Применить порядок и состояние уже добавленных модов из файла modlist.txt"
+                    ToolTip="Применить только порядок и состояние уже добавленных модов из файла modlist.txt"
                     Margin="0,0,8,0"/>
             <WrapPanel Grid.Column="2" HorizontalAlignment="Right">
                 <Button Content="Открыть папку профиля"

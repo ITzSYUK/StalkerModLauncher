@@ -22,6 +22,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     private string _executableSourcePath;
     private string _launchArguments;
     private string _workspacePath;
+    private string _mo2OverwritePath;
     private bool _isEnabled;
     private bool _isDiscordStatusEnabled;
     private bool _isStandalone;
@@ -54,6 +55,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         _executableSourcePath = profile.ExecutableSourcePath;
         _launchArguments = profile.LaunchArguments;
         _workspacePath = profile.WorkspacePath;
+        _mo2OverwritePath = profile.Mo2OverwritePath;
         _isEnabled = profile.IsEnabled;
         _isDiscordStatusEnabled = profile.IsDiscordStatusEnabled;
         _isStandalone = profile.IsStandalone;
@@ -73,6 +75,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         BrowseExecutableCommand = new RelayCommand(BrowseExecutable);
         ClearExecutableSourceCommand = new RelayCommand(ClearExecutableSource, () => !string.IsNullOrWhiteSpace(ExecutableSourcePath));
         OpenProfileFolderCommand = new RelayCommand(OpenProfileFolder);
+        RemoveMo2OverwriteCommand = new RelayCommand(RemoveMo2Overwrite);
         ImportMo2ModListCommand = new AsyncRelayCommand(ImportMo2ModListAsync);
     }
 
@@ -144,6 +147,20 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         get => _workspacePath;
         set => SetProperty(ref _workspacePath, value);
     }
+
+    public string Mo2OverwritePath
+    {
+        get => _mo2OverwritePath;
+        private set
+        {
+            if (SetProperty(ref _mo2OverwritePath, value))
+            {
+                OnPropertyChanged(nameof(HasMo2Overwrite));
+            }
+        }
+    }
+
+    public bool HasMo2Overwrite => !string.IsNullOrWhiteSpace(Mo2OverwritePath);
 
     public bool IsEnabled
     {
@@ -266,6 +283,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     public ICommand BrowseExecutableCommand { get; }
     public ICommand ClearExecutableSourceCommand { get; }
     public ICommand OpenProfileFolderCommand { get; }
+    public ICommand RemoveMo2OverwriteCommand { get; }
     public ICommand ImportMo2ModListCommand { get; }
 
     public async Task<bool> TrySaveAsync()
@@ -302,6 +320,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         _profile.ExecutableSourcePath = IsStandalone ? string.Empty : ExecutableSourcePath;
         _profile.LaunchArguments = LaunchArguments;
         _profile.WorkspacePath = WorkspacePath;
+        _profile.Mo2OverwritePath = Mo2OverwritePath;
         _profile.IsEnabled = IsEnabled;
         _profile.IsDiscordStatusEnabled = IsDiscordStatusEnabled;
         _profile.IsStandalone = IsStandalone;
@@ -415,6 +434,8 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         }
     }
 
+    private void RemoveMo2Overwrite() => Mo2OverwritePath = string.Empty;
+
     private async Task ImportMo2ModListAsync()
     {
         var initialPath = _profile.Mods
@@ -436,7 +457,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
 
             var report = new List<string>
             {
-                "Порядок модов из Mod Organizer 2 применён.",
+                "Файл modlist.txt применён к уже добавленным модам.",
                 string.Empty,
                 $"Сопоставлено модов: {result.MatchedCount}",
                 $"Изменено состояний включения: {result.EnabledStateChanges}",
@@ -451,11 +472,11 @@ public sealed class ProfileSettingsViewModel : ObservableObject
                 report.AddRange(result.MissingProfileMods.Take(8).Select(name => $"• {name}"));
             }
 
-            _dialogService.ShowInfo("Импорт порядка MO2", string.Join(Environment.NewLine, report));
+            _dialogService.ShowInfo("Применить только modlist.txt", string.Join(Environment.NewLine, report));
         }
         catch (Exception ex)
         {
-            _dialogService.ShowError("Не удалось импортировать порядок MO2", ex.Message);
+            _dialogService.ShowError("Не удалось применить modlist.txt", ex.Message);
         }
     }
 
@@ -511,6 +532,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         string ExecutableSourcePath,
         string LaunchArguments,
         string WorkspacePath,
+        string Mo2OverwritePath,
         bool IsEnabled,
         bool IsDiscordStatusEnabled,
         bool IsStandalone,
@@ -524,6 +546,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
             profile.ExecutableSourcePath,
             profile.LaunchArguments,
             profile.WorkspacePath,
+            profile.Mo2OverwritePath,
             profile.IsEnabled,
             profile.IsDiscordStatusEnabled,
             profile.IsStandalone,
@@ -538,6 +561,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
             profile.ExecutableSourcePath = ExecutableSourcePath;
             profile.LaunchArguments = LaunchArguments;
             profile.WorkspacePath = WorkspacePath;
+            profile.Mo2OverwritePath = Mo2OverwritePath;
             profile.IsEnabled = IsEnabled;
             profile.IsDiscordStatusEnabled = IsDiscordStatusEnabled;
             profile.IsStandalone = IsStandalone;

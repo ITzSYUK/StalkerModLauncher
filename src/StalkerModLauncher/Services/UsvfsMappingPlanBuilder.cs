@@ -39,6 +39,7 @@ public sealed class UsvfsMappingPlanBuilder
                 CreateTarget: false));
         }
 
+        AddExcludedFileRestorations(operations, layerPlan, virtualRoot);
         AddWritableFiles(operations, virtualRoot, manifest);
 
         operations.Add(new UsvfsMappingOperation(
@@ -76,6 +77,7 @@ public sealed class UsvfsMappingPlanBuilder
                 fullVirtualRoot);
         }
 
+        AddExcludedFileRestorations(operations, layerPlan, fullVirtualRoot);
         AddWritableFiles(operations, fullVirtualRoot, manifest);
         operations.Add(new UsvfsMappingOperation(
             UsvfsMappingKind.DirectoryStatic,
@@ -151,6 +153,34 @@ public sealed class UsvfsMappingPlanBuilder
                 Path.Combine(virtualRoot, writableFile.RelativePath),
                 "profile writable files",
                 int.MaxValue - 1,
+                MonitorChanges: false,
+                CreateTarget: false));
+        }
+    }
+
+    private static void AddExcludedFileRestorations(
+        ICollection<UsvfsMappingOperation> operations,
+        FileLayerPlan layerPlan,
+        string virtualRoot)
+    {
+        var excludedPaths = layerPlan.Mods
+            .SelectMany(layer => layer.Mod?.ExcludedFiles ?? [])
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+        foreach (var relativePath in excludedPaths)
+        {
+            FileSystemSafety.EnsureRelativePath(relativePath, "Excluded mod file");
+            var provider = layerPlan.FindFinalFile(relativePath);
+            if (provider is null)
+            {
+                continue;
+            }
+
+            operations.Add(new UsvfsMappingOperation(
+                UsvfsMappingKind.File,
+                Path.GetFullPath(provider.FullPath),
+                Path.Combine(virtualRoot, relativePath),
+                $"excluded file fallback: {provider.SourceName}",
+                int.MaxValue - 2,
                 MonitorChanges: false,
                 CreateTarget: false));
         }

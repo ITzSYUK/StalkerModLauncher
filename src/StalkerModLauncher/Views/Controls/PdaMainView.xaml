@@ -564,18 +564,22 @@
                                     </Style>
                                 </Grid.Resources>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1.25*"/>
-                                    <ColumnDefinition Width="0.9*"/>
+                                    <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="0.75*"/>
-                                    <ColumnDefinition Width="1.4*"/>
+                                    <ColumnDefinition Width="45"/>
+                                    <ColumnDefinition Width="100"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" Margin="0,0,9,0">
                                     <TextBlock Text="Бинарник" Style="{StaticResource InlineSummaryLabelStyle}"/>
-                                    <TextBlock Text="{Binding SelectedProfile.ExecutableRelativePath}" Style="{StaticResource InlineSummaryValueStyle}"/>
+                                    <TextBlock Text="{Binding SelectedProfile.ExecutableRelativePath}"
+                                               ToolTip="{Binding SelectedProfile.ExecutableRelativePath}"
+                                               Style="{StaticResource InlineSummaryValueStyle}"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Margin="0,0,9,0">
                                     <TextBlock Text="Аргументы" Style="{StaticResource InlineSummaryLabelStyle}"/>
-                                    <TextBlock Text="{Binding SelectedProfile.LaunchArguments}" Style="{StaticResource InlineSummaryValueStyle}"/>
+                                    <TextBlock Text="{Binding SelectedProfile.LaunchArguments}"
+                                               ToolTip="{Binding SelectedProfile.LaunchArguments}"
+                                               Style="{StaticResource InlineSummaryValueStyle}"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Margin="0,0,9,0">
                                     <TextBlock Text="Модов" Style="{StaticResource InlineSummaryLabelStyle}"/>

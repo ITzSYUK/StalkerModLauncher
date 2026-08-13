@@ -119,6 +119,14 @@ internal sealed class WorkspaceMaterializer
         foreach (var file in source.Files)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (mod.ExcludedFiles.Any(excluded =>
+                    NormalizeRelativePath(excluded).Equals(
+                        NormalizeRelativePath(file.RelativePath),
+                        StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
             FileSystemSafety.EnsureRelativePath(file.RelativePath, "Mod file");
             var targetFile = Path.Combine(workspaceRoot, file.RelativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
@@ -317,6 +325,10 @@ internal sealed class WorkspaceMaterializer
         var root = Path.GetPathRoot(Path.GetFullPath(path));
         return string.IsNullOrWhiteSpace(root) ? "неизвестный" : root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
     }
+
+    private static string NormalizeRelativePath(string path) =>
+        path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
+            .TrimStart(Path.DirectorySeparatorChar);
 
     private static bool TryCreateHardLink(string targetFile, string existingFile)
     {

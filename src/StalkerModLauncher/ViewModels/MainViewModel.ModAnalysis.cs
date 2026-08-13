@@ -59,6 +59,9 @@ public sealed partial class MainViewModel
                 {
                     ApplyConflictState(mod, result.GetValueOrDefault(mod.Id), profile.ExecutableRelativePath);
                 }
+
+                UpdateRelatedModHighlights();
+                FilteredMods?.Refresh();
             });
         }
         catch (OperationCanceledException)
@@ -82,17 +85,35 @@ public sealed partial class MainViewModel
 
     private static void ApplyConflictState(ModEntry mod, ModConflictState? state, string executableRelativePath)
     {
+        mod.ConflictKind = state?.ConflictKind ?? (mod.IsEnabled ? ModConflictKind.None : ModConflictKind.Disabled);
         mod.HasOverlapsAbove = state?.HasOverlapsAbove ?? false;
         mod.OverwrittenFileCount = state?.OverwrittenFileCount ?? 0;
         mod.OverwrittenModCount = state?.OverwrittenModNames.Count ?? 0;
+        mod.OverwrittenByFileCount = state?.OverwrittenByFileCount ?? 0;
+        mod.OverwrittenByModCount = state?.OverwrittenByModNames.Count ?? 0;
+        mod.OverwrittenByBinaryCount = state?.OverwrittenByBinaryCount ?? 0;
+        mod.RelatedModIds = state?.RelatedModIds ?? [];
         mod.ProvidesLaunchExecutable = state?.ProvidesLaunchExecutable ?? false;
         mod.OverwrittenConfigurationCount = state?.OverwrittenConfigurationCount ?? 0;
         mod.OverwrittenBinaryCount = state?.OverwrittenBinaryCount ?? 0;
-        mod.OverlayDetails = state is { OverwrittenModNames.Count: > 0 }
-            ? $"Заменяет файлы из: {string.Join(", ", state.OverwrittenModNames)}.{Environment.NewLine}" +
-              $"Конфигурации и скрипты: {state.OverwrittenConfigurationCount:N0}; бинарные файлы: {state.OverwrittenBinaryCount:N0}."
-            : state?.ProvidesLaunchExecutable == true
-                ? $"Итоговый запускаемый файл: {executableRelativePath}"
-                : string.Empty;
+        var details = new List<string> { mod.ConflictDisplay };
+        if (state is { OverwrittenModNames.Count: > 0 })
+        {
+            details.Add($"Заменяет файлы модов: {string.Join(", ", state.OverwrittenModNames)}.");
+            details.Add($"Конфигурации и скрипты: {state.OverwrittenConfigurationCount:N0}; бинарные файлы: {state.OverwrittenBinaryCount:N0}.");
+        }
+
+        if (state is { OverwrittenByModNames.Count: > 0 })
+        {
+            details.Add($"Его файлы заменяются модами: {string.Join(", ", state.OverwrittenByModNames)}.");
+            details.Add($"Проигрывающие конфигурации и скрипты: {state.OverwrittenByConfigurationCount:N0}; бинарные файлы: {state.OverwrittenByBinaryCount:N0}.");
+        }
+
+        if (state?.ProvidesLaunchExecutable == true)
+        {
+            details.Add($"Итоговый запускаемый файл: {executableRelativePath}");
+        }
+
+        mod.OverlayDetails = string.Join(Environment.NewLine, details);
     }
 }

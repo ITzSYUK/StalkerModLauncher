@@ -143,6 +143,15 @@ public partial class ModPanelView : UserControl
         var canEdit = ViewModel?.CanEditSelectedProfile == true;
         var contextMenu = new ContextMenu();
         contextMenu.Items.Add(CreateLeftClickMenuItem(
+            "Подробности конфликтов",
+            ViewModel?.ShowSelectedModConflictsCommand.CanExecute(mod) == true,
+            () =>
+            {
+                ViewModel?.ShowSelectedModConflictsCommand.Execute(mod);
+                contextMenu.IsOpen = false;
+            }));
+        contextMenu.Items.Add(new Separator());
+        contextMenu.Items.Add(CreateLeftClickMenuItem(
             "В начало",
             canEdit,
             () => MoveSelectedMods(selectedMods, moveToEnd: false, contextMenu)));
@@ -162,6 +171,21 @@ public partial class ModPanelView : UserControl
         contextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
         contextMenu.IsOpen = true;
         e.Handled = true;
+    }
+
+    private void ModsList_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is not DependencyObject source || IsInteractiveDragSource(source))
+        {
+            return;
+        }
+
+        var mod = FindAncestor<ListViewItem>(source)?.DataContext as ModEntry;
+        if (mod is not null && ViewModel?.ShowSelectedModConflictsCommand.CanExecute(mod) == true)
+        {
+            ViewModel.ShowSelectedModConflictsCommand.Execute(mod);
+            e.Handled = true;
+        }
     }
 
     private void ModsList_OnMouseMove(object sender, MouseEventArgs e)
@@ -413,7 +437,8 @@ public partial class ModPanelView : UserControl
                          gridView.Columns[1].Width +
                          gridView.Columns[2].Width +
                          SystemParameters.VerticalScrollBarWidth;
-        var available = listView.ActualWidth - fixedWidth;
+        const double layoutSafetyMargin = 4;
+        var available = listView.ActualWidth - fixedWidth - layoutSafetyMargin;
         if (available > 80)
         {
             gridView.Columns[3].Width = available;

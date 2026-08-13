@@ -50,9 +50,34 @@ public sealed class WindowNavigationService
 
     public ProfileCreationViewModel CreateProfileCreationViewModel() => new(_dialogService);
 
+    public void ShowMo2Import(Window owner, MainViewModel mainViewModel)
+    {
+        try
+        {
+            var window = new Mo2ImportWindow(
+                mainViewModel.CreateMo2ImportViewModel(),
+                _windowSystemIntegrationService)
+            {
+                Owner = owner
+            };
+            window.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowError(
+                "Не удалось открыть импорт MO2",
+                $"Мастер не был открыт. Лаунчер продолжит работу.{Environment.NewLine}{Environment.NewLine}{ex.Message}");
+        }
+    }
+
     public void ShowProfileSettings(Window owner, ProfileSettingsViewModel viewModel)
     {
         new ProfileSettingsWindow(viewModel) { Owner = owner }.ShowDialog();
+    }
+
+    public void ShowConflictExplorer(Window owner, ConflictExplorerViewModel viewModel)
+    {
+        new ConflictExplorerWindow(viewModel, _windowSystemIntegrationService) { Owner = owner }.ShowDialog();
     }
 
     public void ShowScreenshots(Window owner, ModProfile profile)

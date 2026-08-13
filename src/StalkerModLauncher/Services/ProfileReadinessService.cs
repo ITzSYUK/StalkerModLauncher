@@ -63,12 +63,55 @@ public sealed class ProfileReadinessService
             messages.Add($"Папка мода не найдена: {mod.Name}");
         }
 
+        var overwriteExists = string.IsNullOrWhiteSpace(profile.Mo2OverwritePath) ||
+                              Directory.Exists(profile.Mo2OverwritePath);
+        if (!overwriteExists)
+        {
+            messages.Add($"Папка MO2 overwrite не найдена: {profile.Mo2OverwritePath}");
+        }
+
         var executableIsSafe = ValidateExecutablePath(profile, messages);
+        var exclusionsAreValid = ValidateExcludedFiles(profile, messages);
         var ready = gameValidation.IsValid &&
                     profile.IsEnabled &&
                     profile.Mods.Where(mod => mod.IsEnabled).All(mod => Directory.Exists(mod.SourcePath)) &&
+                    overwriteExists &&
+                    exclusionsAreValid &&
                     executableIsSafe;
         return CreateResult(ready, ready ? "Готов к запуску." : string.Join(Environment.NewLine, messages.Distinct()), messages);
+    }
+
+    private static bool ValidateExcludedFiles(ModProfile profile, List<string> messages)
+    {
+        var valid = true;
+        var enabledMods = profile.Mods.Where(mod => mod.IsEnabled).OrderBy(mod => mod.Order).ToArray();
+        foreach (var mod in enabledMods)
+        {
+            foreach (var excluded in mod.ExcludedFiles.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    FileSystemSafety.EnsureRelativePath(excluded, "Excluded mod file");
+                    var hasOtherProvider = File.Exists(Path.Combine(profile.GameInstallPath, excluded)) ||
+                                           enabledMods.Any(other =>
+                                               !ReferenceEquals(other, mod) &&
+                                               File.Exists(Path.Combine(other.SourcePath, excluded)) &&
+                                               !other.ExcludedFiles.Contains(excluded, StringComparer.OrdinalIgnoreCase));
+                    if (!hasOtherProvider)
+                    {
+                        messages.Add($"Исключённый файл больше не имеет другого поставщика: {mod.Name} — {excluded}");
+                        valid = false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    messages.Add(ex.Message);
+                    valid = false;
+                }
+            }
+        }
+
+        return valid;
     }
 
     private static bool ValidateExecutablePath(ModProfile profile, List<string> messages)

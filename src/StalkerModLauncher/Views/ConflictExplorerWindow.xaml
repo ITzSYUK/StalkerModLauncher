@@ -1,0 +1,12 @@
+<Window x:Class="StalkerModLauncher.Views.ConflictExplorerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:StalkerModLauncher.Views.Controls"
+        Title="Конфликты и итоговые файлы"
+        Width="1050" Height="720" MinWidth="780" MinHeight="520"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource WindowBackgroundBrush}"
+        Foreground="{StaticResource TextBrush}"
+        SourceInitialized="Window_OnSourceInitialized">
+    <controls:ConflictExplorerContentView x:Name="ContentView" CloseRequested="ContentView_OnCloseRequested"/>
+</Window>

@@ -317,7 +317,9 @@
                                                FontSize="9"
                                                Margin="86,0,0,2"
                                                TextWrapping="Wrap"
-                                               ToolTip="{Binding OverlayDetails}">
+                                               ToolTip="{Binding OverlayDetails}"
+                                               ToolTipService.InitialShowDelay="600"
+                                               ToolTipService.BetweenShowDelay="0">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -401,6 +403,10 @@
                                 <Setter TargetName="ActionRail" Property="Opacity" Value="1"/>
                                 <Setter TargetName="ActionRail" Property="IsHitTestVisible" Value="True"/>
                             </Trigger>
+                            <DataTrigger Binding="{Binding IsConflictRelated}" Value="True">
+                                <Setter TargetName="RowChrome" Property="Background" Value="{DynamicResource ModRelatedBrush}"/>
+                                <Setter TargetName="RowChrome" Property="BorderBrush" Value="{DynamicResource ModRelatedStrokeBrush}"/>
+                            </DataTrigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="RowChrome" Property="Background" Value="{DynamicResource ModSelectionBrush}"/>
                                 <Setter TargetName="RowChrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>

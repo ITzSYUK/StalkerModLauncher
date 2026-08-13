@@ -3,6 +3,79 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="Transparent">
+    <UserControl.Resources>
+        <ResourceDictionary>
+        <ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary Source="/StalkerModLauncher;component/Themes/Mo2ImportStyles.xaml"/>
+        </ResourceDictionary.MergedDictionaries>
+        <Style x:Key="ConflictRadiationCheckBoxStyle" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border Width="23" Height="23" Background="Transparent">
+                            <Viewbox Width="21" Height="21" Stretch="Uniform"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                                     IsHitTestVisible="False">
+                                <Canvas Width="123" Height="123">
+                                    <Ellipse x:Name="Ring" Width="116" Height="116" Canvas.Left="3.5" Canvas.Top="3.5"
+                                             Stroke="#FFC903" StrokeThickness="7"/>
+                                    <Path x:Name="LeftBlade" Fill="#FFC903"
+                                          Data="M11.53,61.33 C12.46,42.73 20.61,28.16 36.59,17.97 L54.15,48.88 C50,51.21 47.59,55.35 46.95,61.33 Z"/>
+                                    <Path x:Name="RightBlade" Fill="#FFC903"
+                                          Data="M86.45,17.73 C102.09,27.84 110.64,42.18 111.47,61.11 L75.92,60.86 C75.98,56.1 73.6,51.94 68.74,48.4 Z"/>
+                                    <Path x:Name="BottomBlade" Fill="#FFC903"
+                                          Data="M86.71,104.87 C70.13,113.36 53.44,113.59 36.63,104.85 L54.62,74.2 C58.71,76.63 63.51,76.65 69.01,74.21 Z"/>
+                                    <Ellipse x:Name="Center" Width="20" Height="20" Canvas.Left="51.5" Canvas.Top="52" Fill="#FFC903"/>
+                                </Canvas>
+                            </Viewbox>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding ConflictKind}" Value="Overwrite">
+                                <Setter TargetName="Ring" Property="Stroke" Value="#8FAE55"/>
+                                <Setter TargetName="LeftBlade" Property="Fill" Value="#8FAE55"/>
+                                <Setter TargetName="RightBlade" Property="Fill" Value="#8FAE55"/>
+                                <Setter TargetName="BottomBlade" Property="Fill" Value="#8FAE55"/>
+                                <Setter TargetName="Center" Property="Fill" Value="#8FAE55"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ConflictKind}" Value="Overwritten">
+                                <Setter TargetName="Ring" Property="Stroke" Value="#D85C4A"/>
+                                <Setter TargetName="LeftBlade" Property="Fill" Value="#D85C4A"/>
+                                <Setter TargetName="RightBlade" Property="Fill" Value="#D85C4A"/>
+                                <Setter TargetName="BottomBlade" Property="Fill" Value="#D85C4A"/>
+                                <Setter TargetName="Center" Property="Fill" Value="#D85C4A"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ConflictKind}" Value="Mixed">
+                                <Setter TargetName="Ring" Property="Stroke" Value="#D29A39"/>
+                                <Setter TargetName="LeftBlade" Property="Fill" Value="#8FAE55"/>
+                                <Setter TargetName="RightBlade" Property="Fill" Value="#D85C4A"/>
+                                <Setter TargetName="BottomBlade" Property="Fill" Value="#D29A39"/>
+                                <Setter TargetName="Center" Property="Fill" Value="#D29A39"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ConflictKind}" Value="Redundant">
+                                <Setter TargetName="Ring" Property="Stroke" Value="#7D817A"/>
+                                <Setter TargetName="LeftBlade" Property="Fill" Value="#7D817A"/>
+                                <Setter TargetName="RightBlade" Property="Fill" Value="#7D817A"/>
+                                <Setter TargetName="BottomBlade" Property="Fill" Value="#7D817A"/>
+                                <Setter TargetName="Center" Property="Fill" Value="#7D817A"/>
+                            </DataTrigger>
+                            <Trigger Property="IsChecked" Value="False">
+                                <Setter TargetName="Ring" Property="Stroke" Value="#756A32"/>
+                                <Setter TargetName="LeftBlade" Property="Fill" Value="#756A32"/>
+                                <Setter TargetName="RightBlade" Property="Fill" Value="#756A32"/>
+                                <Setter TargetName="BottomBlade" Property="Fill" Value="#756A32"/>
+                                <Setter TargetName="Center" Property="Fill" Value="#756A32"/>
+                                <Setter Property="Opacity" Value="0.52"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.3"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -49,7 +122,8 @@
                               Style="{StaticResource ProfileToggleButtonStyle}"
                               Margin="0,0,8,8"
                               Visibility="{Binding ShowStandaloneToggle, ElementName=Root, Converter={StaticResource BooleanToVisibilityConverter}}"
-                              ToolTipService.InitialShowDelay="600">
+                              ToolTipService.InitialShowDelay="600"
+                              ToolTipService.BetweenShowDelay="0">
                     <ToggleButton.ToolTip>
                         <ToolTip>
                             <TextBlock TextWrapping="Wrap" MaxWidth="260">
@@ -61,6 +135,8 @@
                 <Button Command="{Binding ScanForModsCommand}"
                         Style="{StaticResource ModToolbarIconButtonStyle}"
                         ToolTip="Найти моды в выбранной папке"
+                        ToolTipService.InitialShowDelay="600"
+                        ToolTipService.BetweenShowDelay="0"
                         Margin="0,0,8,8">
                     <Viewbox Width="26" Height="26">
                         <Canvas Width="24" Height="24">
@@ -93,6 +169,8 @@
                 <Button Command="{Binding AddModCommand}"
                         Style="{StaticResource ModToolbarIconButtonStyle}"
                         ToolTip="Добавить папку мода"
+                        ToolTipService.InitialShowDelay="600"
+                        ToolTipService.BetweenShowDelay="0"
                         Margin="0,0,8,8">
                     <Viewbox Width="26" Height="26">
                         <Canvas Width="24" Height="24">
@@ -130,13 +208,54 @@
                     </Style.Triggers>
                 </Style>
             </Border.Style>
+            <Grid>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/><ColumnDefinition Width="215"/><ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid>
+                        <TextBox x:Name="ModSearchBox"
+                                 Text="{Binding ModSearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Border BorderThickness="{Binding BorderThickness, ElementName=ModSearchBox}"
+                                Padding="{Binding Padding, ElementName=ModSearchBox}"
+                                Background="Transparent"
+                                IsHitTestVisible="False">
+                            <TextBlock Text="Поиск по названию, группе или папке"
+                                       Margin="10,0,0,0"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource MutedTextBrush}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text, ElementName=ModSearchBox}" Value="">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Text, ElementName=ModSearchBox}" Value="{x:Null}">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                    </Grid>
+                    <ComboBox Grid.Column="1" Margin="7,0,0,0" ItemsSource="{Binding ModFilterOptions}"
+                              SelectedValue="{Binding SelectedModFilter}" SelectedValuePath="Value" DisplayMemberPath="Name"
+                              Style="{StaticResource Mo2ComboBoxStyle}"/>
+                    <Button Grid.Column="2" Margin="7,0,0,0" Content="Конфликты"
+                            Command="{Binding ShowSelectedModConflictsCommand}" ToolTip="Подробности выбранного мода"
+                            ToolTipService.InitialShowDelay="600" ToolTipService.BetweenShowDelay="0"/>
+                </Grid>
             <ListView x:Name="ModsList"
+                      Grid.Row="1"
                       Margin="0"
                       Background="Transparent"
                       BorderThickness="0"
                       FocusVisualStyle="{x:Null}"
                       SizeChanged="ModsList_SizeChanged"
-                      ItemsSource="{Binding SelectedProfile.Mods}"
+                      ItemsSource="{Binding FilteredMods}"
                       SelectedItem="{Binding SelectedMod}"
                       SelectionMode="Extended"
                       ItemContainerStyle="{DynamicResource ModListViewItemStyle}"
@@ -147,9 +266,12 @@
                       PreviewMouseLeftButtonDown="ModsList_OnPreviewMouseLeftButtonDown"
                       PreviewMouseLeftButtonUp="ModsList_OnPreviewMouseLeftButtonUp"
                       PreviewMouseRightButtonDown="ModsList_OnPreviewMouseRightButtonDown"
+                      MouseDoubleClick="ModsList_OnMouseDoubleClick"
                       MouseMove="ModsList_OnMouseMove"
                       ToolTip="Моды можно перетаскивать между строками; нижние имеют больший приоритет"
-                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                      ToolTipService.InitialShowDelay="600"
+                      ToolTipService.BetweenShowDelay="0"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                       ScrollViewer.CanContentScroll="True"
                       VirtualizingPanel.IsVirtualizing="True"
                       VirtualizingPanel.VirtualizationMode="Recycling"
@@ -162,31 +284,52 @@
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
                                     <CheckBox IsChecked="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged}"
+                                              Style="{StaticResource ConflictRadiationCheckBoxStyle}"
+                                              IsEnabled="{Binding DataContext.CanEditSelectedProfile, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                               HorizontalAlignment="Center"
                                               HorizontalContentAlignment="Center"
+                                              ToolTip="{Binding OverlayDetails}"
                                               ToolTipService.ShowOnDisabled="True"
-                                              ToolTipService.InitialShowDelay="600">
-                                        <CheckBox.Style>
-                                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
-                                                <Setter Property="ToolTip" Value="Прозрачный значок — мод выключен&#x0a;Цветной значок — мод включён"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding DataContext.CanEditSelectedProfile, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                 Value="False">
-                                                        <Setter Property="IsEnabled" Value="False"/>
-                                                        <Setter Property="ToolTip" Value="Нельзя изменять моды, пока профиль запущен"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </CheckBox.Style>
+                                              ToolTipService.InitialShowDelay="600"
+                                              ToolTipService.BetweenShowDelay="0">
                                     </CheckBox>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
-                        <GridViewColumn Header="Мод" Width="220" DisplayMemberBinding="{Binding Name}"/>
-                        <GridViewColumn Header="Папка" DisplayMemberBinding="{Binding SourcePath}"/>
+                        <GridViewColumn Header="Мод" Width="220">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding GroupName, StringFormat=Группа: {0}}"
+                                                   Foreground="{StaticResource MutedTextBrush}"
+                                                   FontSize="10"
+                                                   TextTrimming="CharacterEllipsis">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding GroupName}" Value="">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <GridViewColumn Header="Папка">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding SourcePath}" TextTrimming="CharacterEllipsis"/>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
                     </GridView>
                 </ListView.View>
             </ListView>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>

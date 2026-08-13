@@ -20,12 +20,15 @@ public sealed class ModConflictAnalyzerTests : IDisposable
 
         var result = await analyzer.AnalyzeAsync(
         [
-            new ModConflictInput("first", "First", first, true),
-            new ModConflictInput("second", "Second", second, true)
+            new ModConflictInput("first", "First", first, true, []),
+            new ModConflictInput("second", "Second", second, true, [])
         ]);
 
         Assert.False(result["first"].HasOverlapsAbove);
         Assert.True(result["second"].HasOverlapsAbove);
+        Assert.Equal(ModConflictKind.Overwritten, result["first"].ConflictKind);
+        Assert.Equal(ModConflictKind.Overwrite, result["second"].ConflictKind);
+        Assert.Equal(1, result["first"].OverwrittenByFileCount);
         Assert.Equal(1, result["second"].OverwrittenFileCount);
         Assert.Equal(["First"], result["second"].OverwrittenModNames);
     }
@@ -39,12 +42,14 @@ public sealed class ModConflictAnalyzerTests : IDisposable
 
         var result = await analyzer.AnalyzeAsync(
         [
-            new ModConflictInput("first", "First", first, true),
-            new ModConflictInput("second", "Second", second, false)
+            new ModConflictInput("first", "First", first, true, []),
+            new ModConflictInput("second", "Second", second, false, [])
         ]);
 
         Assert.False(result["first"].HasOverlapsAbove);
         Assert.False(result["second"].HasOverlapsAbove);
+        Assert.Equal(ModConflictKind.None, result["first"].ConflictKind);
+        Assert.Equal(ModConflictKind.Disabled, result["second"].ConflictKind);
     }
 
     [Fact]
@@ -57,9 +62,9 @@ public sealed class ModConflictAnalyzerTests : IDisposable
 
         var result = await analyzer.AnalyzeAsync(
         [
-            new ModConflictInput("first", "Main mod", first, true),
-            new ModConflictInput("second", "Addon", second, true),
-            new ModConflictInput("patch", "Patch", patch, true)
+            new ModConflictInput("first", "Main mod", first, true, []),
+            new ModConflictInput("second", "Addon", second, true, []),
+            new ModConflictInput("patch", "Patch", patch, true, [])
         ]);
 
         Assert.Equal(3, result["patch"].OverwrittenFileCount);
@@ -76,9 +81,9 @@ public sealed class ModConflictAnalyzerTests : IDisposable
 
         var result = await analyzer.AnalyzeAsync(
         [
-            new ModConflictInput("main", "Main mod", main, true),
-            new ModConflictInput("patch", "Patch", patch, true),
-            new ModConflictInput("disabled", "Disabled hotfix", disabledHotfix, false)
+            new ModConflictInput("main", "Main mod", main, true, []),
+            new ModConflictInput("patch", "Patch", patch, true, []),
+            new ModConflictInput("disabled", "Disabled hotfix", disabledHotfix, false, [])
         ], @"bin_x64\xrEngine.exe");
 
         Assert.False(result["main"].ProvidesLaunchExecutable);
@@ -133,8 +138,8 @@ public sealed class ModConflictAnalyzerTests : IDisposable
 
         var result = await analyzer.AnalyzeAsync(
         [
-            new ModConflictInput("main", "Main mod", main, true),
-            new ModConflictInput("patch", "Patch", patch, true)
+            new ModConflictInput("main", "Main mod", main, true, []),
+            new ModConflictInput("patch", "Patch", patch, true, [])
         ], @"bin_x64\xrEngine.exe", main);
 
         Assert.True(result["main"].ProvidesLaunchExecutable);
@@ -150,13 +155,54 @@ public sealed class ModConflictAnalyzerTests : IDisposable
 
         var result = await analyzer.AnalyzeAsync(
         [
-            new ModConflictInput("main", "Main", main, true),
-            new ModConflictInput("patch", "Patch", patch, true)
+            new ModConflictInput("main", "Main", main, true, []),
+            new ModConflictInput("patch", "Patch", patch, true, [])
         ]);
 
         Assert.Equal(1, result["patch"].OverwrittenConfigurationCount);
         Assert.Equal(1, result["patch"].OverwrittenBinaryCount);
         Assert.Equal(3, result["patch"].OverwrittenFileCount);
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_ClassifiesMixedAndRedundantMods()
+    {
+        var first = CreateMod("first", "shared-a.ltx");
+        var mixed = CreateMod("mixed", "shared-a.ltx", "shared-b.ltx", "unique.ltx");
+        var redundant = CreateMod("redundant", "shared-c.ltx");
+        var last = CreateMod("last", "shared-b.ltx", "shared-c.ltx");
+        var analyzer = new ModConflictAnalyzer();
+
+        var result = await analyzer.AnalyzeAsync(
+        [
+            new ModConflictInput("first", "First", first, true, []),
+            new ModConflictInput("mixed", "Mixed", mixed, true, []),
+            new ModConflictInput("redundant", "Redundant", redundant, true, []),
+            new ModConflictInput("last", "Last", last, true, [])
+        ]);
+
+        Assert.Equal(ModConflictKind.Mixed, result["mixed"].ConflictKind);
+        Assert.Equal(1, result["mixed"].OverwrittenFileCount);
+        Assert.Equal(1, result["mixed"].OverwrittenByFileCount);
+        Assert.Equal(ModConflictKind.Redundant, result["redundant"].ConflictKind);
+        Assert.Equal(["last"], result["redundant"].RelatedModIds);
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_IgnoresProfileExcludedFiles()
+    {
+        var first = CreateMod("excluded-first", "shared.ltx");
+        var second = CreateMod("excluded-second", "shared.ltx");
+        var analyzer = new ModConflictAnalyzer();
+
+        var result = await analyzer.AnalyzeAsync(
+        [
+            new ModConflictInput("first", "First", first, true, []),
+            new ModConflictInput("second", "Second", second, true, ["shared.ltx"])
+        ]);
+
+        Assert.Equal(ModConflictKind.None, result["first"].ConflictKind);
+        Assert.Equal(ModConflictKind.None, result["second"].ConflictKind);
     }
 
     private string CreateMod(string name, params string[] relativeFiles)

@@ -1,0 +1,176 @@
+<UserControl x:Class="StalkerModLauncher.Views.Controls.ConflictExplorerContentView"
+             x:Name="Root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:infrastructure="clr-namespace:StalkerModLauncher.Infrastructure">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/StalkerModLauncher;component/Themes/Palette.xaml"/>
+                <ResourceDictionary Source="/StalkerModLauncher;component/Themes/SharedStyles.xaml"/>
+                <ResourceDictionary Source="/StalkerModLauncher;component/Themes/Mo2ImportStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="ConflictGridTextStyle" TargetType="TextBlock">
+                <Setter Property="TextWrapping" Value="NoWrap"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+            </Style>
+            <Style TargetType="TabItem">
+                <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}"/>
+                <Setter Property="Padding" Value="13,7"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TabItem">
+                            <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1,1,1,0"
+                                    Padding="{TemplateBinding Padding}" Margin="0,0,3,0">
+                                <ContentPresenter ContentSource="Header"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource PanelAltBrush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style TargetType="TabControl">
+                <Setter Property="Background" Value="{DynamicResource FieldBackgroundBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}"/>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Background="{DynamicResource CommandPanelBrush}" BorderBrush="{DynamicResource StrokeBrush}"
+                BorderThickness="1" CornerRadius="5" Padding="10" Margin="0,0,0,9">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="КОНФЛИКТЫ И ИТОГОВЫЕ ФАЙЛЫ" FontWeight="SemiBold" FontSize="15"/>
+                    <TextBlock Text="{Binding Summary}" Foreground="{DynamicResource MutedTextBrush}" FontSize="11" Margin="0,2,0,0"/>
+                </StackPanel>
+                <Button Grid.Column="1" Content="Обновить" Command="{Binding RefreshCommand}" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}">
+            <TabItem Header="Конфликты мода">
+                <Grid Margin="9">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="Мод" VerticalAlignment="Center" Margin="0,0,9,0"/>
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding Mods}" SelectedItem="{Binding SelectedMod}"
+                                  Style="{StaticResource Mo2ComboBoxStyle}" DisplayMemberPath="Name"/>
+                    </Grid>
+                    <TabControl Grid.Row="1">
+                        <TabItem Header="Побеждает">
+                            <DataGrid ItemsSource="{Binding WinningFiles}" Style="{StaticResource Mo2DataGridStyle}"
+                                      AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                      RowHeight="30"
+                                      CanUserResizeColumns="True" CanUserResizeRows="False"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                <DataGrid.Columns>
+                                    <DataGridTemplateColumn Header="Действие" Width="110" MinWidth="110" MaxWidth="110"
+                                                            CanUserResize="False">
+                                        <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                                            <Button Content="{Binding ActionText}"
+                                                    Width="84" Height="24" MinHeight="24" Padding="5,1"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                    Command="{Binding DataContext.ToggleFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"/>
+                                        </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn Header="Файл" Binding="{Binding RelativePath}"
+                                                        Width="300" MinWidth="180"
+                                                        ElementStyle="{StaticResource ConflictGridTextStyle}"/>
+                                    <DataGridTextColumn Header="Заменяет моды" Binding="{Binding OtherMods}"
+                                                        Width="800" MinWidth="360"
+                                                        ElementStyle="{StaticResource ConflictGridTextStyle}"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                        <TabItem Header="Проигрывает">
+                            <DataGrid ItemsSource="{Binding LosingFiles}" Style="{StaticResource Mo2DataGridStyle}"
+                                      AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                      RowHeight="30"
+                                      CanUserResizeColumns="True" CanUserResizeRows="False"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                <DataGrid.Columns>
+                                    <DataGridTemplateColumn Header="Действие" Width="110" MinWidth="110" MaxWidth="110"
+                                                            CanUserResize="False">
+                                        <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                                            <Button Content="{Binding ActionText}"
+                                                    Width="84" Height="24" MinHeight="24" Padding="5,1"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                    Command="{Binding DataContext.ToggleFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"/>
+                                        </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn Header="Файл" Binding="{Binding RelativePath}"
+                                                        Width="300" MinWidth="180"
+                                                        ElementStyle="{StaticResource ConflictGridTextStyle}"/>
+                                    <DataGridTextColumn Header="Побеждающие моды" Binding="{Binding OtherMods}"
+                                                        Width="800" MinWidth="360"
+                                                        ElementStyle="{StaticResource ConflictGridTextStyle}"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                        <TabItem Header="Уникальные">
+                            <DataGrid ItemsSource="{Binding UniqueFiles}" Style="{StaticResource Mo2DataGridStyle}"
+                                      AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Файл" Binding="{Binding RelativePath}" Width="*"/>
+                                    <DataGridTextColumn Header="Состояние" Binding="{Binding Status}" Width="180"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                    </TabControl>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Итоговое дерево">
+                <Grid Margin="9">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Поиск по пути или источнику файла"/>
+                        <ComboBox Grid.Column="1" Margin="8,0,0,0" ItemsSource="{Binding FinalFileFilters}"
+                                  SelectedValue="{Binding SelectedFinalFileFilter}" SelectedValuePath="Value"
+                                  DisplayMemberPath="Name"
+                                  Style="{StaticResource Mo2ComboBoxStyle}"/>
+                    </Grid>
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding VisibleFinalFiles}" Style="{StaticResource Mo2DataGridStyle}"
+                              AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                              EnableRowVirtualization="True" VirtualizingPanel.VirtualizationMode="Recycling">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Относительный путь" Binding="{Binding RelativePath}" Width="*"/>
+                            <DataGridTextColumn Binding="{Binding ProvidersDisplay}" Width="*">
+                                <DataGridTextColumn.Header>
+                                    <TextBlock Text="Цепочка замены"
+                                               ToolTip="Источники указаны слева направо. Последний имеет наивысший приоритет, и его файл используется при запуске."
+                                               ToolTipService.InitialShowDelay="600"
+                                               ToolTipService.BetweenShowDelay="0"/>
+                                </DataGridTextColumn.Header>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+        </TabControl>
+
+        <Button Grid.Row="2" Content="{Binding CloseButtonText, ElementName=Root}" HorizontalAlignment="Right"
+                Margin="0,9,0,0" Click="CloseButton_OnClick"/>
+    </Grid>
+</UserControl>
