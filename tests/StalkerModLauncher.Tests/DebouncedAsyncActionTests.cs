@@ -9,10 +9,12 @@ public sealed class DebouncedAsyncActionTests
     public async Task Schedule_CollapsesRapidCallsIntoSingleAction()
     {
         var executionCount = 0;
+        var executed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var action = new DebouncedAsyncAction(
             () =>
             {
                 Interlocked.Increment(ref executionCount);
+                executed.TrySetResult();
                 return Task.CompletedTask;
             },
             TimeSpan.FromMilliseconds(40));
@@ -20,7 +22,8 @@ public sealed class DebouncedAsyncActionTests
         action.Schedule();
         action.Schedule();
         action.Schedule();
-        await Task.Delay(150);
+        await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await Task.Delay(100);
 
         Assert.Equal(1, executionCount);
     }
