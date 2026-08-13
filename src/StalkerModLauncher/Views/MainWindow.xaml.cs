@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using StalkerModLauncher.Services;
+using StalkerModLauncher.Models;
 using StalkerModLauncher.ViewModels;
 
 namespace StalkerModLauncher.Views;
@@ -28,6 +29,8 @@ public partial class MainWindow : Window
         viewModel.ActivityLog.PropertyChanged += ActivityLog_PropertyChanged;
         viewModel.PropertyChanged += ViewModel_PropertyChanged;
         viewModel.ProfileCreationRequested += ViewModel_ProfileCreationRequested;
+        viewModel.Mo2ImportRequested += ViewModel_Mo2ImportRequested;
+        viewModel.ConflictExplorerRequested += ViewModel_ConflictExplorerRequested;
         DataContext = viewModel;
     }
 
@@ -39,6 +42,22 @@ public partial class MainWindow : Window
         }
 
         _navigation.ShowProfileCreation(this, ViewModel);
+    }
+
+    private void ViewModel_ConflictExplorerRequested(object? sender, ModEntry? mod)
+    {
+        if (ViewModel is not null && _pdaWindow is null)
+        {
+            _navigation.ShowConflictExplorer(this, ViewModel.CreateConflictExplorerViewModel(mod));
+        }
+    }
+
+    private void ViewModel_Mo2ImportRequested(object? sender, EventArgs e)
+    {
+        if (ViewModel is not null && _pdaWindow is null)
+        {
+            _navigation.ShowMo2Import(this, ViewModel);
+        }
     }
 
     private void ActivityLog_PropertyChanged(object? sender, PropertyChangedEventArgs e)

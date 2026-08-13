@@ -42,6 +42,7 @@ public sealed class FileLayerPlan
         FileSystemSafety.EnsureRelativePath(relativePath, "Layer file");
         return SourceLayers
             .Where(layer => Directory.Exists(layer.RootPath))
+            .Where(layer => !IsExcluded(layer, relativePath))
             .Select(layer => new FileLayerFile(
                 Path.Combine(layer.RootPath, relativePath),
                 relativePath,
@@ -69,9 +70,15 @@ public sealed class FileLayerPlan
             foreach (var file in files)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                var relativePath = Path.GetRelativePath(layer.RootPath, file);
+                if (IsExcluded(layer, relativePath))
+                {
+                    continue;
+                }
+
                 candidates.Add(new FileLayerExecutableCandidate(
                     file,
-                    Path.GetRelativePath(layer.RootPath, file),
+                    relativePath,
                     GetDisplayName(layer),
                     layer));
             }
@@ -158,6 +165,25 @@ public sealed class FileLayerPlan
                 mod.Order,
                 mod)));
 
+        if (!string.IsNullOrWhiteSpace(profile.Mo2OverwritePath))
+        {
+            var overwrite = new ModEntry
+            {
+                Id = "__mo2_overwrite",
+                Name = "Файлы overwrite из MO2",
+                SourcePath = Path.GetFullPath(profile.Mo2OverwritePath),
+                IsEnabled = true,
+                Order = profile.Mods.Count == 0 ? 1 : profile.Mods.Max(mod => mod.Order) + 1
+            };
+            layers.Add(new FileLayer(
+                FileLayerKind.Mod,
+                overwrite.Id,
+                overwrite.Name,
+                overwrite.SourcePath,
+                overwrite.Order,
+                overwrite));
+        }
+
         layers.Add(new FileLayer(
             FileLayerKind.UserData,
             "__userdata",
@@ -183,13 +209,31 @@ public sealed class FileLayerPlan
         foreach (var file in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var relativePath = Path.GetRelativePath(layer.RootPath, file);
+            if (IsExcluded(layer, relativePath))
+            {
+                continue;
+            }
+
             yield return new FileLayerFile(
                 file,
-                Path.GetRelativePath(layer.RootPath, file),
+                relativePath,
                 GetDisplayName(layer),
                 layer);
         }
     }
+
+    public static bool IsExcluded(FileLayer layer, string relativePath)
+    {
+        return layer.Mod?.ExcludedFiles.Any(excluded =>
+            NormalizeRelativePath(excluded).Equals(
+                NormalizeRelativePath(relativePath),
+                StringComparison.OrdinalIgnoreCase)) == true;
+    }
+
+    private static string NormalizeRelativePath(string path) =>
+        path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
+            .TrimStart(Path.DirectorySeparatorChar);
 
     private static EnumerationOptions SafeEnumerationOptions { get; } = new()
     {

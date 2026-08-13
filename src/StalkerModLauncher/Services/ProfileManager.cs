@@ -38,7 +38,8 @@ public sealed class ProfileManager
             ExecutableSourcePath = source.ExecutableSourcePath,
             UsvfsExecutableOverrideRelativePath = source.UsvfsExecutableOverrideRelativePath,
             WorkingDirectoryRelative = source.WorkingDirectoryRelative,
-            GameInstallPath = source.GameInstallPath
+            GameInstallPath = source.GameInstallPath,
+            Mo2OverwritePath = source.Mo2OverwritePath
         };
 
         foreach (var sourceMod in source.Mods.OrderBy(mod => mod.Order))
@@ -47,7 +48,9 @@ public sealed class ProfileManager
             {
                 Name = sourceMod.Name,
                 SourcePath = sourceMod.SourcePath,
+                GroupName = sourceMod.GroupName,
                 IsEnabled = sourceMod.IsEnabled,
+                ExcludedFiles = [.. sourceMod.ExcludedFiles],
                 Order = duplicate.Mods.Count + 1
             });
         }

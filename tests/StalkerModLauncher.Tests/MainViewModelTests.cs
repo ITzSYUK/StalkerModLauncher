@@ -151,6 +151,31 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task TryAddImportedProfileAsync_RollsBackWhenSettingsCannotBeSaved()
+    {
+        var dialogService = new CapturingDialogService();
+        await RunWithViewModelAsync(async (viewModel, root) =>
+        {
+            var settingsPath = Path.Combine(root, "config", "settings.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(settingsPath)!);
+            await File.WriteAllTextAsync(settingsPath, "{}");
+            await using var lockedSettings = new FileStream(
+                settingsPath,
+                FileMode.Open,
+                FileAccess.ReadWrite,
+                FileShare.None);
+            var imported = new ModProfile { Name = "MO2 import" };
+
+            var result = await viewModel.TryAddImportedProfileAsync(imported);
+
+            Assert.False(result);
+            Assert.Empty(viewModel.Profiles);
+            Assert.Null(viewModel.SelectedProfile);
+            Assert.Contains("изменения отменены", dialogService.LastError, StringComparison.OrdinalIgnoreCase);
+        }, dialogService);
+    }
+
+    [Fact]
     public async Task MoveModsToBoundaries_ReordersWholeSelection()
     {
         await RunWithViewModelAsync((viewModel, root) =>
@@ -305,13 +330,15 @@ public sealed class MainViewModelTests
         });
     }
 
-    private static async Task RunWithViewModelAsync(Func<MainViewModel, string, Task> test)
+    private static async Task RunWithViewModelAsync(
+        Func<MainViewModel, string, Task> test,
+        DialogService? dialogService = null)
     {
         var root = Path.Combine(Path.GetTempPath(), "StalkerModLauncherTests", Guid.NewGuid().ToString("N"));
         MainViewModel? viewModel = null;
         try
         {
-            viewModel = CreateViewModel(root);
+            viewModel = CreateViewModel(root, dialogService);
             await WaitForSettingsLoadedAsync(viewModel);
             await test(viewModel, root);
         }
@@ -329,7 +356,7 @@ public sealed class MainViewModelTests
         }
     }
 
-    private static MainViewModel CreateViewModel(string root)
+    private static MainViewModel CreateViewModel(string root, DialogService? dialogService = null)
     {
         var paths = new AppPaths(
             Path.Combine(root, "config"),
@@ -344,16 +371,27 @@ public sealed class MainViewModelTests
             paths,
             settingsStore,
             new LaunchCoordinator(new ThrowingProfileLauncher(), new FakeGameSessionTracker()),
-            new DialogService(),
+            dialogService ?? new DialogService(),
             new ModConflictAnalyzer(),
             new ProfileTransferService(),
             new ModScannerService(),
             new ModListEditor(),
+            new Mo2ImportService(),
             profileManager,
             new GameExitDiagnosticsService(new ProfileDataPathResolver()),
             new ProfileReadinessService(gameValidator),
             new LaunchPreflightService(gameValidator, profileManager),
             new ApplicationLogService(paths));
+    }
+
+    private sealed class CapturingDialogService : DialogService
+    {
+        public string LastError { get; private set; } = string.Empty;
+
+        public override void ShowError(string title, string message)
+        {
+            LastError = $"{title}: {message}";
+        }
     }
 
     private static async Task WaitForSettingsLoadedAsync(MainViewModel viewModel)

@@ -46,6 +46,20 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildAsync_SkipsProfileExcludedConflictFile()
+    {
+        var firstMod = CreateMod("excluded-first", "first");
+        var secondMod = CreateMod("excluded-second", "second");
+        var profile = CreateProfile(firstMod, secondMod);
+        profile.Mods[1].ExcludedFiles.Add(Path.Combine("gamedata", "config", "shared.ltx"));
+
+        var result = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+        Assert.Equal("first", File.ReadAllText(Path.Combine(result.WorkspaceRoot, "gamedata", "config", "shared.ltx")));
+        Assert.Equal("second", File.ReadAllText(Path.Combine(secondMod, "gamedata", "config", "shared.ltx")));
+    }
+
+    [Fact]
     public async Task BuildAsync_LinksModConfigurationWithoutCopyingIt()
     {
         var modPath = CreateMod("mod", "mod source");

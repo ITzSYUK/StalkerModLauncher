@@ -69,6 +69,10 @@ internal sealed class WorkspaceSourceScanner
             builder.Append(layer.Order).Append('|')
                 .Append(mod.IsEnabled).Append('|')
                 .Append(layer.RootPath).AppendLine();
+            foreach (var excluded in mod.ExcludedFiles.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+            {
+                builder.Append("excluded|").AppendLine(excluded);
+            }
 
             if (snapshot.Mods.TryGetValue(mod.Id, out var modSnapshot))
             {

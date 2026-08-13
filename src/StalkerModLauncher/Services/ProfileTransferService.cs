@@ -49,11 +49,14 @@ public sealed class ProfileTransferService
             LaunchArguments = profile.LaunchArguments,
             WorkingDirectoryRelative = profile.WorkingDirectoryRelative,
             GameInstallPath = profile.GameInstallPath,
+            Mo2OverwritePath = profile.Mo2OverwritePath,
             Mods = profile.Mods.Select(mod => new ExportedMod
             {
                 Name = mod.Name,
                 SourcePath = mod.SourcePath,
+                GroupName = mod.GroupName,
                 IsEnabled = mod.IsEnabled,
+                ExcludedFiles = [.. mod.ExcludedFiles],
                 Order = mod.Order
             }).ToList()
         };
@@ -73,7 +76,8 @@ public sealed class ProfileTransferService
             UsvfsExecutableOverrideRelativePath = exported.UsvfsExecutableOverrideRelativePath ?? string.Empty,
             LaunchArguments = exported.LaunchArguments,
             WorkingDirectoryRelative = exported.WorkingDirectoryRelative,
-            GameInstallPath = exported.GameInstallPath
+            GameInstallPath = exported.GameInstallPath,
+            Mo2OverwritePath = exported.Mo2OverwritePath ?? string.Empty
         };
 
         foreach (var exportedMod in exported.Mods.OrderBy(mod => mod.Order))
@@ -82,7 +86,9 @@ public sealed class ProfileTransferService
             {
                 Name = exportedMod.Name,
                 SourcePath = exportedMod.SourcePath,
+                GroupName = exportedMod.GroupName,
                 IsEnabled = exportedMod.IsEnabled,
+                ExcludedFiles = exportedMod.ExcludedFiles ?? [],
                 Order = profile.Mods.Count + 1
             });
         }

@@ -8,14 +8,22 @@ public sealed class ModEntry : ObservableObject
     private string _id = Guid.NewGuid().ToString("N");
     private string _name = "New mod";
     private string _sourcePath = string.Empty;
+    private string _groupName = string.Empty;
     private bool _isEnabled = true;
+    private List<string> _excludedFiles = [];
+    private ModConflictKind _conflictKind;
     private bool _hasOverlapsAbove;
     private int _overwrittenFileCount;
     private int _overwrittenModCount;
     private bool _providesLaunchExecutable;
     private int _overwrittenConfigurationCount;
     private int _overwrittenBinaryCount;
+    private int _overwrittenByFileCount;
+    private int _overwrittenByModCount;
+    private int _overwrittenByBinaryCount;
     private string _overlayDetails = string.Empty;
+    private IReadOnlyList<string> _relatedModIds = [];
+    private bool _isConflictRelated;
     private int _order;
 
     public string Id
@@ -36,10 +44,37 @@ public sealed class ModEntry : ObservableObject
         set => SetProperty(ref _sourcePath, value);
     }
 
+    public string GroupName
+    {
+        get => _groupName;
+        set => SetProperty(ref _groupName, value);
+    }
+
     public bool IsEnabled
     {
         get => _isEnabled;
         set => SetProperty(ref _isEnabled, value);
+    }
+
+    public List<string> ExcludedFiles
+    {
+        get => _excludedFiles;
+        set => SetProperty(ref _excludedFiles, value ?? []);
+    }
+
+    [JsonIgnore]
+    public ModConflictKind ConflictKind
+    {
+        get => _conflictKind;
+        set
+        {
+            if (SetProperty(ref _conflictKind, value))
+            {
+                OnPropertyChanged(nameof(ConflictDisplay));
+                OnPropertyChanged(nameof(OverlaySummary));
+                OnPropertyChanged(nameof(HasOverlayInfo));
+            }
+        }
     }
 
     [JsonIgnore]
@@ -117,6 +152,40 @@ public sealed class ModEntry : ObservableObject
     }
 
     [JsonIgnore]
+    public int OverwrittenByFileCount
+    {
+        get => _overwrittenByFileCount;
+        set
+        {
+            if (SetProperty(ref _overwrittenByFileCount, value))
+            {
+                OnPropertyChanged(nameof(OverlaySummary));
+                OnPropertyChanged(nameof(HasOverlayInfo));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public int OverwrittenByModCount
+    {
+        get => _overwrittenByModCount;
+        set
+        {
+            if (SetProperty(ref _overwrittenByModCount, value))
+            {
+                OnPropertyChanged(nameof(OverlaySummary));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public int OverwrittenByBinaryCount
+    {
+        get => _overwrittenByBinaryCount;
+        set => SetProperty(ref _overwrittenByBinaryCount, value);
+    }
+
+    [JsonIgnore]
     public string OverlayDetails
     {
         get => _overlayDetails;
@@ -124,7 +193,32 @@ public sealed class ModEntry : ObservableObject
     }
 
     [JsonIgnore]
-    public bool HasOverlayInfo => OverwrittenFileCount > 0 || ProvidesLaunchExecutable;
+    public IReadOnlyList<string> RelatedModIds
+    {
+        get => _relatedModIds;
+        set => SetProperty(ref _relatedModIds, value ?? []);
+    }
+
+    [JsonIgnore]
+    public bool IsConflictRelated
+    {
+        get => _isConflictRelated;
+        set => SetProperty(ref _isConflictRelated, value);
+    }
+
+    [JsonIgnore]
+    public bool HasOverlayInfo => ConflictKind is not ModConflictKind.None and not ModConflictKind.Disabled || ProvidesLaunchExecutable;
+
+    [JsonIgnore]
+    public string ConflictDisplay => ConflictKind switch
+    {
+        ModConflictKind.Overwrite => "Перезаписывает",
+        ModConflictKind.Overwritten => "Перезаписан",
+        ModConflictKind.Mixed => "Смешанный конфликт",
+        ModConflictKind.Redundant => "Полностью перекрыт",
+        ModConflictKind.Disabled => "Выключен",
+        _ => "Без конфликтов"
+    };
 
     [JsonIgnore]
     public string OverlaySummary
@@ -135,6 +229,17 @@ public sealed class ModEntry : ObservableObject
             if (OverwrittenFileCount > 0)
             {
                 parts.Add($"Заменяет {OverwrittenFileCount:N0} {Pluralize(OverwrittenFileCount, "файл", "файла", "файлов")} из {OverwrittenModCount:N0} {Pluralize(OverwrittenModCount, "мода", "модов", "модов")}");
+            }
+
+            if (OverwrittenByFileCount > 0)
+            {
+                parts.Add($"проигрывает {OverwrittenByFileCount:N0} {Pluralize(OverwrittenByFileCount, "файлом", "файлами", "файлами")} {OverwrittenByModCount:N0} {Pluralize(OverwrittenByModCount, "моду", "модам", "модам")}");
+            }
+
+            if (ConflictKind == ModConflictKind.Redundant)
+            {
+                parts.Clear();
+                parts.Add("полностью перекрыт последующими модами");
             }
 
             if (ProvidesLaunchExecutable)

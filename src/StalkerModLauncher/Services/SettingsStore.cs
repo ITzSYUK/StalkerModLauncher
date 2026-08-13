@@ -4,7 +4,7 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class SettingsStore
+public sealed class SettingsStore : IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -16,6 +16,7 @@ public sealed class SettingsStore
     private readonly TimeProvider _timeProvider;
     private readonly SemaphoreSlim _ioLock = new(1, 1);
     private string? _writeBlockReason;
+    private bool _disposed;
 
     public SettingsStore(AppPaths paths, TimeProvider? timeProvider = null)
     {
@@ -41,6 +42,7 @@ public sealed class SettingsStore
 
     public async Task<SettingsLoadResult> LoadWithRecoveryAsync()
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         await _ioLock.WaitAsync();
         try
         {
@@ -61,6 +63,7 @@ public sealed class SettingsStore
 
     public async Task SaveAsync(AppSettings settings)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         var snapshot = JsonSerializer.SerializeToUtf8Bytes(settings, JsonOptions);
         await _ioLock.WaitAsync();
         try
@@ -76,6 +79,7 @@ public sealed class SettingsStore
 
     public async Task<AppSettings> UpdateAsync(Func<AppSettings, AppSettings> update)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         SettingsRecoveryInfo? recovery = null;
         AppSettings updated;
         await _ioLock.WaitAsync();
@@ -317,6 +321,18 @@ public sealed class SettingsStore
                 File.Delete(tempPath);
             }
         }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        RecoveryCompleted = null;
+        _ioLock.Dispose();
     }
 
     private sealed record SettingsFileLoadResult(

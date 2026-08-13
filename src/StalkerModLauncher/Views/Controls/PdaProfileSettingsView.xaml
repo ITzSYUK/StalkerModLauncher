@@ -98,6 +98,23 @@
                     <TextBlock Text="Параметры запуска" Foreground="#929B88" FontSize="11"/>
                     <TextBox Text="{Binding LaunchArguments, UpdateSourceTrigger=PropertyChanged}" Margin="0,3,0,9"/>
 
+                    <Border Background="#101923" BorderBrush="#3B4755" BorderThickness="1" Padding="8" Margin="0,0,0,9"
+                            Visibility="{Binding HasMo2Overwrite, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Слой MO2 overwrite" FontWeight="SemiBold" FontSize="11"/>
+                                <TextBlock Text="{Binding Mo2OverwritePath}" Foreground="#727B6D" FontSize="9"
+                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding Mo2OverwritePath}"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Отключить" Command="{Binding RemoveMo2OverwriteCommand}"
+                                    Margin="7,0,0,0" Padding="8,2" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
                     <ToggleButton Content="Показывать статус профиля в Discord"
                                   IsChecked="{Binding IsDiscordStatusEnabled}"
                                   Style="{StaticResource ProfileToggleButtonStyle}"
@@ -112,7 +129,7 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <Button Content="Импорт порядка MO2..." Command="{Binding ImportMo2ModListCommand}"/>
+            <Button Content="Применить только modlist.txt..." Command="{Binding ImportMo2ModListCommand}"/>
             <Button Grid.Column="2" Content="Сохранить" Click="SaveButton_OnClick" Style="{StaticResource PrimaryButtonStyle}" MinWidth="100"/>
         </Grid>
     </Grid>

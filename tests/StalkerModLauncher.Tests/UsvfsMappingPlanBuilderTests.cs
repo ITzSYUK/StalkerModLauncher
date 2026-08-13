@@ -142,6 +142,38 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
         Assert.True(knownWritable.Order < plan.Operations.Single(operation => operation.SourceName == "profile overwrite").Order);
     }
 
+    [Fact]
+    public void Build_RestoresPreviousProviderForExcludedConflictFile()
+    {
+        var game = CreateDirectory("excluded-game");
+        var first = CreateDirectory("excluded-first");
+        var patch = CreateDirectory("excluded-patch");
+        var workspace = CreateDirectory("excluded-workspace");
+        File.WriteAllText(Path.Combine(game, "shared.ltx"), "base");
+        var firstFile = Path.Combine(first, "shared.ltx");
+        File.WriteAllText(firstFile, "first");
+        File.WriteAllText(Path.Combine(patch, "shared.ltx"), "patch");
+        var profile = new ModProfile { GameInstallPath = game };
+        profile.Mods.Add(new ModEntry { Id = "first", Name = "First", SourcePath = first, Order = 1 });
+        profile.Mods.Add(new ModEntry
+        {
+            Id = "patch",
+            Name = "Patch",
+            SourcePath = patch,
+            Order = 2,
+            ExcludedFiles = ["shared.ltx"]
+        });
+        var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
+        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+
+        var plan = new UsvfsMappingPlanBuilder().Build(layerPlan, manifest);
+
+        var fallback = Assert.Single(plan.Operations, operation => operation.SourceName.StartsWith("excluded file fallback:", StringComparison.Ordinal));
+        Assert.Equal(UsvfsMappingKind.File, fallback.Kind);
+        Assert.Equal(Path.GetFullPath(firstFile), fallback.SourcePath);
+        Assert.Equal(Path.Combine(Path.GetFullPath(game), "shared.ltx"), fallback.DestinationPath);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

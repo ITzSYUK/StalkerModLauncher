@@ -2,7 +2,7 @@
 
 [English version](TECHNICAL_EN.md) | [Русская версия](TECHNICAL_RU.md) | [Russian user guide](USER_GUIDE_RU.md)
 
-This document describes the current architecture of S.T.A.L.K.E.R. Mod Launcher `v1.2.6`: how profiles are stored, how the winning file is selected, how Workspace differs from USVFS, where profile data is kept, and which checks protect original game and mod folders.
+This document describes the current architecture of S.T.A.L.K.E.R. Mod Launcher `v1.2.7`: how profiles are stored, how the winning file is selected, how Workspace differs from USVFS, where profile data is kept, and which checks protect original game and mod folders.
 
 The detailed USVFS research history and experimental prototypes are available in [USVFS_RESEARCH_EN.md](USVFS_RESEARCH_EN.md).
 
@@ -374,9 +374,17 @@ Scanning searches recursively for mod roots, but stops treating nested folders a
 
 Grouped movement preserves the relative order of selected mods. The UI supports drag and drop plus move-to-start and move-to-end commands.
 
-Import from `modlist.txt` matches entries to mods already added to the profile and imports enabled state and order. MO2 order is converted to the launcher's rule that lower entries have higher priority.
+The MO2 transfer wizard accepts a Mod Organizer 2 root, an MO2 profile directory, or `modlist.txt`. It reads `ModOrganizer.ini`, supports standard and relative paths, and discovers `profiles`, `mods`, the base game, and `overwrite` without writing to any source directory.
 
-Overlap analysis treats file replacement as priority information, not as an error. An overlap does not prevent a mod from being disabled.
+The preview matches `modlist.txt` entries to physical directories, reports missing matches, and requires the user to select a source when several directories match. After all ambiguities are resolved, it transfers enabled state and converts MO2 order to the launcher's lower-is-higher priority rule. MO2 separators are persisted in `ModEntry.GroupName` and do not participate in the layer plan. A non-empty `overwrite` directory can be connected through `ModProfile.Mo2OverwritePath` as a separate layer after regular mods; it is hidden from the user-facing mod list and can be disconnected in profile settings. The executable is selected only through the existing detection over actual layers; MO2 launch arguments are not copied automatically.
+
+Profile creation is transactional with respect to settings: the profile is first added in memory and then explicitly saved through the atomic settings store. On failure it is removed, the previous selection is restored, and the wizard remains open. Saves and `user.ltx` are not copied in the current version.
+
+The additional **Apply only modlist.txt** command preserves the previous behavior: it matches entries only to mods already present in a profile and changes their state and order.
+
+Conflict analysis indexes `relative path -> providing mods` and classifies every enabled mod as conflict-free, overwriting earlier mods, overwritten by later mods, mixed, or fully redundant. The detail view shows winning, losing, and unique files; the final tree shows the effective provider of every path.
+
+An individual conflicting file can be excluded only in the current profile without changing its source directory. Workspace skips it during materialization, while USVFS maps the previous effective provider back onto that path after directory mappings. Unique files cannot be excluded because a normal USVFS mapping cannot hide them correctly.
 
 ## 13. AP-PRO modification browser
 

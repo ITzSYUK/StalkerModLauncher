@@ -56,7 +56,11 @@ public sealed class ModConflictAnalyzer
         foreach (var mod in mods.Where(mod => mod.IsEnabled && !string.IsNullOrWhiteSpace(mod.SourcePath)))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            fileCache[mod.Id] = GetModFileList(mod.SourcePath, cancellationToken);
+            var files = new HashSet<string>(
+                GetModFileList(mod.SourcePath, cancellationToken),
+                StringComparer.OrdinalIgnoreCase);
+            files.ExceptWith(mod.ExcludedFiles.Select(NormalizeRelativePath));
+            fileCache[mod.Id] = files;
         }
 
         var normalizedExecutable = NormalizeRelativePath(launchExecutableRelativePath);
@@ -66,40 +70,101 @@ public sealed class ModConflictAnalyzer
                 .LastOrDefault(mod => fileCache.GetValueOrDefault(mod.Id)?.Contains(normalizedExecutable) == true)
                 ?.Id;
 
+        var providersByPath = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
+        for (var index = 0; index < mods.Count; index++)
+        {
+            if (!mods[index].IsEnabled || !fileCache.TryGetValue(mods[index].Id, out var files))
+            {
+                continue;
+            }
+
+            foreach (var relativePath in files)
+            {
+                if (!providersByPath.TryGetValue(relativePath, out var providers))
+                {
+                    providers = [];
+                    providersByPath.Add(relativePath, providers);
+                }
+
+                providers.Add(index);
+            }
+        }
+
         var result = new Dictionary<string, ModConflictState>(StringComparer.OrdinalIgnoreCase);
         for (var index = 0; index < mods.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             var currentFiles = fileCache.GetValueOrDefault(mods[index].Id);
-            var overwrittenFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var overwrittenModNames = new List<string>();
-            for (var aboveIndex = 0; aboveIndex < index; aboveIndex++)
+            if (!mods[index].IsEnabled || currentFiles is null)
             {
-                var upperFiles = fileCache.GetValueOrDefault(mods[aboveIndex].Id);
-                if (currentFiles is null || upperFiles is null)
+                result[mods[index].Id] = ModConflictState.Disabled;
+                continue;
+            }
+
+            var conflicts = new List<ModConflictFileState>();
+            foreach (var relativePath in currentFiles.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+            {
+                var providers = providersByPath[relativePath];
+                var lower = providers.Where(provider => provider < index).ToArray();
+                var higher = providers.Where(provider => provider > index).ToArray();
+                if (lower.Length == 0 && higher.Length == 0)
                 {
                     continue;
                 }
 
-                var overlap = currentFiles.Intersect(upperFiles, StringComparer.OrdinalIgnoreCase).ToArray();
-                if (overlap.Length > 0)
-                {
-                    overwrittenFiles.UnionWith(overlap);
-                    overwrittenModNames.Add(mods[aboveIndex].Name);
-                }
+                var finalProvider = providers[^1];
+                conflicts.Add(new ModConflictFileState(
+                    relativePath,
+                    lower.Select(provider => mods[provider].Id).ToArray(),
+                    lower.Select(provider => mods[provider].Name).ToArray(),
+                    higher.Select(provider => mods[provider].Id).ToArray(),
+                    higher.Select(provider => mods[provider].Name).ToArray(),
+                    mods[finalProvider].Id,
+                    mods[finalProvider].Name));
             }
 
+            var overwrittenFiles = conflicts.Where(file => file.LowerPriorityModIds.Count > 0).ToArray();
+            var overwrittenByFiles = conflicts.Where(file => file.HigherPriorityModIds.Count > 0).ToArray();
+            var overwrittenModNames = DistinctProviderNames(overwrittenFiles.SelectMany(file => file.LowerPriorityModNames));
+            var overwrittenByModNames = DistinctProviderNames(overwrittenByFiles.SelectMany(file => file.HigherPriorityModNames));
+            var relatedIds = conflicts
+                .SelectMany(file => file.LowerPriorityModIds.Concat(file.HigherPriorityModIds))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var isRedundant = currentFiles.Count > 0 && currentFiles.All(path => providersByPath[path][^1] > index);
+            var conflictKind = isRedundant
+                ? ModConflictKind.Redundant
+                : (overwrittenFiles.Length > 0, overwrittenByFiles.Length > 0) switch
+                {
+                    (true, true) => ModConflictKind.Mixed,
+                    (true, false) => ModConflictKind.Overwrite,
+                    (false, true) => ModConflictKind.Overwritten,
+                    _ => ModConflictKind.None
+                };
+
             result[mods[index].Id] = new ModConflictState(
-                overwrittenFiles.Count > 0,
-                overwrittenFiles.Count,
+                conflictKind,
+                overwrittenFiles.Length > 0,
+                overwrittenFiles.Length,
                 overwrittenModNames,
+                overwrittenByFiles.Length,
+                overwrittenByModNames,
+                relatedIds,
+                conflicts,
                 string.Equals(mods[index].Id, executableProviderId, StringComparison.OrdinalIgnoreCase),
-                overwrittenFiles.Count(IsConfigurationFile),
-                overwrittenFiles.Count(IsBinaryFile));
+                overwrittenFiles.Count(file => IsConfigurationFile(file.RelativePath)),
+                overwrittenFiles.Count(file => IsBinaryFile(file.RelativePath)),
+                overwrittenByFiles.Count(file => IsConfigurationFile(file.RelativePath)),
+                overwrittenByFiles.Count(file => IsBinaryFile(file.RelativePath)));
         }
 
         return result;
+    }
+
+    private static IReadOnlyList<string> DistinctProviderNames(IEnumerable<string> names)
+    {
+        return names.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
     private static string? FindPinnedExecutableProvider(
@@ -202,23 +267,65 @@ public sealed class ModConflictAnalyzer
         DateTime CreatedAtUtc);
 }
 
-public sealed record ModConflictInput(string Id, string Name, string SourcePath, bool IsEnabled)
+public sealed record ModConflictInput(
+    string Id,
+    string Name,
+    string SourcePath,
+    bool IsEnabled,
+    IReadOnlyList<string> ExcludedFiles)
 {
     public static ModConflictInput FromMod(ModEntry mod)
     {
-        return new ModConflictInput(mod.Id, mod.Name, mod.SourcePath, mod.IsEnabled);
+        return new ModConflictInput(mod.Id, mod.Name, mod.SourcePath, mod.IsEnabled, mod.ExcludedFiles);
     }
 
     public static ModConflictInput FromLayer(FileLayer layer)
     {
-        return new ModConflictInput(layer.Id, layer.Name, layer.RootPath, IsEnabled: true);
+        return new ModConflictInput(
+            layer.Id,
+            layer.Name,
+            layer.RootPath,
+            IsEnabled: true,
+            layer.Mod?.ExcludedFiles ?? []);
     }
 }
 
 public sealed record ModConflictState(
+    ModConflictKind ConflictKind,
     bool HasOverlapsAbove,
     int OverwrittenFileCount,
     IReadOnlyList<string> OverwrittenModNames,
+    int OverwrittenByFileCount,
+    IReadOnlyList<string> OverwrittenByModNames,
+    IReadOnlyList<string> RelatedModIds,
+    IReadOnlyList<ModConflictFileState> Files,
     bool ProvidesLaunchExecutable,
     int OverwrittenConfigurationCount,
-    int OverwrittenBinaryCount);
+    int OverwrittenBinaryCount,
+    int OverwrittenByConfigurationCount,
+    int OverwrittenByBinaryCount)
+{
+    public static ModConflictState Disabled { get; } = new(
+        ModConflictKind.Disabled,
+        false,
+        0,
+        [],
+        0,
+        [],
+        [],
+        [],
+        false,
+        0,
+        0,
+        0,
+        0);
+}
+
+public sealed record ModConflictFileState(
+    string RelativePath,
+    IReadOnlyList<string> LowerPriorityModIds,
+    IReadOnlyList<string> LowerPriorityModNames,
+    IReadOnlyList<string> HigherPriorityModIds,
+    IReadOnlyList<string> HigherPriorityModNames,
+    string FinalProviderId,
+    string FinalProviderName);

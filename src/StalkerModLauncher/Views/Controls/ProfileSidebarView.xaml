@@ -38,6 +38,12 @@
                             </Canvas>
                         </Viewbox>
                     </Button>
+                    <Button Command="{Binding ImportMo2CollectionCommand}"
+                            Style="{DynamicResource ProfileHeaderIconButtonStyle}"
+                            ToolTip="Перенести сборку из Mod Organizer 2"
+                            Margin="0,0,3,0">
+                        <TextBlock Text="MO2" FontSize="10" FontWeight="Bold"/>
+                    </Button>
                     <Button Command="{Binding ImportProfileCommand}"
                             Style="{DynamicResource ProfileHeaderIconButtonStyle}"
                             ToolTip="Импортировать профиль">

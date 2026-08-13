@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using StalkerModLauncher.Services;
+using StalkerModLauncher.Models;
 using StalkerModLauncher.ViewModels;
 using StalkerModLauncher.Views.Controls;
 
@@ -16,12 +17,53 @@ public partial class PdaWindow : Window
         _navigation = navigation;
         DataContext = viewModel;
         viewModel.ProfileCreationRequested += ViewModel_ProfileCreationRequested;
+        viewModel.Mo2ImportRequested += ViewModel_Mo2ImportRequested;
         viewModel.ModScanSelectionRequested += ViewModel_ModScanSelectionRequested;
+        viewModel.ConflictExplorerRequested += ViewModel_ConflictExplorerRequested;
         Closed += (_, _) =>
         {
             viewModel.ProfileCreationRequested -= ViewModel_ProfileCreationRequested;
+            viewModel.Mo2ImportRequested -= ViewModel_Mo2ImportRequested;
             viewModel.ModScanSelectionRequested -= ViewModel_ModScanSelectionRequested;
+            viewModel.ConflictExplorerRequested -= ViewModel_ConflictExplorerRequested;
         };
+    }
+
+    private void ViewModel_ConflictExplorerRequested(object? sender, ModEntry? mod)
+    {
+        if (ViewModel is null)
+        {
+            return;
+        }
+
+        var viewModel = ViewModel.CreateConflictExplorerViewModel(mod);
+        var page = new ConflictExplorerContentView
+        {
+            DataContext = viewModel,
+            UsePdaTheme = true,
+            CloseButtonText = "Назад"
+        };
+        page.CloseRequested += (_, _) => PdaView.ShowProfilePage();
+        PdaView.ShowPage(
+            page,
+            "Конфликты и файлы",
+            ViewModel.SelectedProfile?.Name ?? string.Empty,
+            viewModel,
+            showProfileTypeIcon: true);
+    }
+
+    private void ViewModel_Mo2ImportRequested(object? sender, EventArgs e)
+    {
+        if (ViewModel is null)
+        {
+            return;
+        }
+
+        var importViewModel = ViewModel.CreateMo2ImportViewModel();
+        var page = new PdaMo2ImportView { DataContext = importViewModel };
+        importViewModel.Completed += (_, _) => PdaView.ShowProfilePage();
+        page.Cancelled += (_, _) => PdaView.ShowProfilePage();
+        PdaView.ShowPage(page, "Перенос сборки из MO2", "Mod Organizer 2");
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;

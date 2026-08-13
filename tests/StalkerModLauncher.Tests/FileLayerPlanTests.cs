@@ -66,6 +66,31 @@ public sealed class FileLayerPlanTests : IDisposable
     }
 
     [Fact]
+    public void CreateLinkedWorkspace_AddsMo2OverwriteAfterModsWithoutChangingProfileModList()
+    {
+        var profile = new ModProfile
+        {
+            Mo2OverwritePath = Path.Combine(_root, "mo2-overwrite")
+        };
+        profile.Mods.Add(new ModEntry
+        {
+            Id = "regular",
+            Name = "Regular",
+            SourcePath = Path.Combine(_root, "regular"),
+            Order = 1
+        });
+
+        var plan = FileLayerPlan.CreateLinkedWorkspace(
+            Path.Combine(_root, "game"),
+            profile,
+            Path.Combine(_root, "workspace"));
+
+        Assert.Equal(["regular", "__mo2_overwrite"], plan.Mods.Select(layer => layer.Id));
+        Assert.Equal("Файлы overwrite из MO2", plan.Mods[^1].Name);
+        Assert.Single(profile.Mods);
+    }
+
+    [Fact]
     public void FindFinalFile_ReturnsHighestPriorityProvider()
     {
         var game = Path.Combine(_root, "game");
@@ -120,6 +145,23 @@ public sealed class FileLayerPlanTests : IDisposable
         var candidates = plan.GetExecutableCandidates();
 
         Assert.Equal([baseExe, patchExe], candidates.Select(candidate => candidate.FullPath));
+    }
+
+    [Fact]
+    public void FindFinalFile_SkipsFilesExcludedByProfile()
+    {
+        var game = Path.Combine(_root, "excluded-game");
+        var main = Path.Combine(_root, "excluded-main");
+        var patch = Path.Combine(_root, "excluded-patch");
+        CreateFile(game, "shared.ltx", "base");
+        var mainFile = CreateFile(main, "shared.ltx", "main");
+        CreateFile(patch, "shared.ltx", "patch");
+        var profile = CreateProfile(game, main, patch);
+        profile.Mods[1].ExcludedFiles.Add("shared.ltx");
+
+        var plan = FileLayerPlan.CreateLinkedWorkspace(game, profile, Path.Combine(_root, "excluded-workspace"));
+
+        Assert.Equal(mainFile, plan.FindFinalFile("shared.ltx")?.FullPath);
     }
 
     private ModProfile CreateProfile(string game, string main, string patch)

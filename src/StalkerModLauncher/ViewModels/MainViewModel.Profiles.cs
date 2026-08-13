@@ -112,6 +112,36 @@ public sealed partial class MainViewModel
         _ = SaveAsync();
     }
 
+    public Mo2ImportViewModel CreateMo2ImportViewModel() =>
+        new(_mo2ImportService, _dialogService, TryAddImportedProfileAsync);
+
+    public async Task<bool> TryAddImportedProfileAsync(ModProfile profile)
+    {
+        var previousSelection = SelectedProfile;
+        profile.Name = ProfileManager.GetUniqueName(Profiles, profile.Name);
+        Profiles.Add(profile);
+        SelectedProfile = profile;
+
+        try
+        {
+            await SaveOrThrowAsync();
+            Log($"MO2 profile imported: {profile.Name}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Profiles.Remove(profile);
+            SelectedProfile = previousSelection is not null && Profiles.Contains(previousSelection)
+                ? previousSelection
+                : Profiles.FirstOrDefault();
+            Log($"MO2 import rolled back: {ex.Message}");
+            _dialogService.ShowError(
+                "Не удалось перенести сборку MO2",
+                $"Профиль не создан, изменения отменены.{Environment.NewLine}{Environment.NewLine}{ex.Message}");
+            return false;
+        }
+    }
+
     private void DuplicateProfile()
     {
         DuplicateProfile(SelectedProfile);

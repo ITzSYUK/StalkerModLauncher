@@ -43,6 +43,7 @@ public static class AppSettingsNormalizer
             profile.WorkspacePath ??= string.Empty;
             profile.WorkingDirectoryRelative ??= string.Empty;
             profile.GameInstallPath ??= string.Empty;
+            profile.Mo2OverwritePath ??= string.Empty;
             if (!Enum.IsDefined(profile.LaunchBackendKind))
             {
                 profile.LaunchBackendKind = LaunchBackendKind.LinkedWorkspace;
@@ -59,6 +60,8 @@ public static class AppSettingsNormalizer
             {
                 mod.Id = EnsureUniqueId(mod.Id, modIds);
                 mod.SourcePath ??= string.Empty;
+                mod.GroupName ??= string.Empty;
+                mod.ExcludedFiles ??= [];
                 mod.Name = string.IsNullOrWhiteSpace(mod.Name)
                     ? GetFallbackModName(mod.SourcePath, order)
                     : mod.Name.Trim();

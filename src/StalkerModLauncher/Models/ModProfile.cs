@@ -22,6 +22,7 @@ public sealed class ModProfile : ObservableObject
     private string _workspacePath = string.Empty;
     private string _workingDirectoryRelative = string.Empty;
     private string _gameInstallPath = string.Empty;
+    private string _mo2OverwritePath = string.Empty;
     private bool _isRunning;
     private ObservableCollection<ModEntry> _mods = new();
 
@@ -159,6 +160,12 @@ public sealed class ModProfile : ObservableObject
     {
         get => _gameInstallPath;
         set => SetProperty(ref _gameInstallPath, value);
+    }
+
+    public string Mo2OverwritePath
+    {
+        get => _mo2OverwritePath;
+        set => SetProperty(ref _mo2OverwritePath, value);
     }
 
     [JsonIgnore]

@@ -135,6 +135,7 @@ public sealed partial class MainViewModel
         }
 
         if (SelectedProfile is not null) _modListEditor.Renumber(SelectedProfile);
+        CreateFilteredModsView();
         RecalculateModOverlayInfo();
         RefreshValidation();
         _autoSave.Schedule();
@@ -156,9 +157,15 @@ public sealed partial class MainViewModel
     private void ModOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(ModEntry.HasOverlapsAbove)
+            or nameof(ModEntry.ConflictKind)
             or nameof(ModEntry.OverwrittenFileCount)
             or nameof(ModEntry.OverwrittenModCount)
+            or nameof(ModEntry.OverwrittenByFileCount)
+            or nameof(ModEntry.OverwrittenByModCount)
+            or nameof(ModEntry.OverwrittenByBinaryCount)
             or nameof(ModEntry.ProvidesLaunchExecutable)
+            or nameof(ModEntry.RelatedModIds)
+            or nameof(ModEntry.IsConflictRelated)
             or nameof(ModEntry.OverlayDetails)
             or nameof(ModEntry.OverlaySummary)
             or nameof(ModEntry.HasOverlayInfo))
@@ -229,11 +236,42 @@ public sealed partial class MainViewModel
 
     public async Task CleanupAsync()
     {
-        _settingsStore.RecoveryCompleted -= SettingsStoreOnRecoveryCompleted;
         await SaveAsync();
+        Dispose();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        Profiles.CollectionChanged -= ProfilesOnCollectionChanged;
+        _settingsStore.RecoveryCompleted -= SettingsStoreOnRecoveryCompleted;
+        foreach (var profile in Profiles)
+        {
+            profile.PropertyChanged -= ProfileOnPropertyChanged;
+            profile.Mods.CollectionChanged -= ModsOnCollectionChanged;
+            foreach (var mod in profile.Mods)
+            {
+                mod.PropertyChanged -= ModOnPropertyChanged;
+            }
+        }
+
+        if (_selectedProfile is not null)
+        {
+            _selectedProfile.PropertyChanged -= OnSelectedProfilePropertyChanged;
+        }
+
         _autoSave.Dispose();
         _conflictAnalysisCancellation?.Cancel();
         _conflictAnalysisCancellation?.Dispose();
         _launchCoordinator.Dispose();
+        ProfileCreationRequested = null;
+        Mo2ImportRequested = null;
+        ModScanSelectionRequested = null;
+        ConflictExplorerRequested = null;
     }
 }

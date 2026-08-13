@@ -34,7 +34,7 @@ internal sealed record ApProCatalogPageContent(
     IReadOnlyList<ApProModListing> Items,
     int? TotalPageCount);
 
-public sealed class ApProCatalogService
+public sealed class ApProCatalogService : IDisposable
 {
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan MinimumCatalogRequestInterval = TimeSpan.FromMilliseconds(750);
@@ -53,6 +53,7 @@ public sealed class ApProCatalogService
     private readonly object _cacheSync = new();
     private readonly Dictionary<CatalogPageKey, CachedCatalog> _cache = new();
     private DateTimeOffset _lastCatalogRequestAt = DateTimeOffset.MinValue;
+    private bool _disposed;
 
     public ApProCatalogService(
         HttpMessageHandler? httpMessageHandler = null,
@@ -114,6 +115,7 @@ public sealed class ApProCatalogService
         bool forceRefresh = false,
         CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         var key = new CatalogPageKey(category, pageNumber);
         if (forceRefresh)
         {
@@ -151,6 +153,7 @@ public sealed class ApProCatalogService
 
     public async Task<byte[]?> DownloadThumbnailAsync(string thumbnailUrl, CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         await _thumbnailDownloadLimit.WaitAsync(cancellationToken);
         try
         {
@@ -337,6 +340,23 @@ public sealed class ApProCatalogService
             {
                 _cache.Remove(key);
             }
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _httpClient.Dispose();
+        _catalogRequestLock.Dispose();
+        _thumbnailDownloadLimit.Dispose();
+        lock (_cacheSync)
+        {
+            _cache.Clear();
         }
     }
 

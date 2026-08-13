@@ -9,11 +9,12 @@ using StalkerModLauncher.Services;
 
 namespace StalkerModLauncher;
 
-public partial class App : Application
+public partial class App : Application, IDisposable
 {
     private readonly AppServices _services = new();
     private readonly SingleInstanceGuard _singleInstance = new("StalkerModLauncher");
     private readonly UiSoundService _uiSoundService = new();
+    private bool _disposed;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -114,9 +115,21 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        Dispose();
+        base.OnExit(e);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         _uiSoundService.Dispose();
         _singleInstance.Dispose();
-        base.OnExit(e);
+        _services.Dispose();
     }
 
     private void ButtonBase_OnClick(object sender, RoutedEventArgs e)

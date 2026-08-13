@@ -107,4 +107,20 @@
             </Setter.Value>
         </Setter>
     </Style>
+
+    <Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="Separator">
+        <Setter Property="Height" Value="1"/>
+        <Setter Property="Margin" Value="8,4"/>
+        <Setter Property="Background" Value="{DynamicResource StrokeBrush}"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Separator">
+                    <Border Height="1"
+                            Background="{TemplateBinding Background}"
+                            SnapsToDevicePixels="True"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>
