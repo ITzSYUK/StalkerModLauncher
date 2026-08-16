@@ -21,7 +21,6 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
 
     public ScreenshotsViewModel(
         ModProfile profile,
-        ScreenshotScannerService screenshotScannerService,
         IScreenshotClipboardService clipboardService)
     {
         _clipboardService = clipboardService;
@@ -48,7 +47,7 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
             }
         });
 
-        _ = LoadScreenshotsAsync(profile, screenshotScannerService);
+        _ = LoadScreenshotsAsync(profile);
     }
 
     public ObservableCollection<ScreenshotItem> Screenshots { get; } = new();
@@ -229,14 +228,12 @@ public sealed class ScreenshotsViewModel : ObservableObject, IDisposable
         }
     }
 
-    private async Task LoadScreenshotsAsync(
-        ModProfile profile,
-        ScreenshotScannerService screenshotScannerService)
+    private async Task LoadScreenshotsAsync(ModProfile profile)
     {
         var cancellationToken = _loadCancellation.Token;
         try
         {
-            var files = await screenshotScannerService.ScanAsync(profile, cancellationToken);
+            var files = await ScreenshotScannerService.ScanAsync(profile, cancellationToken);
             foreach (var file in files)
             {
                 cancellationToken.ThrowIfCancellationRequested();

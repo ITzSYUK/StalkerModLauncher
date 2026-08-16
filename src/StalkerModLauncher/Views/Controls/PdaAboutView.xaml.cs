@@ -59,7 +59,7 @@ public partial class PdaAboutView : UserControl
     {
         if (!string.IsNullOrWhiteSpace(_releaseUrl))
         {
-            _navigation.OpenUrl(_releaseUrl);
+            WindowNavigationService.OpenUrl(_releaseUrl);
         }
     }
 

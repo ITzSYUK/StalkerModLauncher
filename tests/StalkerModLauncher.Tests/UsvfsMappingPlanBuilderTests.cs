@@ -12,7 +12,7 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void Build_UsesPhysicalBaseGameAndMapsOnlyModsToVirtualRootInPriorityOrder()
+    public void BuildUsesPhysicalBaseGameAndMapsOnlyModsToVirtualRootInPriorityOrder()
     {
         var game = CreateDirectory("game");
         var firstMod = CreateDirectory("mod1");
@@ -40,10 +40,9 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
             Order = 2
         });
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
-        var builder = new UsvfsMappingPlanBuilder();
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
 
-        var plan = builder.Build(layerPlan, manifest);
+        var plan = UsvfsMappingPlanBuilder.Build(layerPlan, manifest);
 
         Assert.Equal(Path.GetFullPath(game), plan.VirtualRoot);
         Assert.Equal(
@@ -61,7 +60,7 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
     }
 
     [Fact]
-    public void Build_AddsProfileOverwriteAsCreateTargetAtHighestPriority()
+    public void BuildAddsProfileOverwriteAsCreateTargetAtHighestPriority()
     {
         var game = CreateDirectory("game");
         var workspace = CreateDirectory("workspace");
@@ -71,10 +70,9 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
             GameInstallPath = game
         };
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
-        var builder = new UsvfsMappingPlanBuilder();
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
 
-        var plan = builder.Build(layerPlan, manifest);
+        var plan = UsvfsMappingPlanBuilder.Build(layerPlan, manifest);
 
         var overwrite = Assert.Single(plan.Operations, operation => operation.SourceName == "profile overwrite");
         Assert.Equal(UsvfsMappingKind.DirectoryStatic, overwrite.Kind);
@@ -85,7 +83,7 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
     }
 
     [Fact]
-    public void Build_MapsBaseGameWhenUsingSeparateBootstrapVirtualRoot()
+    public void BuildMapsBaseGameWhenUsingSeparateBootstrapVirtualRoot()
     {
         var game = CreateDirectory("game");
         var mod = CreateDirectory("mod");
@@ -101,9 +99,9 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
             Order = 1
         });
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
 
-        var plan = new UsvfsMappingPlanBuilder().Build(layerPlan, manifest, virtualRoot);
+        var plan = UsvfsMappingPlanBuilder.Build(layerPlan, manifest, virtualRoot);
 
         Assert.Equal(Path.GetFullPath(virtualRoot), plan.VirtualRoot);
         Assert.Equal(
@@ -113,7 +111,7 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
     }
 
     [Fact]
-    public void Build_AddsExistingKnownWritableFilesBeforeOverwriteCreateTarget()
+    public void BuildAddsExistingKnownWritableFilesBeforeOverwriteCreateTarget()
     {
         var game = CreateDirectory("game");
         var workspace = CreateDirectory("workspace");
@@ -123,14 +121,13 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
             GameInstallPath = game
         };
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
         var writableFile = manifest.WritableFiles.Single(file =>
             file.RelativePath == Path.Combine("gamedata", "configs", "localization.ltx"));
         Directory.CreateDirectory(Path.GetDirectoryName(writableFile.StoragePath)!);
         File.WriteAllText(writableFile.StoragePath, "language = rus");
-        var builder = new UsvfsMappingPlanBuilder();
 
-        var plan = builder.Build(layerPlan, manifest);
+        var plan = UsvfsMappingPlanBuilder.Build(layerPlan, manifest);
 
         var knownWritable = Assert.Single(
             plan.Operations,
@@ -143,7 +140,7 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
     }
 
     [Fact]
-    public void Build_RestoresPreviousProviderForExcludedConflictFile()
+    public void BuildRestoresPreviousProviderForExcludedConflictFile()
     {
         var game = CreateDirectory("excluded-game");
         var first = CreateDirectory("excluded-first");
@@ -164,9 +161,9 @@ public sealed class UsvfsMappingPlanBuilderTests : IDisposable
             ExcludedFiles = ["shared.ltx"]
         });
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
 
-        var plan = new UsvfsMappingPlanBuilder().Build(layerPlan, manifest);
+        var plan = UsvfsMappingPlanBuilder.Build(layerPlan, manifest);
 
         var fallback = Assert.Single(plan.Operations, operation => operation.SourceName.StartsWith("excluded file fallback:", StringComparison.Ordinal));
         Assert.Equal(UsvfsMappingKind.File, fallback.Kind);

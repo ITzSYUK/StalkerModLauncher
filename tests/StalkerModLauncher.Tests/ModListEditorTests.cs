@@ -6,14 +6,12 @@ namespace StalkerModLauncher.Tests;
 
 public sealed class ModListEditorTests
 {
-    private readonly ModListEditor _editor = new();
-
     [Fact]
-    public void Add_CreatesEnabledModAtEnd()
+    public void AddCreatesEnabledModAtEnd()
     {
         var profile = CreateProfile("First");
 
-        var added = _editor.Add(profile, @"D:\Mods\Second");
+        var added = ModListEditor.Add(profile, @"D:\Mods\Second");
 
         Assert.Equal("Second", added.Name);
         Assert.Equal(@"D:\Mods\Second", added.SourcePath);
@@ -23,11 +21,11 @@ public sealed class ModListEditorTests
     }
 
     [Fact]
-    public void Move_ReordersAndRenumbersMods()
+    public void MoveReordersAndRenumbersMods()
     {
         var profile = CreateProfile("First", "Second", "Third");
 
-        var moved = _editor.Move(profile, profile.Mods[0], profile.Mods[2]);
+        var moved = ModListEditor.Move(profile, profile.Mods[0], profile.Mods[2]);
 
         Assert.True(moved);
         Assert.Equal(["Second", "Third", "First"], profile.Mods.Select(mod => mod.Name));
@@ -35,11 +33,11 @@ public sealed class ModListEditorTests
     }
 
     [Fact]
-    public void Remove_RemovesExistingModsAndRenumbersRemainder()
+    public void RemoveRemovesExistingModsAndRenumbersRemainder()
     {
         var profile = CreateProfile("First", "Second", "Third", "Fourth");
 
-        var removed = _editor.Remove(profile, [profile.Mods[1], profile.Mods[3]]);
+        var removed = ModListEditor.Remove(profile, [profile.Mods[1], profile.Mods[3]]);
 
         Assert.Equal(2, removed);
         Assert.Equal(["First", "Third"], profile.Mods.Select(mod => mod.Name));
@@ -47,11 +45,11 @@ public sealed class ModListEditorTests
     }
 
     [Fact]
-    public void MoveToEnd_MovesModAndRenumbers()
+    public void MoveToEndMovesModAndRenumbers()
     {
         var profile = CreateProfile("First", "Second", "Third");
 
-        var moved = _editor.MoveToEnd(profile, profile.Mods[0]);
+        var moved = ModListEditor.MoveToEnd(profile, profile.Mods[0]);
 
         Assert.True(moved);
         Assert.Equal(["Second", "Third", "First"], profile.Mods.Select(mod => mod.Name));
@@ -59,21 +57,21 @@ public sealed class ModListEditorTests
     }
 
     [Fact]
-    public void MoveByOffset_DoesNotMoveOutsideCollection()
+    public void MoveByOffsetDoesNotMoveOutsideCollection()
     {
         var profile = CreateProfile("First", "Second");
 
-        Assert.False(_editor.CanMoveByOffset(profile, profile.Mods[0], -1));
-        Assert.False(_editor.MoveByOffset(profile, profile.Mods[0], -1));
+        Assert.False(ModListEditor.CanMoveByOffset(profile, profile.Mods[0], -1));
+        Assert.False(ModListEditor.MoveByOffset(profile, profile.Mods[0], -1));
         Assert.Equal(["First", "Second"], profile.Mods.Select(mod => mod.Name));
     }
 
     [Fact]
-    public void MoveToInsertionIndex_ReordersAndRenumbersMods()
+    public void MoveToInsertionIndexReordersAndRenumbersMods()
     {
         var profile = CreateProfile("First", "Second", "Third");
 
-        var moved = _editor.MoveToInsertionIndex(profile, profile.Mods[0], 3);
+        var moved = ModListEditor.MoveToInsertionIndex(profile, profile.Mods[0], 3);
 
         Assert.True(moved);
         Assert.Equal(["Second", "Third", "First"], profile.Mods.Select(mod => mod.Name));
@@ -81,12 +79,12 @@ public sealed class ModListEditorTests
     }
 
     [Fact]
-    public void MoveManyToInsertionIndex_MovesSelectionAsOrderedBlock()
+    public void MoveManyToInsertionIndexMovesSelectionAsOrderedBlock()
     {
         var profile = CreateProfile("First", "Second", "Third", "Fourth", "Fifth");
         var selected = new[] { profile.Mods[1], profile.Mods[3] };
 
-        var moved = _editor.MoveManyToInsertionIndex(profile, selected, 5);
+        var moved = ModListEditor.MoveManyToInsertionIndex(profile, selected, 5);
 
         Assert.True(moved);
         Assert.Equal(["First", "Third", "Fifth", "Second", "Fourth"], profile.Mods.Select(mod => mod.Name));
@@ -94,15 +92,15 @@ public sealed class ModListEditorTests
     }
 
     [Fact]
-    public void MoveManyToStartAndEnd_PreserveRelativeOrder()
+    public void MoveManyToStartAndEndPreserveRelativeOrder()
     {
         var profile = CreateProfile("First", "Second", "Third", "Fourth", "Fifth");
         var selected = new[] { profile.Mods[1], profile.Mods[3] };
 
-        Assert.True(_editor.MoveManyToStart(profile, selected));
+        Assert.True(ModListEditor.MoveManyToStart(profile, selected));
         Assert.Equal(["Second", "Fourth", "First", "Third", "Fifth"], profile.Mods.Select(mod => mod.Name));
 
-        Assert.True(_editor.MoveManyToEnd(profile, selected));
+        Assert.True(ModListEditor.MoveManyToEnd(profile, selected));
         Assert.Equal(["First", "Third", "Fifth", "Second", "Fourth"], profile.Mods.Select(mod => mod.Name));
         Assert.Equal([1, 2, 3, 4, 5], profile.Mods.Select(mod => mod.Order));
     }

@@ -13,9 +13,8 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     private readonly Func<string, ProfileExecutableSelection?> _createExecutableSelection;
     private readonly Func<ProfileExecutableSelection?> _detectAutomaticExecutableSelection;
     private readonly Func<string, bool> _isNameTaken;
-    private readonly ProfileSettingsValidator _validator;
-    private readonly Mo2ModListImporter _mo2ModListImporter = new();
     private readonly bool _isUsvfsAvailable;
+    private readonly string _defaultModInstallPath;
     private string _profileName;
     private string _profileDescription;
     private string _executableRelativePath;
@@ -23,6 +22,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     private string _launchArguments;
     private string _workspacePath;
     private string _mo2OverwritePath;
+    private string _modInstallPath;
     private bool _isEnabled;
     private bool _isDiscordStatusEnabled;
     private bool _isStandalone;
@@ -39,7 +39,8 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         Func<string, ProfileExecutableSelection?> createExecutableSelection,
         Func<ProfileExecutableSelection?> detectAutomaticExecutableSelection,
         Func<string, bool> isNameTaken,
-        bool? usvfsAvailable = null)
+        bool? usvfsAvailable = null,
+        AppPaths? paths = null)
     {
         _profile = profile;
         _dialogService = dialogService;
@@ -47,7 +48,6 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         _createExecutableSelection = createExecutableSelection;
         _detectAutomaticExecutableSelection = detectAutomaticExecutableSelection;
         _isNameTaken = isNameTaken;
-        _validator = new ProfileSettingsValidator();
         _isUsvfsAvailable = usvfsAvailable ?? UsvfsFeatureGate.IsEnabled();
         _profileName = profile.Name.Trim();
         _profileDescription = profile.Description;
@@ -56,6 +56,11 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         _launchArguments = profile.LaunchArguments;
         _workspacePath = profile.WorkspacePath;
         _mo2OverwritePath = profile.Mo2OverwritePath;
+        _defaultModInstallPath = paths?.GetDefaultModInstallPath(profile.Id, profile.GameInstallPath)
+            ?? profile.ModInstallPath;
+        _modInstallPath = string.IsNullOrWhiteSpace(profile.ModInstallPath)
+            ? _defaultModInstallPath
+            : profile.ModInstallPath;
         _isEnabled = profile.IsEnabled;
         _isDiscordStatusEnabled = profile.IsDiscordStatusEnabled;
         _isStandalone = profile.IsStandalone;
@@ -76,6 +81,8 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         ClearExecutableSourceCommand = new RelayCommand(ClearExecutableSource, () => !string.IsNullOrWhiteSpace(ExecutableSourcePath));
         OpenProfileFolderCommand = new RelayCommand(OpenProfileFolder);
         RemoveMo2OverwriteCommand = new RelayCommand(RemoveMo2Overwrite);
+        BrowseModInstallPathCommand = new RelayCommand(BrowseModInstallPath);
+        ResetModInstallPathCommand = new RelayCommand(ResetModInstallPath);
         ImportMo2ModListCommand = new AsyncRelayCommand(ImportMo2ModListAsync);
     }
 
@@ -161,6 +168,12 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     }
 
     public bool HasMo2Overwrite => !string.IsNullOrWhiteSpace(Mo2OverwritePath);
+
+    public string ModInstallPath
+    {
+        get => _modInstallPath;
+        set => SetProperty(ref _modInstallPath, value);
+    }
 
     public bool IsEnabled
     {
@@ -284,11 +297,13 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     public ICommand ClearExecutableSourceCommand { get; }
     public ICommand OpenProfileFolderCommand { get; }
     public ICommand RemoveMo2OverwriteCommand { get; }
+    public ICommand BrowseModInstallPathCommand { get; }
+    public ICommand ResetModInstallPathCommand { get; }
     public ICommand ImportMo2ModListCommand { get; }
 
     public async Task<bool> TrySaveAsync()
     {
-        var validation = _validator.Validate(ProfileName, ExecutableRelativePath, _isNameTaken);
+        var validation = ProfileSettingsValidator.Validate(ProfileName, ExecutableRelativePath, _isNameTaken);
         if (!validation.IsValid)
         {
             _dialogService.ShowError("Некорректные настройки профиля", string.Join(Environment.NewLine, validation.Messages));
@@ -321,6 +336,9 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         _profile.LaunchArguments = LaunchArguments;
         _profile.WorkspacePath = WorkspacePath;
         _profile.Mo2OverwritePath = Mo2OverwritePath;
+        _profile.ModInstallPath = string.IsNullOrWhiteSpace(ModInstallPath)
+            ? string.Empty
+            : Path.GetFullPath(ModInstallPath.Trim());
         _profile.IsEnabled = IsEnabled;
         _profile.IsDiscordStatusEnabled = IsDiscordStatusEnabled;
         _profile.IsStandalone = IsStandalone;
@@ -339,7 +357,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         }
 
         var initialPath = Directory.Exists(_workspacePath) ? _workspacePath : null;
-        var selected = _dialogService.PickExecutable("Choose launch executable", initialPath);
+        var selected = DialogService.PickExecutable("Choose launch executable", initialPath);
         if (selected is null)
         {
             return;
@@ -371,7 +389,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
             return;
         }
 
-        var selected = _dialogService.PickExecutable("Choose game executable", modRoot);
+        var selected = DialogService.PickExecutable("Choose game executable", modRoot);
         if (selected is null)
         {
             return;
@@ -386,7 +404,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
             return;
         }
 
-        SetExecutableSelection(new ProfileExecutableSelection(relative, modRoot, "автономный мод", true));
+        SetExecutableSelection(new ProfileExecutableSelection(relative, modRoot, "автономная сборка", true));
     }
 
     private void SetExecutableSelection(ProfileExecutableSelection selection)
@@ -426,7 +444,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
             }
 
             Directory.CreateDirectory(path);
-            _dialogService.OpenFolder(path);
+            DialogService.OpenFolder(path);
         }
         catch
         {
@@ -436,12 +454,31 @@ public sealed class ProfileSettingsViewModel : ObservableObject
 
     private void RemoveMo2Overwrite() => Mo2OverwritePath = string.Empty;
 
+    private void BrowseModInstallPath()
+    {
+        var selected = DialogService.PickFolder(
+            "Выберите папку для распакованных модов",
+            Directory.Exists(ModInstallPath) ? ModInstallPath : null);
+        if (selected is not null)
+        {
+            ModInstallPath = selected;
+        }
+    }
+
+    private void ResetModInstallPath()
+    {
+        if (!string.IsNullOrWhiteSpace(_defaultModInstallPath))
+        {
+            ModInstallPath = _defaultModInstallPath;
+        }
+    }
+
     private async Task ImportMo2ModListAsync()
     {
         var initialPath = _profile.Mods
             .Select(mod => Path.GetDirectoryName(mod.SourcePath))
             .FirstOrDefault(Directory.Exists);
-        var filePath = _dialogService.PickFile(
+        var filePath = DialogService.PickFile(
             "Выберите modlist.txt из профиля Mod Organizer 2",
             "Mod Organizer mod list (modlist.txt)|modlist.txt|Text files (*.txt)|*.txt",
             initialPath);
@@ -452,7 +489,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
 
         try
         {
-            var result = _mo2ModListImporter.Import(_profile, filePath);
+            var result = Mo2ModListImporter.Import(_profile, filePath);
             await _onSave();
 
             var report = new List<string>
@@ -472,7 +509,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
                 report.AddRange(result.MissingProfileMods.Take(8).Select(name => $"• {name}"));
             }
 
-            _dialogService.ShowInfo("Применить только modlist.txt", string.Join(Environment.NewLine, report));
+            DialogService.ShowInfo("Применить только modlist.txt", string.Join(Environment.NewLine, report));
         }
         catch (Exception ex)
         {
@@ -533,6 +570,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         string LaunchArguments,
         string WorkspacePath,
         string Mo2OverwritePath,
+        string ModInstallPath,
         bool IsEnabled,
         bool IsDiscordStatusEnabled,
         bool IsStandalone,
@@ -547,6 +585,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
             profile.LaunchArguments,
             profile.WorkspacePath,
             profile.Mo2OverwritePath,
+            profile.ModInstallPath,
             profile.IsEnabled,
             profile.IsDiscordStatusEnabled,
             profile.IsStandalone,
@@ -562,6 +601,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
             profile.LaunchArguments = LaunchArguments;
             profile.WorkspacePath = WorkspacePath;
             profile.Mo2OverwritePath = Mo2OverwritePath;
+            profile.ModInstallPath = ModInstallPath;
             profile.IsEnabled = IsEnabled;
             profile.IsDiscordStatusEnabled = IsDiscordStatusEnabled;
             profile.IsStandalone = IsStandalone;

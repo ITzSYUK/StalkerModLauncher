@@ -9,7 +9,7 @@ public sealed class WorkspaceManagementServiceTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "StalkerModLauncherTests", Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public async Task InspectAsync_ReadsStatisticsFromManifestWithoutScanningWorkspace()
+    public async Task InspectAsyncReadsStatisticsFromManifestWithoutScanningWorkspace()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var service = new WorkspaceManagementService(new WorkspaceBuilder(paths));
@@ -32,7 +32,7 @@ public sealed class WorkspaceManagementServiceTests : IDisposable
             """);
         var profile = new ModProfile { WorkspacePath = workspace };
 
-        var status = await service.InspectAsync(profile);
+        var status = await WorkspaceManagementService.InspectAsync(profile);
 
         Assert.True(status.Exists);
         Assert.Equal(12, status.FileCount);
@@ -43,7 +43,7 @@ public sealed class WorkspaceManagementServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task InspectAsync_ReturnsImmediatelyWithoutDetailedStatisticsForOldManifest()
+    public async Task InspectAsyncReturnsImmediatelyWithoutDetailedStatisticsForOldManifest()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var service = new WorkspaceManagementService(new WorkspaceBuilder(paths));
@@ -57,14 +57,14 @@ public sealed class WorkspaceManagementServiceTests : IDisposable
         var profile = new ModProfile { WorkspacePath = workspace };
         var started = DateTime.UtcNow;
 
-        var status = await service.InspectAsync(profile);
+        var status = await WorkspaceManagementService.InspectAsync(profile);
 
         Assert.False(status.StatisticsAvailable);
         Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(1));
     }
 
     [Fact]
-    public async Task MoveAsync_MovesUserDataButNotCurrentCache()
+    public async Task MoveAsyncMovesUserDataButNotCurrentCache()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var service = new WorkspaceManagementService(new WorkspaceBuilder(paths));
@@ -92,7 +92,7 @@ public sealed class WorkspaceManagementServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task MoveAsync_DoesNotCopyTemporaryUsvfsBootstrap()
+    public async Task MoveAsyncDoesNotCopyTemporaryUsvfsBootstrap()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var service = new WorkspaceManagementService(new WorkspaceBuilder(paths));
@@ -131,7 +131,7 @@ public sealed class WorkspaceManagementServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task MoveAsync_DoesNotDeleteDestinationWhenItIsInManagedWorkspaceRoot()
+    public async Task MoveAsyncDoesNotDeleteDestinationWhenItIsInManagedWorkspaceRoot()
     {
         var destinationRoot = Path.Combine(_root, "managed-destination");
         var paths = new AppPaths(_root, destinationRoot, false);
@@ -172,7 +172,7 @@ public sealed class WorkspaceManagementServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task MoveAsync_KeepsSuccessfulMoveWhenOldWorkspaceCleanupFailsAndCanRetryCleanup()
+    public async Task MoveAsyncKeepsSuccessfulMoveWhenOldWorkspaceCleanupFailsAndCanRetryCleanup()
     {
         var game = Path.Combine(_root, "game");
         Directory.CreateDirectory(game);

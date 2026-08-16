@@ -13,7 +13,7 @@ public sealed class ProfileCreationViewModelTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void NextCommand_AutoDetectsExecutableFromHighestPriorityMod()
+    public void NextCommandAutoDetectsExecutableFromHighestPriorityMod()
     {
         var game = CreateDirectory("game");
         CreateFile(game, "bin/xr_3da.exe");
@@ -21,7 +21,7 @@ public sealed class ProfileCreationViewModelTests : IDisposable
         CreateFile(mainMod, "bin_x64/xrEngine.exe");
         var patch = CreateDirectory("patch");
         CreateFile(patch, "bin_x64/xrEngine.exe");
-        var viewModel = new ProfileCreationViewModel(new DialogService())
+        var viewModel = new ProfileCreationViewModel()
         {
             Name = "Ликвидация",
             GamePath = game
@@ -38,10 +38,10 @@ public sealed class ProfileCreationViewModelTests : IDisposable
     }
 
     [Fact]
-    public void FinishCommand_BlocksProfileWhenExecutableIsMissing()
+    public void FinishCommandBlocksProfileWhenExecutableIsMissing()
     {
         var game = CreateDirectory("game-without-exe");
-        var viewModel = new ProfileCreationViewModel(new DialogService())
+        var viewModel = new ProfileCreationViewModel()
         {
             Name = "Без бинарника",
             GamePath = game
@@ -58,13 +58,13 @@ public sealed class ProfileCreationViewModelTests : IDisposable
     }
 
     [Fact]
-    public void AddDroppedMods_AddsDirectoriesInDropOrderAndSkipsDuplicatesAndFiles()
+    public void AddDroppedModsAddsDirectoriesInDropOrderAndSkipsDuplicatesAndFiles()
     {
         var first = CreateDirectory("first-mod");
         var second = CreateDirectory("second-mod");
         var file = Path.Combine(_root, "not-a-directory.txt");
         File.WriteAllText(file, "test");
-        var viewModel = new ProfileCreationViewModel(new DialogService());
+        var viewModel = new ProfileCreationViewModel();
 
         viewModel.AddDroppedMods([first, file, second, first]);
 
@@ -83,11 +83,11 @@ public sealed class ProfileCreationViewModelTests : IDisposable
     }
 
     [Fact]
-    public void DroppedPaths_SetGameAndStandaloneSourcesForMatchingProfileType()
+    public void DroppedPathsSetGameAndStandaloneSourcesForMatchingProfileType()
     {
         var game = CreateDirectory("game-drop");
         var standalone = CreateDirectory("standalone-drop");
-        var viewModel = new ProfileCreationViewModel(new DialogService());
+        var viewModel = new ProfileCreationViewModel();
 
         viewModel.SetDroppedGamePath(game);
         viewModel.IsStandalone = true;

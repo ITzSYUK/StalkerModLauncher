@@ -5,19 +5,14 @@ namespace StalkerModLauncher.Services;
 public sealed class LaunchPreflightService
 {
     private const long LowDiskSpaceBytes = 512L * 1024 * 1024;
-    private readonly GameInstallationValidator _gameValidator;
+    private static readonly string[] EngineDllNames = ["xrCore.dll", "xrGame.dll", "xrEngine.dll"];
     private readonly ProfileManager _profileManager;
-    private readonly ProfileLaunchPlanResolver _launchPlanResolver = new();
-    private readonly OverlayManifestBuilder _overlayManifestBuilder = new();
-    private readonly AnomalyUsvfsLaunchTargetResolver _anomalyUsvfsLaunchTargetResolver = new();
     private readonly string _usvfsRuntimeDirectory;
 
     public LaunchPreflightService(
-        GameInstallationValidator gameValidator,
         ProfileManager profileManager,
         string? usvfsRuntimeDirectory = null)
     {
-        _gameValidator = gameValidator;
         _profileManager = profileManager;
         _usvfsRuntimeDirectory = Path.GetFullPath(usvfsRuntimeDirectory ?? AppContext.BaseDirectory);
     }
@@ -40,7 +35,7 @@ public sealed class LaunchPreflightService
 
         if (!profile.IsStandalone)
         {
-            var game = _gameValidator.Validate(profile.GameInstallPath);
+            var game = GameInstallationValidator.Validate(profile.GameInstallPath);
             checks.Add(new ProfileHealthCheck(
                 game.IsValid ? ProfileHealthStatus.Healthy : ProfileHealthStatus.Error,
                 "Базовая игра",
@@ -50,7 +45,7 @@ public sealed class LaunchPreflightService
         var enabledMods = profile.Mods.Where(mod => mod.IsEnabled).OrderBy(mod => mod.Order).ToArray();
         if (profile.IsStandalone && enabledMods.Length != 1)
         {
-            checks.Add(Error("Автономный мод", "Автономный профиль должен содержать ровно одну включённую папку мода."));
+            checks.Add(Error("Автономная сборка", "Автономный профиль должен содержать ровно одну включённую папку мода."));
         }
 
         foreach (var mod in enabledMods)
@@ -119,7 +114,7 @@ public sealed class LaunchPreflightService
     {
         if (profile.IsStandalone)
         {
-            return _launchPlanResolver.PreviewStandalone(profile, cancellationToken);
+            return ProfileLaunchPlanResolver.PreviewStandalone(profile, cancellationToken);
         }
 
         if (fileLayerPlan is null)
@@ -134,8 +129,8 @@ public sealed class LaunchPreflightService
         }
 
         return profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem
-            ? _launchPlanResolver.PreviewVirtualFileSystem(profile, fileLayerPlan)
-            : _launchPlanResolver.PreviewLinkedWorkspace(profile, fileLayerPlan, workspace);
+            ? ProfileLaunchPlanResolver.PreviewVirtualFileSystem(profile, fileLayerPlan)
+            : ProfileLaunchPlanResolver.PreviewLinkedWorkspace(profile, fileLayerPlan, workspace);
     }
 
     private OverlayManifest? TryCreateOverlayManifest(
@@ -155,12 +150,12 @@ public sealed class LaunchPreflightService
         }
 
         return profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem
-            ? _overlayManifestBuilder.BuildVirtualFileSystem(
+            ? OverlayManifestBuilder.BuildVirtualFileSystem(
                 profile,
                 fileLayerPlan,
                 workspace,
                 cancellationToken: cancellationToken)
-            : _overlayManifestBuilder.BuildLinkedWorkspace(
+            : OverlayManifestBuilder.BuildLinkedWorkspace(
                 profile,
                 fileLayerPlan,
                 workspace,
@@ -240,7 +235,7 @@ public sealed class LaunchPreflightService
 
         try
         {
-            var target = _anomalyUsvfsLaunchTargetResolver.Resolve(profile, fileLayerPlan, launchResolution);
+            var target = AnomalyUsvfsLaunchTargetResolver.Resolve(profile, fileLayerPlan, launchResolution);
             var architecture = WindowsExecutableArchitectureDetector.Detect(target.ExecutablePath);
             if (architecture == WindowsExecutableArchitecture.Unknown)
             {
@@ -330,7 +325,7 @@ public sealed class LaunchPreflightService
         }
 
         var relativeDirectory = Path.GetDirectoryName(executableRelativePath) ?? string.Empty;
-        var hasEngineDll = new[] { "xrCore.dll", "xrGame.dll", "xrEngine.dll" }
+        var hasEngineDll = EngineDllNames
             .Any(name => FindFinalSource(profile, Path.Combine(relativeDirectory, name), fileLayerPlan) is not null);
         checks.Add(new ProfileHealthCheck(
             hasEngineDll ? ProfileHealthStatus.Healthy : ProfileHealthStatus.Warning,
@@ -386,7 +381,7 @@ public sealed class LaunchPreflightService
             .LastOrDefault(File.Exists);
     }
 
-    private LaunchExecutableResolution? FindFinalExecutableSource(
+    private static LaunchExecutableResolution? FindFinalExecutableSource(
         ModProfile profile,
         string requestedRelativePath,
         FileLayerPlan? fileLayerPlan,
@@ -395,7 +390,7 @@ public sealed class LaunchPreflightService
         var roots = fileLayerPlan is null
             ? CreateExecutableRoots(profile).ToArray()
             : FileLayerSourceResolver.CreateExecutableRoots(fileLayerPlan);
-        return _launchPlanResolver.ResolveExecutableSource(
+        return ProfileLaunchPlanResolver.ResolveExecutableSource(
             profile,
             roots,
             requestedRelativePath,

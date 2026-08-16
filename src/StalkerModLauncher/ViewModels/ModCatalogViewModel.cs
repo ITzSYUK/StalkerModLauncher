@@ -10,9 +10,8 @@ namespace StalkerModLauncher.ViewModels;
 public sealed class ModCatalogViewModel : ObservableObject, IDisposable
 {
     private readonly ApProCatalogService _catalogService;
-    private readonly DialogService _dialogService;
     private readonly List<ModCatalogItemViewModel> _allItems = new();
-    private readonly SemaphoreSlim _pageLoadLock = new(1, 1);
+    private int _pageLoadActive;
     private CancellationTokenSource? _loadCancellation;
     private ApProCatalogCategory _selectedCategory = ApProCatalogCategory.ShadowOfChernobyl;
     private bool _isLoading;
@@ -25,10 +24,9 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
     private string _searchQuery = string.Empty;
     private string _statusText = string.Empty;
 
-    public ModCatalogViewModel(ApProCatalogService catalogService, DialogService dialogService)
+    public ModCatalogViewModel(ApProCatalogService catalogService)
     {
         _catalogService = catalogService;
-        _dialogService = dialogService;
     }
 
     public ObservableCollection<ModCatalogItemViewModel> Items { get; } = new();
@@ -111,7 +109,11 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
 
     public async Task LoadInitialAsync(ApProCatalogCategory category, bool forceRefresh = false)
     {
-        _loadCancellation?.Cancel();
+        if (_loadCancellation is not null)
+        {
+            await _loadCancellation.CancelAsync();
+        }
+
         _loadCancellation?.Dispose();
         _loadCancellation = new CancellationTokenSource();
         _loadGeneration++;
@@ -175,7 +177,7 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
             return;
         }
 
-        if (!await _pageLoadLock.WaitAsync(0))
+        if (Interlocked.CompareExchange(ref _pageLoadActive, 1, 0) != 0)
         {
             await Task.Delay(50);
             return;
@@ -219,19 +221,19 @@ public sealed class ModCatalogViewModel : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(CatalogProgressText));
             }
 
-            _pageLoadLock.Release();
+            Volatile.Write(ref _pageLoadActive, 0);
         }
     }
 
-    public void OpenListing(ModCatalogItemViewModel? item)
+    public static void OpenListing(ModCatalogItemViewModel? item)
     {
         if (item is not null)
         {
-            _dialogService.OpenUrl(item.DetailUrl);
+            DialogService.OpenUrl(item.DetailUrl);
         }
     }
 
-    public void OpenWebsite() => _dialogService.OpenUrl("https://ap-pro.ru/");
+    public static void OpenWebsite() => DialogService.OpenUrl("https://ap-pro.ru/");
 
     public void Dispose()
     {

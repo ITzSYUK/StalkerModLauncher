@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Media;
 using StalkerModLauncher.Models;
 using StalkerModLauncher.Services;
 
@@ -24,7 +26,7 @@ public sealed partial class MainViewModel
                 continue;
             }
 
-            SelectedMod = _modListEditor.Add(SelectedProfile, path);
+            SelectedMod = ModListEditor.Add(SelectedProfile, path);
         }
 
         RefreshValidation();
@@ -47,7 +49,7 @@ public sealed partial class MainViewModel
     {
         if (!CanEditSelectedProfile ||
             SelectedProfile is null ||
-            !_modListEditor.Move(SelectedProfile, source, target))
+            !ModListEditor.Move(SelectedProfile, source, target))
         {
             return;
         }
@@ -60,7 +62,7 @@ public sealed partial class MainViewModel
     {
         if (!CanEditSelectedProfile ||
             SelectedProfile is null ||
-            !_modListEditor.MoveToEnd(SelectedProfile, source))
+            !ModListEditor.MoveToEnd(SelectedProfile, source))
         {
             return;
         }
@@ -79,7 +81,7 @@ public sealed partial class MainViewModel
         if (!CanEditSelectedProfile ||
             SelectedProfile is null ||
             sources.Count == 0 ||
-            !_modListEditor.MoveManyToInsertionIndex(SelectedProfile, sources, insertionIndex))
+            !ModListEditor.MoveManyToInsertionIndex(SelectedProfile, sources, insertionIndex))
         {
             return;
         }
@@ -108,8 +110,8 @@ public sealed partial class MainViewModel
         }
 
         var moved = moveToEnd
-            ? _modListEditor.MoveManyToEnd(SelectedProfile, sources)
-            : _modListEditor.MoveManyToStart(SelectedProfile, sources);
+            ? ModListEditor.MoveManyToEnd(SelectedProfile, sources)
+            : ModListEditor.MoveManyToStart(SelectedProfile, sources);
         if (!moved)
         {
             return;
@@ -128,7 +130,7 @@ public sealed partial class MainViewModel
             return;
         }
 
-        var folder = _dialogService.PickFolder("Выберите папку для поиска модов");
+        var folder = DialogService.PickFolder("Выберите папку для поиска модов");
         if (folder is null)
         {
             return;
@@ -139,7 +141,7 @@ public sealed partial class MainViewModel
             IsBuilding = true;
             BuildProgressText = "Сканирование модов...";
             RaiseCommandStates();
-            var discovered = await _modScannerService.ScanFolderAsync(folder);
+            var discovered = await ModScannerService.ScanFolderAsync(folder);
 
             if (discovered.Count == 0)
             {
@@ -153,7 +155,7 @@ public sealed partial class MainViewModel
 
             if (IsPdaInterfaceEnabled && ModScanSelectionRequested is not null)
             {
-                var request = new ModScanSelectionRequest(selectableMods);
+                var request = new ModScanSelectionEventArgs(selectableMods);
                 ModScanSelectionRequested.Invoke(this, request);
                 selected = await request.Completion;
             }
@@ -189,7 +191,7 @@ public sealed partial class MainViewModel
                         continue;
                     }
 
-                    _modListEditor.Add(SelectedProfile, mod.Path, mod.Name);
+                    ModListEditor.Add(SelectedProfile, mod.Path, mod.Name);
                     existingPaths.Add(mod.Path);
                     added++;
                 }
@@ -219,16 +221,213 @@ public sealed partial class MainViewModel
             return;
         }
 
-        var selected = _dialogService.PickFolder("Choose mod folder");
+        var selected = DialogService.PickFolder("Choose mod folder");
         if (selected is null)
         {
             return;
         }
 
-        SelectedMod = _modListEditor.Add(SelectedProfile, selected);
+        SelectedMod = ModListEditor.Add(SelectedProfile, selected);
         RefreshValidation();
         Log($"Mod added: {selected}");
         _ = SaveAsync();
+    }
+
+    private async Task InstallModArchiveAsync()
+    {
+        if (SelectedProfile is not { } profile || !CanInstallModArchive())
+        {
+            return;
+        }
+
+        var archivePath = DialogService.PickFile(
+            "Выберите архив мода",
+            "Архивы модов (*.zip;*.7z;*.rar)|*.zip;*.7z;*.rar|Все файлы (*.*)|*.*");
+        if (archivePath is null)
+        {
+            return;
+        }
+
+        try
+        {
+            IsBuilding = true;
+            IsInstallingModArchive = true;
+            IsModArchiveInstallCompleted = false;
+            IsModArchiveInstallProgressIndeterminate = true;
+            ModArchiveInstallProgress = 0;
+            var archiveFileName = Path.GetFileName(archivePath);
+            ModArchiveInstallProgressText = $"Подготовка {archiveFileName}...";
+            BuildProgressText = ModArchiveInstallProgressText;
+            RaiseCommandStates();
+
+            var installRoot = string.IsNullOrWhiteSpace(profile.ModInstallPath)
+                ? _paths.GetDefaultModInstallPath(profile.Id, profile.GameInstallPath)
+                : profile.ModInstallPath;
+            profile.ModInstallPath = ValidateModInstallPath(profile, installRoot);
+
+            var progressTimer = Stopwatch.StartNew();
+            var progress = new Progress<ModArchiveInstallProgress>(value =>
+                UpdateModArchiveInstallProgress(value, archiveFileName, progressTimer.Elapsed));
+            var result = await ModArchiveInstaller.InstallAsync(
+                archivePath,
+                profile.ModInstallPath,
+                progress);
+            var installedMod = ModListEditor.Add(profile, result.ModPath, result.ModName);
+
+            if (ReferenceEquals(SelectedProfile, profile))
+            {
+                SelectedMod = installedMod;
+                if (profile.IsStandalone)
+                {
+                    AutoDetectStandaloneExecutable();
+                }
+
+                RefreshValidation();
+            }
+
+            await SaveAsync();
+            Log($"Mod archive installed: {archivePath} -> {result.ModPath}");
+
+            var databaseNote = result.DatabaseArchivesRelocated
+                ? Environment.NewLine + "Архивы .db* помещены в db\\mods."
+                : string.Empty;
+            var details = $"Файлов: {result.FileCount:N0}{databaseNote}";
+            SystemSounds.Asterisk.Play();
+            IsInstallingModArchive = false;
+            if (IsPdaInterfaceEnabled)
+            {
+                InstalledModArchiveName = result.ModName;
+                InstalledModArchivePath = result.ModPath;
+                InstalledModArchiveDetails = details;
+                IsModArchiveInstallCompleted = true;
+            }
+            else
+            {
+                _dialogService.ShowModArchiveInstalled(
+                    result.ModName,
+                    result.ModPath,
+                    details);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"Mod archive installation failed: {ex.Message}");
+            _dialogService.ShowError("Не удалось установить архив мода", ex.Message);
+        }
+        finally
+        {
+            IsBuilding = false;
+            IsInstallingModArchive = false;
+            IsModArchiveInstallProgressIndeterminate = false;
+            ModArchiveInstallProgress = 0;
+            ModArchiveInstallProgressText = string.Empty;
+            BuildProgressText = string.Empty;
+            RaiseCommandStates();
+        }
+    }
+
+    private void UpdateModArchiveInstallProgress(
+        ModArchiveInstallProgress progress,
+        string archiveFileName,
+        TimeSpan elapsed)
+    {
+        switch (progress.Stage)
+        {
+            case ModArchiveInstallStage.Inspecting:
+                IsModArchiveInstallProgressIndeterminate = true;
+                ModArchiveInstallProgress = 0;
+                ModArchiveInstallProgressText = $"Анализ {archiveFileName}...";
+                break;
+
+            case ModArchiveInstallStage.Extracting when progress.TotalBytes is > 0:
+                IsModArchiveInstallProgressIndeterminate = false;
+                ModArchiveInstallProgress = Math.Clamp(
+                    progress.ExtractedBytes * 100d / progress.TotalBytes.Value,
+                    0,
+                    100);
+                var remainingText = FormatArchiveInstallRemainingTime(progress, elapsed);
+                ModArchiveInstallProgressText =
+                    $"Распаковка {archiveFileName}: {ModArchiveInstallProgress:0}% · " +
+                    $"{WorkspaceStatus.FormatSize(progress.ExtractedBytes)} / " +
+                    $"{WorkspaceStatus.FormatSize(progress.TotalBytes.Value)} · {remainingText}";
+                break;
+
+            case ModArchiveInstallStage.Extracting:
+                IsModArchiveInstallProgressIndeterminate = true;
+                ModArchiveInstallProgressText =
+                    $"Распаковка {archiveFileName}: {WorkspaceStatus.FormatSize(progress.ExtractedBytes)}";
+                break;
+
+            case ModArchiveInstallStage.Finalizing:
+                IsModArchiveInstallProgressIndeterminate = false;
+                ModArchiveInstallProgress = 100;
+                ModArchiveInstallProgressText = $"Завершение установки {archiveFileName}...";
+                break;
+        }
+
+        BuildProgressText = ModArchiveInstallProgressText;
+    }
+
+    private static string FormatArchiveInstallRemainingTime(
+        ModArchiveInstallProgress progress,
+        TimeSpan elapsed)
+    {
+        if (progress.TotalBytes is not > 0 ||
+            progress.ExtractedBytes <= 0 ||
+            progress.ExtractedBytes >= progress.TotalBytes.Value ||
+            elapsed.TotalSeconds < 0.8)
+        {
+            return "оценка времени...";
+        }
+
+        var remainingSeconds = elapsed.TotalSeconds *
+                               (progress.TotalBytes.Value - progress.ExtractedBytes) /
+                               progress.ExtractedBytes;
+        if (!double.IsFinite(remainingSeconds) || remainingSeconds < 0)
+        {
+            return "оценка времени...";
+        }
+
+        var remaining = TimeSpan.FromSeconds(Math.Min(remainingSeconds, TimeSpan.FromDays(99).TotalSeconds));
+        if (remaining.TotalHours >= 1)
+        {
+            return $"осталось ~{(int)remaining.TotalHours} ч {remaining.Minutes} мин";
+        }
+
+        if (remaining.TotalMinutes >= 1)
+        {
+            return $"осталось ~{(int)remaining.TotalMinutes} мин {remaining.Seconds} с";
+        }
+
+        return $"осталось ~{Math.Max(1, (int)Math.Ceiling(remaining.TotalSeconds))} с";
+    }
+
+    private bool CanInstallModArchive() => !IsBuilding && CanAddMod();
+
+    private static string ValidateModInstallPath(ModProfile profile, string installRoot)
+    {
+        var fullInstallRoot = Path.GetFullPath(installRoot);
+        if (!string.IsNullOrWhiteSpace(profile.GameInstallPath) &&
+            FileSystemSafety.IsDirectoryInside(fullInstallRoot, profile.GameInstallPath))
+        {
+            throw new InvalidOperationException("Папка установленных модов не должна находиться внутри папки игры.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(profile.WorkspacePath) &&
+            (FileSystemSafety.IsDirectoryInside(fullInstallRoot, profile.WorkspacePath) ||
+             FileSystemSafety.IsDirectoryInside(profile.WorkspacePath, fullInstallRoot)))
+        {
+            throw new InvalidOperationException("Папка установленных модов не должна пересекаться с workspace профиля.");
+        }
+
+        if (profile.Mods.Any(mod =>
+                !string.IsNullOrWhiteSpace(mod.SourcePath) &&
+                FileSystemSafety.IsDirectoryInside(fullInstallRoot, mod.SourcePath)))
+        {
+            throw new InvalidOperationException("Папка установленных модов не должна находиться внутри исходной папки другого мода.");
+        }
+
+        return fullInstallRoot;
     }
 
     private void BrowseExecutable()
@@ -241,7 +440,7 @@ public sealed partial class MainViewModel
         var initialPath = Directory.Exists(SelectedMod?.SourcePath) ? SelectedMod.SourcePath
             : !string.IsNullOrWhiteSpace(SelectedProfile.GameInstallPath) ? SelectedProfile.GameInstallPath
             : _lastBrowsedGamePath;
-        var selected = _dialogService.PickExecutable("Choose launch executable", initialPath);
+        var selected = DialogService.PickExecutable("Choose launch executable", initialPath);
         if (selected is null)
         {
             return;
@@ -285,7 +484,7 @@ public sealed partial class MainViewModel
         }
 
         var found = LaunchExecutableDetector.DetectBest(
-            [new LaunchExecutableSearchRoot(modRoot, "автономный мод", 1)],
+            [new LaunchExecutableSearchRoot(modRoot, "автономная сборка", 1)],
             currentExe);
 
         if (found is null)
@@ -305,7 +504,7 @@ public sealed partial class MainViewModel
             return;
         }
 
-        var removed = _modListEditor.Remove(SelectedProfile, mods);
+        var removed = ModListEditor.Remove(SelectedProfile, mods);
         RefreshValidation();
         Log($"Removed {removed} mod(s).");
         _ = SaveAsync();
@@ -319,7 +518,7 @@ public sealed partial class MainViewModel
         }
 
         var removed = SelectedMod;
-        _modListEditor.Remove(SelectedProfile, [removed]);
+        ModListEditor.Remove(SelectedProfile, [removed]);
         RefreshValidation();
         Log($"Mod removed: {removed.Name}");
         _ = SaveAsync();
@@ -332,7 +531,7 @@ public sealed partial class MainViewModel
             return;
         }
 
-        if (!_modListEditor.MoveByOffset(SelectedProfile, SelectedMod, direction))
+        if (!ModListEditor.MoveByOffset(SelectedProfile, SelectedMod, direction))
         {
             return;
         }
@@ -345,7 +544,7 @@ public sealed partial class MainViewModel
         return CanEditSelectedProfile &&
                SelectedProfile is not null &&
                SelectedMod is not null &&
-               _modListEditor.CanMoveByOffset(SelectedProfile, SelectedMod, direction);
+               ModListEditor.CanMoveByOffset(SelectedProfile, SelectedMod, direction);
     }
 
     private void RemoveInlineMod(ModEntry? mod)
@@ -361,7 +560,7 @@ public sealed partial class MainViewModel
         if (!CanMoveInlineMod(mod, direction) ||
             SelectedProfile is null ||
             mod is null ||
-            !_modListEditor.MoveByOffset(SelectedProfile, mod, direction))
+            !ModListEditor.MoveByOffset(SelectedProfile, mod, direction))
         {
             return;
         }
@@ -375,7 +574,7 @@ public sealed partial class MainViewModel
         return CanEditSelectedProfile &&
                SelectedProfile is not null &&
                mod is not null &&
-               _modListEditor.CanMoveByOffset(SelectedProfile, mod, direction);
+               ModListEditor.CanMoveByOffset(SelectedProfile, mod, direction);
     }
 
     private void OpenInlineModFolder(ModEntry? mod)
@@ -387,7 +586,7 @@ public sealed partial class MainViewModel
 
         try
         {
-            _dialogService.OpenFolder(mod.SourcePath);
+            DialogService.OpenFolder(mod.SourcePath);
         }
         catch (Exception ex)
         {
@@ -414,7 +613,7 @@ public sealed partial class MainViewModel
 
         try
         {
-            _dialogService.OpenFolder(SelectedMod.SourcePath);
+            DialogService.OpenFolder(SelectedMod.SourcePath);
         }
         catch (Exception ex)
         {

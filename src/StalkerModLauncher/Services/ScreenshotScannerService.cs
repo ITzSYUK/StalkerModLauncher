@@ -2,7 +2,7 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class ScreenshotScannerService
+public static class ScreenshotScannerService
 {
     private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -12,25 +12,20 @@ public sealed class ScreenshotScannerService
         ".png"
     };
 
-    private readonly ProfileDataPathResolver _dataPathResolver;
-
-    public ScreenshotScannerService(ProfileDataPathResolver dataPathResolver)
-    {
-        _dataPathResolver = dataPathResolver;
-    }
-
-    public Task<IReadOnlyList<string>> ScanAsync(
+    public static Task<IReadOnlyList<string>> ScanAsync(
         ModProfile profile,
         CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => Scan(profile, cancellationToken), cancellationToken);
+        return Task.Run<IReadOnlyList<string>>(
+            () => Scan(profile, cancellationToken),
+            cancellationToken);
     }
 
-    private IReadOnlyList<string> Scan(
+    private static List<string> Scan(
         ModProfile profile,
         CancellationToken cancellationToken)
     {
-        var directories = new List<string>(_dataPathResolver.GetScreenshotDirectories(profile));
+        var directories = new List<string>(ProfileDataPathResolver.GetScreenshotDirectories(profile));
         var gamePath = profile.GameInstallPath;
 
         if (!string.IsNullOrWhiteSpace(gamePath))

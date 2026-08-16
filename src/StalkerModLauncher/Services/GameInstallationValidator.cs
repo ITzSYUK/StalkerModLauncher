@@ -2,7 +2,7 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class GameInstallationValidator
+public static class GameInstallationValidator
 {
     private static readonly string[] KnownExecutableCandidates =
     {
@@ -17,7 +17,7 @@ public sealed class GameInstallationValidator
         @"bin\AnomalyDX9_AVX.exe"
     };
 
-    public ValidationResult Validate(string? gamePath)
+    public static ValidationResult Validate(string? gamePath)
     {
         var messages = new List<string>();
 

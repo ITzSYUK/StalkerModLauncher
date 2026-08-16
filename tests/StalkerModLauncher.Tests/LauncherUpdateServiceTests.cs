@@ -9,7 +9,7 @@ namespace StalkerModLauncher.Tests;
 public sealed class LauncherUpdateServiceTests
 {
     [Fact]
-    public async Task CheckAsync_ReturnsUpdate_WhenLatestReleaseIsNewer()
+    public async Task CheckAsyncReturnsUpdateWhenLatestReleaseIsNewer()
     {
         var handler = new StubHttpMessageHandler((_, _) => JsonResponse(
             """{"tag_name":"v1.2.3","html_url":"https://github.com/ITzSYUK/StalkerModLauncher/releases/tag/v1.2.3"}"""));
@@ -25,7 +25,7 @@ public sealed class LauncherUpdateServiceTests
     [Theory]
     [InlineData("v1.2.2")]
     [InlineData("v1.2.1")]
-    public async Task CheckAsync_ReturnsNoUpdate_WhenReleaseIsNotNewer(string tagName)
+    public async Task CheckAsyncReturnsNoUpdateWhenReleaseIsNotNewer(string tagName)
     {
         var handler = new StubHttpMessageHandler((_, _) => JsonResponse(
             $$"""{"tag_name":"{{tagName}}","html_url":"https://github.com/ITzSYUK/StalkerModLauncher/releases/tag/{{tagName}}"}"""));
@@ -37,7 +37,7 @@ public sealed class LauncherUpdateServiceTests
     }
 
     [Fact]
-    public async Task CheckAsync_SendsHonestUserAgent()
+    public async Task CheckAsyncSendsHonestUserAgent()
     {
         string? userAgent = null;
         var handler = new StubHttpMessageHandler((request, _) =>
@@ -55,7 +55,7 @@ public sealed class LauncherUpdateServiceTests
     }
 
     [Fact]
-    public async Task CheckAsync_RejectsUnexpectedReleaseUrl()
+    public async Task CheckAsyncRejectsUnexpectedReleaseUrl()
     {
         var handler = new StubHttpMessageHandler((_, _) => JsonResponse(
             """{"tag_name":"v1.2.3","html_url":"https://example.com/download"}"""));

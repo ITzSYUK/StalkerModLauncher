@@ -6,7 +6,7 @@ namespace StalkerModLauncher.Tests;
 public sealed class DebouncedAsyncActionTests
 {
     [Fact]
-    public async Task Schedule_CollapsesRapidCallsIntoSingleAction()
+    public async Task ScheduleCollapsesRapidCallsIntoSingleAction()
     {
         var executionCount = 0;
         var executed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -29,7 +29,7 @@ public sealed class DebouncedAsyncActionTests
     }
 
     [Fact]
-    public async Task Cancel_PreventsPendingAction()
+    public async Task CancelPreventsPendingAction()
     {
         var executionCount = 0;
         using var action = new DebouncedAsyncAction(

@@ -6,8 +6,6 @@ namespace StalkerModLauncher.Services;
 
 public sealed class OfficialUsvfsNativeApi : IUsvfsNativeApi
 {
-    private const uint Infinite = 0xFFFFFFFF;
-
     public IntPtr CreateParameters()
     {
         var parameters = Native.usvfsCreateParameters();
@@ -27,11 +25,13 @@ public sealed class OfficialUsvfsNativeApi : IUsvfsNativeApi
         }
     }
 
-    public void SetInstanceName(IntPtr parameters, string name) => Native.usvfsSetInstanceName(parameters, name);
+    public void SetInstanceName(IntPtr parameters, string name) =>
+        Native.usvfsSetInstanceName(parameters, ToNullTerminatedUtf8(name));
     public void SetDebugMode(IntPtr parameters, bool debugMode) => Native.usvfsSetDebugMode(parameters, debugMode);
     public void SetLogLevel(IntPtr parameters, UsvfsLogLevel level) => Native.usvfsSetLogLevel(parameters, level);
     public void SetCrashDumpType(IntPtr parameters, UsvfsCrashDumpType type) => Native.usvfsSetCrashDumpType(parameters, type);
-    public void SetCrashDumpPath(IntPtr parameters, string path) => Native.usvfsSetCrashDumpPath(parameters, path);
+    public void SetCrashDumpPath(IntPtr parameters, string path) =>
+        Native.usvfsSetCrashDumpPath(parameters, ToNullTerminatedUtf8(path));
     public void InitLogging(bool toLocal) => Native.usvfsInitLogging(toLocal);
     public bool CreateVfs(IntPtr parameters) => Native.usvfsCreateVFS(parameters);
     public void DisconnectVfs() => Native.usvfsDisconnectVFS();
@@ -92,12 +92,12 @@ public sealed class OfficialUsvfsNativeApi : IUsvfsNativeApi
         return true;
     }
 
-    public bool LinkDirectoryStatic(string sourcePath, string destinationPath, UsvfsLinkFlags flags)
+    public bool LinkDirectoryStatic(string sourcePath, string destinationPath, UsvfsLinkOptions flags)
     {
         return Native.usvfsVirtualLinkDirectoryStatic(sourcePath, destinationPath, flags);
     }
 
-    public bool LinkFile(string sourcePath, string destinationPath, UsvfsLinkFlags flags)
+    public bool LinkFile(string sourcePath, string destinationPath, UsvfsLinkOptions flags)
     {
         return Native.usvfsVirtualLinkFile(sourcePath, destinationPath, flags);
     }
@@ -111,7 +111,7 @@ public sealed class OfficialUsvfsNativeApi : IUsvfsNativeApi
         var startup = new StartupInfo { cb = Marshal.SizeOf<StartupInfo>() };
         if (!Native.usvfsCreateProcessHooked(
                 executablePath,
-                new StringBuilder(commandLine),
+                [.. commandLine, '\0'],
                 IntPtr.Zero,
                 IntPtr.Zero,
                 false,
@@ -185,6 +185,9 @@ public sealed class OfficialUsvfsNativeApi : IUsvfsNativeApi
         }
     }
 
+    private static byte[] ToNullTerminatedUtf8(string value) =>
+        [.. Encoding.UTF8.GetBytes(value), 0];
+
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct StartupInfo
     {
@@ -225,8 +228,8 @@ public sealed class OfficialUsvfsNativeApi : IUsvfsNativeApi
         [DllImport("usvfs_x64.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern void usvfsFreeParameters(IntPtr parameters);
 
-        [DllImport("usvfs_x64.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-        public static extern void usvfsSetInstanceName(IntPtr parameters, string name);
+        [DllImport("usvfs_x64.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern void usvfsSetInstanceName(IntPtr parameters, [In] byte[] name);
 
         [DllImport("usvfs_x64.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern void usvfsSetDebugMode(IntPtr parameters, [MarshalAs(UnmanagedType.Bool)] bool debugMode);
@@ -237,8 +240,8 @@ public sealed class OfficialUsvfsNativeApi : IUsvfsNativeApi
         [DllImport("usvfs_x64.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern void usvfsSetCrashDumpType(IntPtr parameters, UsvfsCrashDumpType type);
 
-        [DllImport("usvfs_x64.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-        public static extern void usvfsSetCrashDumpPath(IntPtr parameters, string path);
+        [DllImport("usvfs_x64.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern void usvfsSetCrashDumpPath(IntPtr parameters, [In] byte[] path);
 
         [DllImport("usvfs_x64.dll", CallingConvention = CallingConvention.StdCall)]
         public static extern void usvfsInitLogging([MarshalAs(UnmanagedType.Bool)] bool toLocal);
@@ -269,20 +272,20 @@ public sealed class OfficialUsvfsNativeApi : IUsvfsNativeApi
         public static extern bool usvfsVirtualLinkDirectoryStatic(
             string source,
             string destination,
-            UsvfsLinkFlags flags);
+            UsvfsLinkOptions flags);
 
         [DllImport("usvfs_x64.dll", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool usvfsVirtualLinkFile(
             string source,
             string destination,
-            UsvfsLinkFlags flags);
+            UsvfsLinkOptions flags);
 
         [DllImport("usvfs_x64.dll", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool usvfsCreateProcessHooked(
             string? lpApplicationName,
-            StringBuilder lpCommandLine,
+            [In, Out, MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.U2)] char[] lpCommandLine,
             IntPtr lpProcessAttributes,
             IntPtr lpThreadAttributes,
             [MarshalAs(UnmanagedType.Bool)] bool bInheritHandles,

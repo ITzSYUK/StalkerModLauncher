@@ -8,9 +8,9 @@ public sealed record Mo2ModListImportResult(
     IReadOnlyList<string> MissingProfileMods,
     IReadOnlyList<string> UnlistedLauncherMods);
 
-public sealed class Mo2ModListImporter
+public static class Mo2ModListImporter
 {
-    public Mo2ModListImportResult Import(ModProfile profile, string filePath)
+    public static Mo2ModListImportResult Import(ModProfile profile, string filePath)
     {
         if (!File.Exists(filePath))
         {
@@ -64,7 +64,7 @@ public sealed class Mo2ModListImporter
             available.Select(mod => mod.Name).ToArray());
     }
 
-    private static IReadOnlyList<Mo2ModListEntry> Parse(IEnumerable<string> lines)
+    private static List<Mo2ModListEntry> Parse(IEnumerable<string> lines)
     {
         var entries = new List<Mo2ModListEntry>();
         foreach (var rawLine in lines)

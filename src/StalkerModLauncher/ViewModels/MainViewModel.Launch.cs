@@ -95,7 +95,7 @@ public sealed partial class MainViewModel
                     return;
                 }
 
-                terminate = _dialogService.Confirm(
+                terminate = DialogService.Confirm(
                     "Возможное зависание запуска",
                     readiness.Details + Environment.NewLine + Environment.NewLine +
                     "Завершить связанные процессы? Нажмите «Нет», чтобы продолжить ожидание.");
@@ -155,7 +155,7 @@ public sealed partial class MainViewModel
 
     private void LogGameExitDiagnostics(ModProfile profile, GameSessionResult result)
     {
-        var diagnostics = _gameExitDiagnosticsService.Analyze(profile, result);
+        var diagnostics = GameExitDiagnosticsService.Analyze(profile, result);
         if (diagnostics.IsQuickExit)
         {
             var exitCode = diagnostics.ExitCode.HasValue ? $" Exit code: {diagnostics.ExitCode}." : string.Empty;

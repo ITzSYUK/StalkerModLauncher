@@ -49,11 +49,8 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
     public ObservableCollection<ProfileHealthCheck> Checks { get; } = new();
 
     public string ProfileKind => _profile.IsStandalone
-        ? "Автономная игра или мод"
+        ? "Автономная сборка"
         : "Мод поверх базовой игры";
-
-    public string PreflightExplanation =>
-        "Ошибки остановят запуск. Предупреждения подскажут, что стоит проверить.";
 
     public WorkspaceStatus? Workspace
     {
@@ -134,7 +131,11 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
 
     private async Task RefreshAsync()
     {
-        _refreshCancellation?.Cancel();
+        if (_refreshCancellation is not null)
+        {
+            await _refreshCancellation.CancelAsync();
+        }
+
         _refreshCancellation?.Dispose();
         _refreshCancellation = new CancellationTokenSource();
 
@@ -177,32 +178,32 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
 
     private void OpenProfile()
     {
-        RunAction(() => _dialogService.OpenFolder(_report!.ProfileFolderPath));
+        RunAction(() => DialogService.OpenFolder(_report!.ProfileFolderPath));
     }
 
     private void OpenSaves()
     {
-        RunAction(() => _dialogService.OpenFolder(_report!.SavedGamesPath));
+        RunAction(() => DialogService.OpenFolder(_report!.SavedGamesPath));
     }
 
     private void OpenLatestLog()
     {
-        RunAction(() => _dialogService.OpenFileLocation(_report!.LatestLogPath!));
+        RunAction(() => DialogService.OpenFileLocation(_report!.LatestLogPath!));
     }
 
     private void OpenCrashDump()
     {
-        RunAction(() => _dialogService.OpenFileLocation(_report!.LatestCrashDumpPath!));
+        RunAction(() => DialogService.OpenFileLocation(_report!.LatestCrashDumpPath!));
     }
 
     private void CopyReport()
     {
-        RunAction(() => _dialogService.CopyText(_report!.ToText(_profile.Name)));
+        RunAction(() => DialogService.CopyText(_report!.ToText(_profile.Name)));
     }
 
     private void ClearWorkspace()
     {
-        if (!_dialogService.Confirm(
+        if (!DialogService.Confirm(
                 "Очистить кэш workspace",
                 "Удалить только подготовленную папку current? Сохранения, настройки и логи в userdata останутся на месте."))
         {
@@ -249,13 +250,13 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
 
     private async Task MoveWorkspaceAsync()
     {
-        var destination = _dialogService.PickFolder("Выберите папку, в которой будет храниться workspace");
+        var destination = DialogService.PickFolder("Выберите папку, в которой будет храниться workspace");
         if (destination is null)
         {
             return;
         }
 
-        if (!_dialogService.Confirm(
+        if (!DialogService.Confirm(
                 UsesVirtualFileSystem ? "Перенести данные профиля" : "Перенести workspace",
                 UsesVirtualFileSystem
                     ? $"Перенести сохранения, настройки и логи в выбранную папку?{Environment.NewLine}{Environment.NewLine}Временный USVFS-bootstrap не копируется и будет создан заново."
@@ -305,7 +306,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
             $"Workspace перенесён в {result.DestinationPath}, но старая папка не удалена: {oldWorkspace}" +
             $"{Environment.NewLine}{result.CleanupFailure}");
 
-        if (!_dialogService.Confirm(
+        if (!DialogService.Confirm(
                 "Workspace перенесён",
                 $"Данные профиля перенесены в:{Environment.NewLine}{result.DestinationPath}" +
                 $"{Environment.NewLine}{Environment.NewLine}Не удалось удалить старую папку:" +
@@ -322,7 +323,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         if (retryFailure is null)
         {
             Log($"Старый workspace удалён после повторной попытки: {oldWorkspace}");
-            _dialogService.ShowInfo(
+            DialogService.ShowInfo(
                 "Перенос завершён",
                 $"Старая папка workspace удалена:{Environment.NewLine}{oldWorkspace}");
             return;

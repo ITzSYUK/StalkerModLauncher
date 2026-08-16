@@ -12,7 +12,7 @@ public sealed class WorkspaceManagementService
         _workspaceBuilder = workspaceBuilder;
     }
 
-    public Task<WorkspaceStatus> InspectAsync(ModProfile profile, CancellationToken cancellationToken = default)
+    public static Task<WorkspaceStatus> InspectAsync(ModProfile profile, CancellationToken cancellationToken = default)
     {
         return Task.Run(() => Inspect(profile, cancellationToken), cancellationToken);
     }
@@ -25,7 +25,11 @@ public sealed class WorkspaceManagementService
     public async Task RebuildAsync(ModProfile profile, IProgress<string> progress, CancellationToken cancellationToken = default)
     {
         ClearCache(profile, progress);
-        var result = await _workspaceBuilder.BuildAsync(profile.GameInstallPath, profile, progress, cancellationToken);
+        var result = await _workspaceBuilder.BuildAsync(
+            profile.GameInstallPath,
+            profile,
+            progress,
+            cancellationToken: cancellationToken);
         profile.WorkspacePath = result.ProfileWorkspacePath;
         profile.ExecutableRelativePath = result.ExecutableRelativePath;
         profile.WorkingDirectoryRelative = result.WorkingDirectoryRelative;
@@ -77,7 +81,7 @@ public sealed class WorkspaceManagementService
             cancellationToken);
     }
 
-    private WorkspaceMoveResult PrepareMove(
+    private static WorkspaceMoveResult PrepareMove(
         ModProfile profile,
         string destinationRoot,
         IProgress<string> progress,
@@ -127,10 +131,10 @@ public sealed class WorkspaceManagementService
                 CopyDirectory(
                     sourceUserData,
                     targetUserData,
-                    cancellationToken,
                     profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem
                         ? "usvfs-bootstrap"
-                        : null);
+                        : null,
+                    cancellationToken);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -198,8 +202,8 @@ public sealed class WorkspaceManagementService
     private static void CopyDirectory(
         string source,
         string destination,
-        CancellationToken cancellationToken,
-        string? excludedTopLevelDirectory)
+        string? excludedTopLevelDirectory,
+        CancellationToken cancellationToken)
     {
         foreach (var directory in Directory.EnumerateDirectories(source, "*", SearchOption.AllDirectories))
         {

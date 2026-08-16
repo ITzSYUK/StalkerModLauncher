@@ -57,4 +57,12 @@ public sealed class AppPaths
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
+
+    public string GetDefaultModInstallPath(string profileId, string? gameInstallPath)
+    {
+        var workspaceRoot = GetPreferredWorkspaceRoot(gameInstallPath);
+        var launcherRoot = Directory.GetParent(workspaceRoot)?.FullName ?? workspaceRoot;
+        var safeProfileId = FileSystemSafety.SanitizeName(profileId);
+        return Path.Combine(launcherRoot, "Mods", $"profile-{safeProfileId}");
+    }
 }

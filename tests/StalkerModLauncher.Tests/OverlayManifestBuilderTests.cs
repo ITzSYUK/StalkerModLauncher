@@ -12,7 +12,7 @@ public sealed class OverlayManifestBuilderTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void BuildLinkedWorkspace_CapturesOverlayDecisions()
+    public void BuildLinkedWorkspaceCapturesOverlayDecisions()
     {
         var game = Path.Combine(_root, "game");
         var main = Path.Combine(_root, "main");
@@ -34,7 +34,7 @@ public sealed class OverlayManifestBuilderTests : IDisposable
         profile.Mods.Add(new ModEntry { Id = "patch", Name = "Patch", SourcePath = patch, Order = 2 });
 
         var plan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(
             profile,
             plan,
             workspace,
@@ -49,7 +49,9 @@ public sealed class OverlayManifestBuilderTests : IDisposable
         Assert.Contains(
             manifest.WritableFiles,
             file => file.RelativePath == Path.Combine("gamedata", "configs", "localization.ltx") &&
-                    file.StoragePath.EndsWith(Path.Combine("userdata", "writable-game-files", "gamedata", "configs", "localization.ltx")));
+                    file.StoragePath.EndsWith(
+                        Path.Combine("userdata", "writable-game-files", "gamedata", "configs", "localization.ltx"),
+                        StringComparison.OrdinalIgnoreCase));
         Assert.EndsWith(Path.Combine("userdata", "overwrite"), manifest.WriteOverlayRoot);
         Assert.Contains(
             manifest.Overwrites,

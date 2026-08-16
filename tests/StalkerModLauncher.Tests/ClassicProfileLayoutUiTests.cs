@@ -10,7 +10,7 @@ namespace StalkerModLauncher.Tests;
 public sealed class ClassicProfileLayoutUiTests
 {
     [Fact]
-    public void ProfileOverview_RendersThreeFolderActionsAtClassicContentWidth()
+    public void ProfileOverviewRendersFourFolderActionsAtClassicContentWidth()
     {
         Exception? failure = null;
         var thread = new Thread(() =>
@@ -26,7 +26,7 @@ public sealed class ClassicProfileLayoutUiTests
                 bitmap.Render(view);
 
                 Assert.Equal(960, bitmap.PixelWidth);
-                Assert.Equal(3, CountVisualChildren<Button>(view));
+                Assert.Equal(4, CountVisualChildren<Button>(view));
             }
             catch (Exception ex)
             {

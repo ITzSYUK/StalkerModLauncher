@@ -171,6 +171,9 @@
                                 <Setter TargetName="Chrome" Property="Stroke" Value="#7F8A94"/>
                                 <Setter TargetName="Marker" Property="Fill" Value="#C5C9C4"/>
                             </Trigger>
+                            <Trigger Property="Tag" Value="Active">
+                                <Setter TargetName="Marker" Property="Fill" Value="#C5C9C4"/>
+                            </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Chrome" Property="Fill" Value="#0B1119"/>
                                 <Setter TargetName="Marker" Property="Fill" Value="#CF962C"/>
@@ -434,14 +437,14 @@
                             Style="{StaticResource PdaNavButtonStyle}"
                             Click="ProfilesButton_OnClick"/>
                     <StackPanel Grid.Column="2" Orientation="Horizontal">
-                        <Button Content="Скриншоты" Width="140" Margin="0,0,4,0"
+                        <Button x:Name="ScreenshotsNavButton" Content="Скриншоты" Width="140" Margin="0,0,4,0"
                                 Style="{StaticResource PdaNavButtonStyle}" Click="ScreenshotsButton_OnClick"/>
                         <Button Content="Папка профиля" Width="140" Margin="0,0,4,0"
                                 Style="{StaticResource PdaNavButtonStyle}"
                                 Command="{Binding OpenProfileFolderCommand}"/>
-                        <Button Content="Состояние" Width="140" Margin="0,0,4,0"
+                        <Button x:Name="StatusNavButton" Content="Состояние" Width="140" Margin="0,0,4,0"
                                 Style="{StaticResource PdaNavButtonStyle}" Click="StatusButton_OnClick"/>
-                        <Button Content="Настройки" Width="140"
+                        <Button x:Name="SettingsNavButton" Content="Настройки" Width="140"
                                 Style="{StaticResource PdaNavButtonStyle}" Click="SettingsTab_OnClick"/>
                     </StackPanel>
                 </Grid>
@@ -468,6 +471,7 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="36"/>
                                     <ColumnDefinition Width="9"/>
+                                    <ColumnDefinition Width="36"/>
                                     <ColumnDefinition Width="36"/>
                                     <ColumnDefinition Width="36"/>
                                 </Grid.ColumnDefinitions>
@@ -535,7 +539,16 @@
                                         </Canvas>
                                     </Viewbox>
                                 </Button>
-                                <Button Grid.Column="4" Command="{Binding AddModCommand}" Style="{StaticResource PdaProfileToolButtonStyle}"
+                                <Button Grid.Column="4" Command="{Binding InstallModArchiveCommand}" Style="{StaticResource PdaProfileToolButtonStyle}"
+                                        ToolTip="Установить мод из ZIP, 7Z или RAR" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Grid Width="23" Height="23">
+                                        <Path Data="M5,3.5 H14 L19,8.5 V20.5 H5 Z M14,3.5 V8.5 H19"
+                                              Stroke="{StaticResource TextBrush}" StrokeThickness="1.6" StrokeLineJoin="Round"/>
+                                        <TextBlock Text="ZIP" Foreground="{StaticResource AccentBrush}" FontSize="6" FontWeight="Bold"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                                    </Grid>
+                                </Button>
+                                <Button Grid.Column="5" Command="{Binding AddModCommand}" Style="{StaticResource PdaProfileToolButtonStyle}"
                                         ToolTip="Добавить папку мода" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Viewbox Width="23" Height="23">
                                         <Canvas Width="24" Height="24">

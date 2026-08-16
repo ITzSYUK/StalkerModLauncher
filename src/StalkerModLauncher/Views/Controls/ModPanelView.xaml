@@ -116,7 +116,7 @@
                            Margin="0,2,0,0"/>
             </StackPanel>
             <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
-                <ToggleButton Content="Автономный мод"
+                <ToggleButton Content="Автономная сборка"
                               IsChecked="{Binding SelectedProfile.IsStandalone}"
                               IsEnabled="{Binding CanEditSelectedProfile}"
                               Style="{StaticResource ProfileToggleButtonStyle}"
@@ -127,7 +127,7 @@
                     <ToggleButton.ToolTip>
                         <ToolTip>
                             <TextBlock TextWrapping="Wrap" MaxWidth="260">
-                                Автономный мод имеет свой движок и все файлы игры, запускается из своей папки
+                                Автономная сборка имеет свой движок и все файлы игры, запускается из своей папки
                             </TextBlock>
                         </ToolTip>
                     </ToggleButton.ToolTip>
@@ -165,6 +165,22 @@
                                   StrokeEndLineCap="Round"/>
                         </Canvas>
                     </Viewbox>
+                </Button>
+                <Button Command="{Binding InstallModArchiveCommand}"
+                        Style="{StaticResource ModToolbarIconButtonStyle}"
+                        ToolTip="Установить мод из ZIP, 7Z или RAR"
+                        ToolTipService.InitialShowDelay="600"
+                        ToolTipService.BetweenShowDelay="0"
+                        Margin="0,0,8,8">
+                    <Grid Width="26" Height="26">
+                        <Path Data="M5,3.5 H14 L19,8.5 V20.5 H5 Z M14,3.5 V8.5 H19"
+                              Stroke="{StaticResource TextBrush}" StrokeThickness="1.6"
+                              StrokeLineJoin="Round"/>
+                        <TextBlock Text="ZIP" Foreground="{StaticResource AccentBrush}"
+                                   FontSize="7" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Margin="0,5,0,0"/>
+                    </Grid>
                 </Button>
                 <Button Command="{Binding AddModCommand}"
                         Style="{StaticResource ModToolbarIconButtonStyle}"
@@ -209,7 +225,11 @@
                 </Style>
             </Border.Style>
             <Grid>
-                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
                 <Grid Margin="0,0,0,8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/><ColumnDefinition Width="215"/><ColumnDefinition Width="Auto"/>
@@ -329,6 +349,75 @@
                     </GridView>
                 </ListView.View>
             </ListView>
+
+                <Border Grid.Row="2"
+                        Style="{DynamicResource ModArchiveProgressPanelStyle}"
+                        Margin="0,8,0,0"
+                        Visibility="{Binding IsInstallingModArchive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding ModArchiveInstallProgressText}"
+                                   Foreground="{DynamicResource TextBrush}"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <ProgressBar Value="{Binding ModArchiveInstallProgress, Mode=OneWay}"
+                                     IsIndeterminate="{Binding IsModArchiveInstallProgressIndeterminate}"
+                                     Style="{DynamicResource ModArchiveProgressBarStyle}"
+                                     Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="2"
+                        Margin="0,8,0,0"
+                        Cursor="Hand">
+                    <Border.InputBindings>
+                        <MouseBinding MouseAction="LeftClick"
+                                      Command="{Binding DismissModArchiveInstallCompletedCommand}"/>
+                    </Border.InputBindings>
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource ModArchiveProgressPanelStyle}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding UsePdaTheme, ElementName=Root}" Value="True"/>
+                                        <Condition Binding="{Binding IsModArchiveInstallCompleted}" Value="True"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Image Grid.Column="0"
+                               Source="{DynamicResource RadiationOnImage}"
+                               Width="22"
+                               Height="22"
+                               Margin="0,1,9,0"
+                               VerticalAlignment="Top"/>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="МОД УСТАНОВЛЕН"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding InstalledModArchiveName}"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       FontWeight="SemiBold"
+                                       Margin="0,2,0,0"
+                                       TextWrapping="NoWrap"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding InstalledModArchivePath}"
+                                       Foreground="{DynamicResource MutedTextBrush}"
+                                       Margin="0,1,0,0"
+                                       TextWrapping="NoWrap"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding InstalledModArchiveDetails}"
+                                       Foreground="{DynamicResource MutedTextBrush}"
+                                       Margin="0,1,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
             </Grid>
         </Border>
     </Grid>

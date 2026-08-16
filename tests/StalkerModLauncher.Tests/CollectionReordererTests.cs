@@ -7,13 +7,13 @@ namespace StalkerModLauncher.Tests;
 public sealed class CollectionReordererTests
 {
     [Theory]
-    [InlineData(0, 3, new[] { "B", "C", "A", "D" })]
-    [InlineData(2, 0, new[] { "C", "A", "B", "D" })]
-    [InlineData(1, 4, new[] { "A", "C", "D", "B" })]
-    public void MoveToInsertionIndex_MovesToRequestedSlot(
+    [InlineData(0, 3, "B", "C", "A", "D")]
+    [InlineData(2, 0, "C", "A", "B", "D")]
+    [InlineData(1, 4, "A", "C", "D", "B")]
+    public void MoveToInsertionIndexMovesToRequestedSlot(
         int sourceIndex,
         int insertionIndex,
-        string[] expected)
+        params string[] expected)
     {
         var collection = new ObservableCollection<string>(["A", "B", "C", "D"]);
 
@@ -27,7 +27,7 @@ public sealed class CollectionReordererTests
     }
 
     [Fact]
-    public void MoveToInsertionIndex_DoesNothingForEquivalentSlot()
+    public void MoveToInsertionIndexDoesNothingForEquivalentSlot()
     {
         var collection = new ObservableCollection<string>(["A", "B", "C"]);
 

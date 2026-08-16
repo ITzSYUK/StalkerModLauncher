@@ -11,7 +11,6 @@ public sealed class AppServices : IDisposable
         Paths = new AppPaths();
         SettingsStore = new SettingsStore(Paths);
         DialogService = new DialogService();
-        WindowSystemIntegrationService = new WindowSystemIntegrationService();
         LauncherUpdateService = new LauncherUpdateService();
 
         var workspaceBuilder = new WorkspaceBuilder(Paths);
@@ -28,60 +27,41 @@ public sealed class AppServices : IDisposable
                 x86Runtime: new X86UsvfsHostRuntime()));
         }
 
-        ProfileDataPathResolver = new ProfileDataPathResolver();
         LaunchCoordinator = new LaunchCoordinator(
             new ProfileLauncher(
                 launchBackends,
                 profileManager: ProfileManager),
             new GameSessionTracker(),
-            new GameLaunchReadinessMonitor(ProfileDataPathResolver));
-        GameValidator = new GameInstallationValidator();
-        ProfileReadinessService = new ProfileReadinessService(GameValidator);
-        LaunchPreflightService = new LaunchPreflightService(GameValidator, ProfileManager);
+            new GameLaunchReadinessMonitor());
+        LaunchPreflightService = new LaunchPreflightService(ProfileManager);
         ApplicationLogService = new ApplicationLogService(Paths);
         ModConflictAnalyzer = new ModConflictAnalyzer();
-        ProfileTransferService = new ProfileTransferService();
-        ModScannerService = new ModScannerService();
-        ModListEditor = new ModListEditor();
-        Mo2ImportService = new Mo2ImportService();
-        ScreenshotScannerService = new ScreenshotScannerService(ProfileDataPathResolver);
+        ModArchiveInstaller = new ModArchiveInstaller();
         ScreenshotClipboardService = new ScreenshotClipboardService();
         ApProCatalogService = new ApProCatalogService();
-        GameExitDiagnosticsService = new GameExitDiagnosticsService(ProfileDataPathResolver);
-        ProfileHealthService = new ProfileHealthService(GameValidator, ProfileManager, ProfileDataPathResolver, WorkspaceManagementService);
+        ProfileHealthService = new ProfileHealthService(ProfileManager);
         WindowNavigationService = new WindowNavigationService(
             DialogService,
             SettingsStore,
             ProfileHealthService,
             WorkspaceManagementService,
-            ScreenshotScannerService,
             ScreenshotClipboardService,
             ApProCatalogService,
-            WindowSystemIntegrationService,
             LauncherUpdateService);
     }
 
     public AppPaths Paths { get; }
     public SettingsStore SettingsStore { get; }
     public DialogService DialogService { get; }
-    public WindowSystemIntegrationService WindowSystemIntegrationService { get; }
     public LauncherUpdateService LauncherUpdateService { get; }
     public ProfileManager ProfileManager { get; }
     public LaunchCoordinator LaunchCoordinator { get; }
-    public GameInstallationValidator GameValidator { get; }
-    public ProfileReadinessService ProfileReadinessService { get; }
     public LaunchPreflightService LaunchPreflightService { get; }
     public WorkspaceManagementService WorkspaceManagementService { get; }
     public ApplicationLogService ApplicationLogService { get; }
     public ModConflictAnalyzer ModConflictAnalyzer { get; }
-    public ProfileTransferService ProfileTransferService { get; }
-    public ModScannerService ModScannerService { get; }
-    public ModListEditor ModListEditor { get; }
-    public Mo2ImportService Mo2ImportService { get; }
-    public GameExitDiagnosticsService GameExitDiagnosticsService { get; }
+    public ModArchiveInstaller ModArchiveInstaller { get; }
     public ProfileHealthService ProfileHealthService { get; }
-    public ProfileDataPathResolver ProfileDataPathResolver { get; }
-    public ScreenshotScannerService ScreenshotScannerService { get; }
     public ScreenshotClipboardService ScreenshotClipboardService { get; }
     public ApProCatalogService ApProCatalogService { get; }
     public WindowNavigationService WindowNavigationService { get; }
@@ -95,13 +75,8 @@ public sealed class AppServices : IDisposable
             LaunchCoordinator,
             DialogService,
             ModConflictAnalyzer,
-            ProfileTransferService,
-            ModScannerService,
-            ModListEditor,
-            Mo2ImportService,
+            ModArchiveInstaller,
             ProfileManager,
-            GameExitDiagnosticsService,
-            ProfileReadinessService,
             LaunchPreflightService,
             ApplicationLogService);
     }

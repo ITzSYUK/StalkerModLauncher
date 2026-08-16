@@ -16,15 +16,11 @@ public sealed class ProfileHealthServiceTests : IDisposable
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var manager = new ProfileManager(paths, new FakeWorkspaceManager());
-        _service = new ProfileHealthService(
-            new GameInstallationValidator(),
-            manager,
-            new ProfileDataPathResolver(),
-            new WorkspaceManagementService(new WorkspaceBuilder(paths)));
+        _service = new ProfileHealthService(manager);
     }
 
     [Fact]
-    public async Task AnalyzeAsync_ReportsReadyOverlayProfile()
+    public async Task AnalyzeAsyncReportsReadyOverlayProfile()
     {
         var game = CreateGame();
         var mod = CreateFile("mod/gamedata/test.ltx");
@@ -40,11 +36,14 @@ public sealed class ProfileHealthServiceTests : IDisposable
 
         Assert.True(report.IsReady);
         Assert.Equal(0, report.ErrorCount);
-        Assert.Contains(report.Checks, check => check.Title == "Сохранения" && check.Details.StartsWith("1 файл"));
+        Assert.Contains(
+            report.Checks,
+            check => check.Title == "Сохранения" &&
+                     check.Details.StartsWith("1 файл", StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task AnalyzeAsync_CountsScopSavesButNotTheirMetadataOrPreview()
+    public async Task AnalyzeAsyncCountsScopSavesButNotTheirMetadataOrPreview()
     {
         var workspace = Path.Combine(_root, "ixray-workspace");
         CreateFileAtPath(Path.Combine(workspace, ".stalker-launcher-workspace"));
@@ -64,11 +63,11 @@ public sealed class ProfileHealthServiceTests : IDisposable
         Assert.Contains(
             report.Checks,
             check => check.Title == "Сохранения" &&
-                     check.Details.StartsWith("2 файл"));
+                     check.Details.StartsWith("2 файл", StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task AnalyzeAsync_RejectsOverlayProfileWithoutOwnGamePath()
+    public async Task AnalyzeAsyncRejectsOverlayProfileWithoutOwnGamePath()
     {
         _ = CreateGame();
         var profile = new ModProfile { GameInstallPath = string.Empty };
@@ -84,7 +83,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_ReportsMissingModAndExecutable()
+    public async Task AnalyzeAsyncReportsMissingModAndExecutable()
     {
         var profile = new ModProfile
         {
@@ -101,7 +100,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_TreatsMissingDisabledModAsWarning()
+    public async Task AnalyzeAsyncTreatsMissingDisabledModAsWarning()
     {
         var profile = new ModProfile { GameInstallPath = CreateGame() };
         profile.Mods.Add(new ModEntry
@@ -119,7 +118,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_FindsLatestLogAndCrashDump()
+    public async Task AnalyzeAsyncFindsLatestLogAndCrashDump()
     {
         var modRoot = Path.Combine(_root, "standalone");
         CreateFileAtPath(Path.Combine(modRoot, "bin_x64", "xrEngine.exe"));
@@ -144,7 +143,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_FindsStandaloneAppdataLogAndSaves()
+    public async Task AnalyzeAsyncFindsStandaloneAppdataLogAndSaves()
     {
         var modRoot = Path.Combine(_root, "cpogsr");
         CreateFileAtPath(Path.Combine(modRoot, "bin_x64", "xrEngine.exe"));
@@ -161,11 +160,14 @@ public sealed class ProfileHealthServiceTests : IDisposable
 
         Assert.Equal(log, report.LatestLogPath);
         Assert.Equal(Path.GetDirectoryName(save), report.SavedGamesPath);
-        Assert.Contains(report.Checks, check => check.Title == "Сохранения" && check.Details.StartsWith("1 файл"));
+        Assert.Contains(
+            report.Checks,
+            check => check.Title == "Сохранения" &&
+                     check.Details.StartsWith("1 файл", StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task AnalyzeAsync_UsesWorkspaceAsOverlayProfileFolder()
+    public async Task AnalyzeAsyncUsesWorkspaceAsOverlayProfileFolder()
     {
         var workspace = Path.Combine(_root, "workspace");
         Directory.CreateDirectory(workspace);
@@ -177,7 +179,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_DescribesUsvfsWithoutRequiringCurrentCache()
+    public async Task AnalyzeAsyncDescribesUsvfsWithoutRequiringCurrentCache()
     {
         var workspace = Path.Combine(_root, "usvfs-profile");
         CreateFileAtPath(Path.Combine(workspace, ".stalker-launcher-workspace"));
@@ -201,7 +203,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_ReportsLastEnabledModAsExecutableSource()
+    public async Task AnalyzeAsyncReportsLastEnabledModAsExecutableSource()
     {
         var game = CreateGame();
         var mainMod = Path.Combine(_root, "liquidation");
@@ -225,7 +227,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_CreatesLaunchPlanPreviewWithDetectedWorkingDirectory()
+    public async Task AnalyzeAsyncCreatesLaunchPlanPreviewWithDetectedWorkingDirectory()
     {
         var game = CreateGame();
         var mod = Path.Combine(_root, "ogsr-mod");
@@ -253,7 +255,7 @@ public sealed class ProfileHealthServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_IgnoresDisabledLaterExecutableProvider()
+    public async Task AnalyzeAsyncIgnoresDisabledLaterExecutableProvider()
     {
         var game = CreateGame();
         var mainMod = Path.Combine(_root, "main");

@@ -7,7 +7,7 @@ namespace StalkerModLauncher.Tests;
 public sealed class AppSettingsNormalizerTests
 {
     [Fact]
-    public void Normalize_ResetsUnknownLaunchBackendToLinkedWorkspace()
+    public void NormalizeResetsUnknownLaunchBackendToLinkedWorkspace()
     {
         var profile = new ModProfile { LaunchBackendKind = (LaunchBackendKind)999 };
         var settings = new AppSettings { Profiles = [profile] };
@@ -18,7 +18,7 @@ public sealed class AppSettingsNormalizerTests
     }
 
     [Fact]
-    public void Normalize_PreservesVirtualFileSystemSelectionWithoutRuntime()
+    public void NormalizePreservesVirtualFileSystemSelectionWithoutRuntime()
     {
         var profile = new ModProfile
         {
@@ -32,7 +32,7 @@ public sealed class AppSettingsNormalizerTests
     }
 
     [Fact]
-    public void Normalize_ClearsUnsupportedAnomalyUsvfsOverride()
+    public void NormalizeClearsUnsupportedAnomalyUsvfsOverride()
     {
         var profile = new ModProfile
         {
@@ -46,7 +46,7 @@ public sealed class AppSettingsNormalizerTests
     }
 
     [Fact]
-    public void Normalize_PreservesPdaInterfacePreference()
+    public void NormalizePreservesPdaInterfacePreference()
     {
         var settings = new AppSettings { IsPdaInterfaceEnabled = true };
 

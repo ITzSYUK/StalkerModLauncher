@@ -8,7 +8,6 @@ public sealed class ConflictExplorerViewModel : ObservableObject, IDisposable
 {
     private readonly ModProfile _profile;
     private readonly ModConflictAnalyzer _conflictAnalyzer;
-    private readonly FileLayerExplorerService _fileExplorer;
     private readonly DialogService _dialogService;
     private readonly Func<Task> _persistAsync;
     private readonly Action _changed;
@@ -29,7 +28,6 @@ public sealed class ConflictExplorerViewModel : ObservableObject, IDisposable
         ModProfile profile,
         ModEntry? selectedMod,
         ModConflictAnalyzer conflictAnalyzer,
-        FileLayerExplorerService fileExplorer,
         DialogService dialogService,
         Func<Task> persistAsync,
         Action changed)
@@ -38,7 +36,6 @@ public sealed class ConflictExplorerViewModel : ObservableObject, IDisposable
         _selectedMod = selectedMod ?? profile.Mods.FirstOrDefault();
         _selectedTabIndex = _selectedMod is null ? 1 : 0;
         _conflictAnalyzer = conflictAnalyzer;
-        _fileExplorer = fileExplorer;
         _dialogService = dialogService;
         _persistAsync = persistAsync;
         _changed = changed;
@@ -159,7 +156,11 @@ public sealed class ConflictExplorerViewModel : ObservableObject, IDisposable
 
     public async Task RefreshAsync()
     {
-        _refreshCancellation?.Cancel();
+        if (_refreshCancellation is not null)
+        {
+            await _refreshCancellation.CancelAsync();
+        }
+
         _refreshCancellation?.Dispose();
         _refreshCancellation = new CancellationTokenSource();
         var cancellationToken = _refreshCancellation.Token;
@@ -172,14 +173,14 @@ public sealed class ConflictExplorerViewModel : ObservableObject, IDisposable
                 ? Path.Combine(Path.GetTempPath(), "StalkerModLauncher", "analysis", _profile.Id)
                 : _profile.WorkspacePath;
             var plan = FileLayerPlan.CreateLinkedWorkspace(_profile.GameInstallPath, _profile, workspace);
-            var finalTreeTask = _fileExplorer.BuildFinalTreeAsync(plan, workspace, cancellationToken);
+            var finalTreeTask = FileLayerExplorerService.BuildFinalTreeAsync(plan, workspace, cancellationToken);
             var conflictTask = AnalyzeSelectedModAsync(cancellationToken);
             await Task.WhenAll(finalTreeTask, conflictTask);
 
             cancellationToken.ThrowIfCancellationRequested();
-            FinalFiles = finalTreeTask.Result;
+            FinalFiles = await finalTreeTask;
 
-            PopulateModFiles(conflictTask.Result);
+            PopulateModFiles(await conflictTask);
             ApplyFinalFileFilter();
             Summary = $"Итоговых файлов: {FinalFiles.Count:N0}; конфликтов путей: {FinalFiles.Count(file => file.HasConflict):N0}.";
         }

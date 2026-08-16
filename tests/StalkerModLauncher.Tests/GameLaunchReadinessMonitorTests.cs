@@ -6,7 +6,7 @@ namespace StalkerModLauncher.Tests;
 public sealed class GameLaunchReadinessMonitorTests
 {
     [Fact]
-    public void EvaluateReadySignal_AcceptsMainWindow()
+    public void EvaluateReadySignalAcceptsMainWindow()
     {
         var signal = GameLaunchReadinessMonitor.EvaluateReadySignal(
             [new GameProcessReadinessState(true, 4 * 1024 * 1024)],
@@ -16,7 +16,7 @@ public sealed class GameLaunchReadinessMonitorTests
     }
 
     [Fact]
-    public void EvaluateReadySignal_RejectsSmallProcessWithoutWindowOrLog()
+    public void EvaluateReadySignalRejectsSmallProcessWithoutWindowOrLog()
     {
         var signal = GameLaunchReadinessMonitor.EvaluateReadySignal(
             [new GameProcessReadinessState(false, 4 * 1024 * 1024)],
@@ -26,7 +26,7 @@ public sealed class GameLaunchReadinessMonitorTests
     }
 
     [Fact]
-    public void EvaluateReadySignal_AcceptsFreshGameLog()
+    public void EvaluateReadySignalAcceptsFreshGameLog()
     {
         var signal = GameLaunchReadinessMonitor.EvaluateReadySignal([], @"C:\profile\logs\xray.log");
 

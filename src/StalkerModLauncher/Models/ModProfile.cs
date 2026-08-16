@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Text.Json.Serialization;
 using StalkerModLauncher.Infrastructure;
 
@@ -23,6 +24,7 @@ public sealed class ModProfile : ObservableObject
     private string _workingDirectoryRelative = string.Empty;
     private string _gameInstallPath = string.Empty;
     private string _mo2OverwritePath = string.Empty;
+    private string _modInstallPath = string.Empty;
     private bool _isRunning;
     private ObservableCollection<ModEntry> _mods = new();
 
@@ -142,7 +144,7 @@ public sealed class ModProfile : ObservableObject
     }
 
     [JsonIgnore]
-    public string LastPlayedDisplay => _lastPlayedAt?.ToString("g") ?? "—";
+    public string LastPlayedDisplay => _lastPlayedAt?.ToString("g", CultureInfo.CurrentCulture) ?? "—";
 
     public string WorkspacePath
     {
@@ -166,6 +168,12 @@ public sealed class ModProfile : ObservableObject
     {
         get => _mo2OverwritePath;
         set => SetProperty(ref _mo2OverwritePath, value);
+    }
+
+    public string ModInstallPath
+    {
+        get => _modInstallPath;
+        set => SetProperty(ref _modInstallPath, value);
     }
 
     [JsonIgnore]

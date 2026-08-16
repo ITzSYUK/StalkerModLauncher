@@ -3,7 +3,7 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class ProfileTransferService
+public static class ProfileTransferService
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -11,21 +11,19 @@ public sealed class ProfileTransferService
         PropertyNameCaseInsensitive = true
     };
 
-    private readonly ProfileSettingsValidator _validator = new();
-
-    public void Export(string filePath, ModProfile profile)
+    public static void Export(string filePath, ModProfile profile)
     {
         var exported = ToExportedProfile(profile);
         File.WriteAllText(filePath, JsonSerializer.Serialize(exported, JsonOptions));
     }
 
-    public ModProfile Import(string filePath)
+    public static ModProfile Import(string filePath)
     {
         var json = File.ReadAllText(filePath);
         var exported = JsonSerializer.Deserialize<ExportedProfile>(json, JsonOptions)
             ?? throw new InvalidDataException("Файл профиля пуст или имеет неверный формат.");
 
-        var validation = _validator.Validate(exported.Name, exported.ExecutableRelativePath, _ => false);
+        var validation = ProfileSettingsValidator.Validate(exported.Name, exported.ExecutableRelativePath, _ => false);
         if (!validation.IsValid)
         {
             throw new InvalidDataException(string.Join(Environment.NewLine, validation.Messages));

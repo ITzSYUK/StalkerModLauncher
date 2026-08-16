@@ -4,9 +4,9 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-internal sealed class WorkspaceSourceScanner
+internal static class WorkspaceSourceScanner
 {
-    public WorkspaceSourceSnapshot Capture(FileLayerPlan plan, CancellationToken cancellationToken)
+    public static WorkspaceSourceSnapshot Capture(FileLayerPlan plan, CancellationToken cancellationToken)
     {
         var game = CaptureDirectory(plan.BaseGame.RootPath, cancellationToken);
         var mods = new Dictionary<string, DirectorySnapshot>();
@@ -24,7 +24,7 @@ internal sealed class WorkspaceSourceScanner
         return new WorkspaceSourceSnapshot(game, mods);
     }
 
-    public WorkspaceSourceSnapshot Capture(string gamePath, ModProfile profile, CancellationToken cancellationToken)
+    public static WorkspaceSourceSnapshot Capture(string gamePath, ModProfile profile, CancellationToken cancellationToken)
     {
         var game = CaptureDirectory(gamePath, cancellationToken);
         var mods = new Dictionary<string, DirectorySnapshot>();
@@ -42,7 +42,7 @@ internal sealed class WorkspaceSourceScanner
         return new WorkspaceSourceSnapshot(game, mods);
     }
 
-    public string CreateBuildSignature(
+    public static string CreateBuildSignature(
         string formatVersion,
         ModProfile profile,
         WorkspaceSourceSnapshot snapshot,

@@ -12,7 +12,7 @@ public sealed class LinkedWorkspaceLaunchBackendTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public async Task PrepareAsync_BuildsWorkspaceAndReturnsLaunchPlan()
+    public async Task PrepareAsyncBuildsWorkspaceAndReturnsLaunchPlan()
     {
         var game = Path.Combine(_root, "game");
         var mod = Path.Combine(_root, "mods", "patch");

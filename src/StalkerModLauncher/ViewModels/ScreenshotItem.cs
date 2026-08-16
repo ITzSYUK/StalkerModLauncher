@@ -5,9 +5,10 @@ namespace StalkerModLauncher.ViewModels;
 
 public sealed class ScreenshotItem
 {
+    public const double ThumbnailWidth = 240;
+
     public string FilePath { get; }
     public BitmapImage Thumbnail { get; }
-    public double ThumbnailWidth => 240;
     public double ThumbnailHeight { get; }
 
     public ScreenshotItem(string filePath)

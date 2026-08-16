@@ -11,7 +11,7 @@ public sealed class Mo2ImportServiceTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void DiscoverAndPreview_ImportsFoldersOrderStateGroupsAndOverwrite()
+    public void DiscoverAndPreviewImportsFoldersOrderStateGroupsAndOverwrite()
     {
         var source = CreatePortableMo2(
             "+High",
@@ -22,9 +22,8 @@ public sealed class Mo2ImportServiceTests : IDisposable
         CreateMod(source.ModsPath, "Low", @"gamedata\configs\low.ltx");
         CreateFile(Path.Combine(source.OverwritePath, "gamedata", "configs", "generated.ltx"));
 
-        var service = new Mo2ImportService();
-        var discovery = service.Discover(source.RootPath);
-        var preview = service.CreatePreview(
+        var discovery = Mo2ImportService.Discover(source.RootPath);
+        var preview = Mo2ImportService.CreatePreview(
             discovery,
             Assert.Single(discovery.Profiles),
             discovery.GamePath,
@@ -41,7 +40,7 @@ public sealed class Mo2ImportServiceTests : IDisposable
         Assert.Equal("Gameplay", preview.Entries.Single(entry => entry.Name == "High").GroupName);
         Assert.Equal(string.Empty, preview.Entries.Single(entry => entry.Name == "Low").GroupName);
 
-        var profile = service.CreateProfile(preview, "Imported", includeOverwrite: true);
+        var profile = Mo2ImportService.CreateProfile(preview, "Imported", includeOverwrite: true);
 
         Assert.Equal("Imported", profile.Name);
         Assert.Equal(source.GamePath, profile.GameInstallPath);
@@ -56,7 +55,7 @@ public sealed class Mo2ImportServiceTests : IDisposable
     }
 
     [Fact]
-    public void CreatePreview_AssignsSeparatorToModsBelowItInMo2Interface()
+    public void CreatePreviewAssignsSeparatorToModsBelowItInMo2Interface()
     {
         var source = CreatePortableMo2(
             "+GroupedThree",
@@ -69,9 +68,8 @@ public sealed class Mo2ImportServiceTests : IDisposable
         CreateMod(source.ModsPath, "GroupedThree", @"gamedata\three.txt");
         CreateMod(source.ModsPath, "Ungrouped", @"gamedata\ungrouped.txt");
 
-        var service = new Mo2ImportService();
-        var discovery = service.Discover(source.RootPath);
-        var preview = service.CreatePreview(
+        var discovery = Mo2ImportService.Discover(source.RootPath);
+        var preview = Mo2ImportService.CreatePreview(
             discovery,
             Assert.Single(discovery.Profiles),
             discovery.GamePath,
@@ -85,13 +83,13 @@ public sealed class Mo2ImportServiceTests : IDisposable
     }
 
     [Fact]
-    public void Discover_FromModListFindsSiblingProfilesAndConfiguredPaths()
+    public void DiscoverFromModListFindsSiblingProfilesAndConfiguredPaths()
     {
         var source = CreatePortableMo2("+One");
         var secondProfile = Directory.CreateDirectory(Path.Combine(source.RootPath, "profiles", "Second"));
         File.WriteAllText(Path.Combine(secondProfile.FullName, "modlist.txt"), "+Two");
 
-        var discovery = new Mo2ImportService().Discover(source.ModListPath);
+        var discovery = Mo2ImportService.Discover(source.ModListPath);
 
         Assert.Equal(2, discovery.Profiles.Count);
         Assert.Equal("Default", discovery.SelectedProfile?.Name);
@@ -100,15 +98,14 @@ public sealed class Mo2ImportServiceTests : IDisposable
     }
 
     [Fact]
-    public void Preview_ReportsAmbiguousNormalizedFolderMatches()
+    public void PreviewReportsAmbiguousNormalizedFolderMatches()
     {
         var source = CreatePortableMo2("+Foo_1");
         Directory.CreateDirectory(Path.Combine(source.ModsPath, "Foo-1"));
         Directory.CreateDirectory(Path.Combine(source.ModsPath, "Foo 1"));
-        var service = new Mo2ImportService();
-        var discovery = service.Discover(source.RootPath);
+        var discovery = Mo2ImportService.Discover(source.RootPath);
 
-        var preview = service.CreatePreview(
+        var preview = Mo2ImportService.CreatePreview(
             discovery,
             Assert.Single(discovery.Profiles),
             discovery.GamePath,
@@ -122,14 +119,13 @@ public sealed class Mo2ImportServiceTests : IDisposable
     }
 
     [Fact]
-    public void Preview_AllowsResolvingAmbiguousFolderBeforeProfileCreation()
+    public void PreviewAllowsResolvingAmbiguousFolderBeforeProfileCreation()
     {
         var source = CreatePortableMo2("+Foo_1");
         var firstCandidate = Directory.CreateDirectory(Path.Combine(source.ModsPath, "Foo-1")).FullName;
         var secondCandidate = Directory.CreateDirectory(Path.Combine(source.ModsPath, "Foo 1")).FullName;
-        var service = new Mo2ImportService();
-        var discovery = service.Discover(source.RootPath);
-        var preview = service.CreatePreview(
+        var discovery = Mo2ImportService.Discover(source.RootPath);
+        var preview = Mo2ImportService.CreatePreview(
             discovery,
             Assert.Single(discovery.Profiles),
             discovery.GamePath,
@@ -138,7 +134,7 @@ public sealed class Mo2ImportServiceTests : IDisposable
         var entry = Assert.Single(preview.Entries);
 
         Assert.Throws<InvalidOperationException>(() =>
-            service.CreateProfile(preview, "Unresolved", includeOverwrite: false));
+            Mo2ImportService.CreateProfile(preview, "Unresolved", includeOverwrite: false));
 
         entry.SourcePath = secondCandidate;
 
@@ -147,27 +143,26 @@ public sealed class Mo2ImportServiceTests : IDisposable
         Assert.Equal("Выбрано вручную", entry.Status);
         Assert.Equal(0, preview.AmbiguousModCount);
         Assert.Equal(1, preview.FoundModCount);
-        var profile = service.CreateProfile(preview, "Resolved", includeOverwrite: false);
+        var profile = Mo2ImportService.CreateProfile(preview, "Resolved", includeOverwrite: false);
         Assert.Equal(secondCandidate, Assert.Single(profile.Mods).SourcePath);
         Assert.NotEqual(firstCandidate, profile.Mods[0].SourcePath);
     }
 
     [Fact]
-    public void CreateProfile_CanExcludeOverwrite()
+    public void CreateProfileCanExcludeOverwrite()
     {
         var source = CreatePortableMo2("+One");
         CreateMod(source.ModsPath, "One", @"gamedata\one.txt");
         CreateFile(Path.Combine(source.OverwritePath, "generated.txt"));
-        var service = new Mo2ImportService();
-        var discovery = service.Discover(source.RootPath);
-        var preview = service.CreatePreview(
+        var discovery = Mo2ImportService.Discover(source.RootPath);
+        var preview = Mo2ImportService.CreatePreview(
             discovery,
             Assert.Single(discovery.Profiles),
             discovery.GamePath,
             discovery.ModsPath,
             discovery.OverwritePath);
 
-        var profile = service.CreateProfile(preview, "Without overwrite", includeOverwrite: false);
+        var profile = Mo2ImportService.CreateProfile(preview, "Without overwrite", includeOverwrite: false);
 
         Assert.Equal(["One"], profile.Mods.Select(mod => mod.Name));
         Assert.Empty(profile.Mo2OverwritePath);

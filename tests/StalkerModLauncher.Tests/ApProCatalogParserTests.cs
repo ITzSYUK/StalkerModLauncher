@@ -10,7 +10,7 @@ namespace StalkerModLauncher.Tests;
 public sealed class ApProCatalogParserTests
 {
     [Fact]
-    public void Parse_ExtractsFeaturedEntryDetails()
+    public void ParseExtractsFeaturedEntryDetails()
     {
         const string html = """
             <article class='cCmsCategoryFeaturedEntry ipsClear'>
@@ -36,7 +36,7 @@ public sealed class ApProCatalogParserTests
     }
 
     [Fact]
-    public void Parse_HandlesNestedAndImperfectHtml()
+    public void ParseHandlesNestedAndImperfectHtml()
     {
         const string html = """
             <article class="cCmsCategoryFeaturedEntry">
@@ -57,13 +57,13 @@ public sealed class ApProCatalogParserTests
     [InlineData(ApProCatalogCategory.ShadowOfChernobyl, "https://ap-pro.ru/stuff/ten_chernobylja/")]
     [InlineData(ApProCatalogCategory.ClearSky, "https://ap-pro.ru/stuff/chistoe_nebo/")]
     [InlineData(ApProCatalogCategory.CallOfPripyat, "https://ap-pro.ru/stuff/zov_pripjati/")]
-    public void GetCategoryUrl_ReturnsOfficialCategoryUrl(ApProCatalogCategory category, string expectedUrl)
+    public void GetCategoryUrlReturnsOfficialCategoryUrl(ApProCatalogCategory category, string expectedUrl)
     {
         Assert.Equal(expectedUrl, ApProCatalogService.GetCategoryUrl(category));
     }
 
     [Fact]
-    public void GetTotalPageCount_ReadsPaginationMetadata()
+    public void GetTotalPageCountReadsPaginationMetadata()
     {
         const string html = "<ul class='ipsPagination' data-pages='10'><li>...</li></ul>";
 
@@ -71,7 +71,7 @@ public sealed class ApProCatalogParserTests
     }
 
     [Fact]
-    public void GetPageUrl_ReturnsExpectedUrlForFollowingPage()
+    public void GetPageUrlReturnsExpectedUrlForFollowingPage()
     {
         var url = ApProCatalogService.GetPageUrl(ApProCatalogCategory.ShadowOfChernobyl, 2);
 
@@ -79,7 +79,7 @@ public sealed class ApProCatalogParserTests
     }
 
     [Fact]
-    public async Task LoadPageAsync_UsesHonestLauncherUserAgent()
+    public async Task LoadPageAsyncUsesHonestLauncherUserAgent()
     {
         string? userAgent = null;
         var handler = new StubHttpMessageHandler((request, _) =>
@@ -98,7 +98,7 @@ public sealed class ApProCatalogParserTests
     }
 
     [Fact]
-    public async Task LoadPageAsync_RetriesOnceAfterTooManyRequests()
+    public async Task LoadPageAsyncRetriesOnceAfterTooManyRequests()
     {
         var requests = 0;
         var handler = new StubHttpMessageHandler((_, _) =>
@@ -120,7 +120,7 @@ public sealed class ApProCatalogParserTests
     }
 
     [Fact]
-    public async Task LoadPageAsync_LeavesMinimumIntervalBetweenPages()
+    public async Task LoadPageAsyncLeavesMinimumIntervalBetweenPages()
     {
         var requestTimes = new ConcurrentQueue<TimeSpan>();
         var stopwatch = Stopwatch.StartNew();
@@ -140,7 +140,7 @@ public sealed class ApProCatalogParserTests
     }
 
     [Fact]
-    public async Task DownloadThumbnailAsync_LimitsConcurrentRequests()
+    public async Task DownloadThumbnailAsyncLimitsConcurrentRequests()
     {
         var activeRequests = 0;
         var maximumActiveRequests = 0;
@@ -175,7 +175,7 @@ public sealed class ApProCatalogParserTests
     }
 
     [Fact]
-    public async Task DownloadThumbnailAsync_RejectsOversizedResponse()
+    public async Task DownloadThumbnailAsyncRejectsOversizedResponse()
     {
         var handler = new StubHttpMessageHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
         {
@@ -192,7 +192,7 @@ public sealed class ApProCatalogParserTests
     }
 
     [Fact]
-    public async Task LoadPageAsync_RejectsOversizedResponse()
+    public async Task LoadPageAsyncRejectsOversizedResponse()
     {
         var handler = new StubHttpMessageHandler((_, _) => Task.FromResult(CreateResponse(
             HttpStatusCode.OK,
@@ -209,7 +209,7 @@ public sealed class ApProCatalogParserTests
     }
 
     [Fact]
-    public async Task LoadPageAsync_CacheSupportsConcurrentRefreshes()
+    public async Task LoadPageAsyncCacheSupportsConcurrentRefreshes()
     {
         var handler = new StubHttpMessageHandler(async (_, cancellationToken) =>
         {

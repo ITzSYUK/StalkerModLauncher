@@ -8,7 +8,6 @@ namespace StalkerModLauncher.ViewModels;
 
 public sealed class ProfileCreationViewModel : ObservableObject
 {
-    private readonly DialogService _dialogService;
     private int _step = 1;
     private string _name = "Новый профиль";
     private bool _isStandalone;
@@ -20,9 +19,8 @@ public sealed class ProfileCreationViewModel : ObservableObject
     private string _executableDetectionMessage = string.Empty;
     private bool _isMessageWarning;
 
-    public ProfileCreationViewModel(DialogService dialogService)
+    public ProfileCreationViewModel()
     {
-        _dialogService = dialogService;
         NextCommand = new RelayCommand(Next, () => Step < 3);
         BackCommand = new RelayCommand(Back, () => Step > 1);
         FinishCommand = new RelayCommand(Finish, () => Step == 3);
@@ -127,11 +125,11 @@ public sealed class ProfileCreationViewModel : ObservableObject
         : "Добавьте папки модов. Моды ниже в списке имеют больший приоритет.";
 
     public string ProfileTypeDescription => IsStandalone
-        ? "Автономный мод уже содержит движок и запускается прямо из своей папки."
+        ? "Автономная сборка уже содержит движок и запускается прямо из своей папки."
         : "Обычный профиль объединяет базовую игру и включённые модификации в изолированном workspace.";
 
     public string ProfileTypeLabel => IsStandalone
-        ? "Автономная игра или мод"
+        ? "Автономная сборка"
         : "Мод поверх базовой игры";
 
     public string SourceStepDescription => IsStandalone
@@ -282,7 +280,7 @@ public sealed class ProfileCreationViewModel : ObservableObject
         var profile = new ModProfile
         {
             Name = Name.Trim(),
-            Description = IsStandalone ? "Автономный мод" : "Мод поверх базовой игры",
+            Description = IsStandalone ? "Автономная сборка" : "Мод поверх базовой игры",
             IsStandalone = IsStandalone,
             GameInstallPath = IsStandalone ? string.Empty : GamePath.Trim(),
             ExecutableRelativePath = ExecutableRelativePath.Trim(),
@@ -350,7 +348,7 @@ public sealed class ProfileCreationViewModel : ObservableObject
 
     private void BrowseGame()
     {
-        var selected = _dialogService.PickFolder("Выберите папку базовой игры", GamePath);
+        var selected = DialogService.PickFolder("Выберите папку базовой игры", GamePath);
         if (selected is not null)
         {
             GamePath = selected;
@@ -360,7 +358,7 @@ public sealed class ProfileCreationViewModel : ObservableObject
 
     private void BrowseStandalone()
     {
-        var selected = _dialogService.PickFolder("Выберите папку автономной игры или мода", StandalonePath);
+        var selected = DialogService.PickFolder("Выберите папку автономной игры или мода", StandalonePath);
         if (selected is null)
         {
             return;
@@ -372,7 +370,7 @@ public sealed class ProfileCreationViewModel : ObservableObject
 
     private void AddMod()
     {
-        var selected = _dialogService.PickFolder(IsStandalone ? "Выберите папку автономного мода" : "Выберите папку мода");
+        var selected = DialogService.PickFolder(IsStandalone ? "Выберите папку автономной сборки" : "Выберите папку мода");
         if (selected is null)
         {
             return;
@@ -428,7 +426,7 @@ public sealed class ProfileCreationViewModel : ObservableObject
             initial = GamePath;
         }
 
-        var selected = _dialogService.PickExecutable("Выберите запускаемый файл", initial);
+        var selected = DialogService.PickExecutable("Выберите запускаемый файл", initial);
         if (selected is null)
         {
             return;

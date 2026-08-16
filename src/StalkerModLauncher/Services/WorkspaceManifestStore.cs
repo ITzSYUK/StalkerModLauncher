@@ -3,12 +3,12 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-internal sealed class WorkspaceManifestStore
+internal static class WorkspaceManifestStore
 {
     private const string ManifestFileName = "build-manifest.json";
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    public string? TryGetCachedExecutable(
+    public static string? TryGetCachedExecutable(
         string workspaceRoot,
         string currentWorkspace,
         ModProfile profile,
@@ -54,7 +54,7 @@ internal sealed class WorkspaceManifestStore
         }
     }
 
-    public void Write(string workspaceRoot, string buildSignature, WorkspaceBuildStats stats)
+    public static void Write(string workspaceRoot, string buildSignature, WorkspaceBuildStats stats)
     {
         var manifest = new WorkspaceBuildManifest
         {

@@ -2,7 +2,7 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class OverlayManifestBuilder
+public static class OverlayManifestBuilder
 {
     private static readonly string[] ImportantSystemFiles =
     [
@@ -11,16 +11,14 @@ public sealed class OverlayManifestBuilder
         Path.Combine("gamedata", "configs", "localization.ltx")
     ];
 
-    private readonly ProfileLaunchPlanResolver _launchPlanResolver = new();
-
-    public OverlayManifest BuildLinkedWorkspace(
+    public static OverlayManifest BuildLinkedWorkspace(
         ModProfile profile,
         FileLayerPlan layerPlan,
         string profileWorkspace,
         bool includeOverwrites = false,
         CancellationToken cancellationToken = default)
     {
-        var launch = _launchPlanResolver.PreviewLinkedWorkspace(profile, layerPlan, profileWorkspace);
+        var launch = ProfileLaunchPlanResolver.PreviewLinkedWorkspace(profile, layerPlan, profileWorkspace);
         return Build(
             layerPlan,
             profileWorkspace,
@@ -29,14 +27,14 @@ public sealed class OverlayManifestBuilder
             cancellationToken);
     }
 
-    public OverlayManifest BuildVirtualFileSystem(
+    public static OverlayManifest BuildVirtualFileSystem(
         ModProfile profile,
         FileLayerPlan layerPlan,
         string profileWorkspace,
         bool includeOverwrites = false,
         CancellationToken cancellationToken = default)
     {
-        var launch = _launchPlanResolver.PreviewVirtualFileSystem(profile, layerPlan);
+        var launch = ProfileLaunchPlanResolver.PreviewVirtualFileSystem(profile, layerPlan);
         return Build(
             layerPlan,
             profileWorkspace,

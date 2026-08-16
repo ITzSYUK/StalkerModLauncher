@@ -31,7 +31,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_OverlaysModsInOrderWithoutChangingSources()
+    public async Task BuildAsyncOverlaysModsInOrderWithoutChangingSources()
     {
         var firstMod = CreateMod("first", "first");
         var secondMod = CreateMod("second", "second");
@@ -46,7 +46,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_SkipsProfileExcludedConflictFile()
+    public async Task BuildAsyncSkipsProfileExcludedConflictFile()
     {
         var firstMod = CreateMod("excluded-first", "first");
         var secondMod = CreateMod("excluded-second", "second");
@@ -60,7 +60,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_LinksModConfigurationWithoutCopyingIt()
+    public async Task BuildAsyncLinksModConfigurationWithoutCopyingIt()
     {
         var modPath = CreateMod("mod", "mod source");
         var profile = CreateProfile(modPath);
@@ -73,7 +73,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_RebuildsReadOnlyModFilesWithoutChangingTheirAttributes()
+    public async Task BuildAsyncRebuildsReadOnlyModFilesWithoutChangingTheirAttributes()
     {
         var modPath = CreateMod("read-only", "mod source");
         var sourceFile = Path.Combine(modPath, "gamedata", "config", "shared.ltx");
@@ -105,7 +105,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_RepairsLegacyReadOnlyHardLinkBeforeRebuild()
+    public async Task BuildAsyncRepairsLegacyReadOnlyHardLinkBeforeRebuild()
     {
         var modPath = CreateMod("legacy-read-only", "mod source");
         var sourceFile = Path.Combine(modPath, "gamedata", "config", "shared.ltx");
@@ -137,7 +137,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_RewritesOnlyWorkspaceFsgameAndKeepsProfileUserData()
+    public async Task BuildAsyncRewritesOnlyWorkspaceFsgameAndKeepsProfileUserData()
     {
         var modPath = CreateMod("mod", "mod");
         var profile = CreateProfile(modPath);
@@ -157,7 +157,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_SeedsUserSettingsFromHighestPriorityModAppData()
+    public async Task BuildAsyncSeedsUserSettingsFromHighestPriorityModAppData()
     {
         var firstMod = CreateMod("first-user-settings", "first");
         var fix = CreateMod("fix-user-settings", "fix");
@@ -175,7 +175,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_UpgradesUnchangedBaseUserSettingsWhenFixIsAdded()
+    public async Task BuildAsyncUpgradesUnchangedBaseUserSettingsWhenFixIsAdded()
     {
         var profile = CreateProfile();
         var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
@@ -199,7 +199,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_SeedsMissingProfileShaderCacheAndRestoresItAfterDeletion()
+    public async Task BuildAsyncSeedsMissingProfileShaderCacheAndRestoresItAfterDeletion()
     {
         CreateFile(
             _gamePath,
@@ -229,7 +229,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_WritesFsgameWithWindows1251ForCyrillicWorkspacePath()
+    public async Task BuildAsyncWritesFsgameWithWindows1251ForCyrillicWorkspacePath()
     {
         var profile = CreateProfile(CreateMod("mod", "mod"));
         profile.Name = "Аномали";
@@ -245,7 +245,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_RewritesCachedUtf8FsgameWithAsciiProfileDataPath()
+    public async Task BuildAsyncRewritesCachedUtf8FsgameWithAsciiProfileDataPath()
     {
         var profile = CreateProfile(CreateMod("mod", "mod"));
         profile.Name = "Мой мод";
@@ -265,7 +265,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_DoesNotRestoreLegacyStoredFsgame()
+    public async Task BuildAsyncDoesNotRestoreLegacyStoredFsgame()
     {
         var modPath = CreateMod("mod", "mod");
         var profile = CreateProfile(modPath);
@@ -295,7 +295,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_PreservesGeneratedAnomalyLocalizationFileAcrossRebuild()
+    public async Task BuildAsyncPreservesGeneratedAnomalyLocalizationFileAcrossRebuild()
     {
         var modPath = CreateMod("mod", "mod");
         var profile = CreateProfile(modPath);
@@ -332,7 +332,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_UsesCacheUntilOverlayInputChanges()
+    public async Task BuildAsyncUsesCacheUntilOverlayInputChanges()
     {
         var modPath = CreateMod("mod", "first");
         var profile = CreateProfile(modPath);
@@ -353,7 +353,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_RebuildsWorkspaceWhenCachedExecutableIsMissing()
+    public async Task BuildAsyncRebuildsWorkspaceWhenCachedExecutableIsMissing()
     {
         var profile = CreateProfile(CreateMod("mod", "mod"));
         var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
@@ -368,7 +368,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task ClearProfileWorkspaceCache_RestoresMissingMarkerForGeneratedWorkspace()
+    public async Task ClearProfileWorkspaceCacheRestoresMissingMarkerForGeneratedWorkspace()
     {
         var profile = CreateProfile(CreateMod("mod", "mod"));
         var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
@@ -385,7 +385,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public void DeleteProfileWorkspace_RestoresMarkerForRenamedLegacyUsvfsWorkspace()
+    public void DeleteProfileWorkspaceRestoresMarkerForRenamedLegacyUsvfsWorkspace()
     {
         var profile = CreateProfile();
         var oldName = "Аномали — копия";
@@ -402,7 +402,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public void EnsureProfileWorkspace_MigratesLegacyCyrillicFolderToAsciiPath()
+    public void EnsureProfileWorkspaceMigratesLegacyCyrillicFolderToAsciiPath()
     {
         var profile = CreateProfile();
         var legacyWorkspace = Path.Combine(_workspaceRoot, $"Старое имя-{profile.Id[..8]}");
@@ -419,7 +419,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public void DeleteProfileWorkspace_RemovesAllLegacyUsvfsFoldersWithSameProfileId()
+    public void DeleteProfileWorkspaceRemovesAllLegacyUsvfsFoldersWithSameProfileId()
     {
         var profile = CreateProfile();
         var first = Path.Combine(_workspaceRoot, $"Профиль 1-{profile.Id[..8]}");
@@ -435,7 +435,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_DoesNotFallbackToDedicatedServerExecutable()
+    public async Task BuildAsyncDoesNotFallbackToDedicatedServerExecutable()
     {
         File.Delete(Path.Combine(_gamePath, "bin", "xr_3da.exe"));
         CreateFile(_gamePath, "bin/dedicated/XR_3DA.exe", "dedicated server");
@@ -448,7 +448,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public void DeleteProfileWorkspace_RejectsUnmanagedDirectoryEvenWithMarker()
+    public void DeleteProfileWorkspaceRejectsUnmanagedDirectoryEvenWithMarker()
     {
         var outside = Path.Combine(_root, "outside");
         CreateFile(outside, ".stalker-launcher-workspace", "fake marker");
@@ -460,7 +460,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_RejectsManagedWorkspaceRootAsProfileWorkspace()
+    public async Task BuildAsyncRejectsManagedWorkspaceRootAsProfileWorkspace()
     {
         var profile = CreateProfile(CreateMod("mod", "mod"));
         profile.WorkspacePath = _workspaceRoot;
@@ -472,7 +472,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_ReportsMissingEnabledModFolderClearly()
+    public async Task BuildAsyncReportsMissingEnabledModFolderClearly()
     {
         var missingMod = Path.Combine(_root, "mods", "missing");
         var profile = CreateProfile(missingMod);
@@ -485,7 +485,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_RejectsEmptyOverlayGamePathBeforeCreatingWorkspace()
+    public async Task BuildAsyncRejectsEmptyOverlayGamePathBeforeCreatingWorkspace()
     {
         var profile = CreateProfile(CreateMod("mod", "mod"));
 
@@ -498,7 +498,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_CancellationDoesNotChangeSourcesOrWriteManifest()
+    public async Task BuildAsyncCancellationDoesNotChangeSourcesOrWriteManifest()
     {
         var modPath = CreateMod("mod", "mod source");
         var profile = CreateProfile(modPath);
@@ -512,7 +512,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
         });
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => _builder.BuildAsync(_gamePath, profile, progress, cancellation.Token));
+            () => _builder.BuildAsync(_gamePath, profile, progress, cancellationToken: cancellation.Token));
 
         Assert.Equal("base", File.ReadAllText(Path.Combine(_gamePath, "gamedata", "config", "shared.ltx")));
         Assert.Equal("mod source", File.ReadAllText(Path.Combine(modPath, "gamedata", "config", "shared.ltx")));
@@ -521,7 +521,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_DoesNotMutateBoundProfilePropertiesOnWorkerThread()
+    public async Task BuildAsyncDoesNotMutateBoundProfilePropertiesOnWorkerThread()
     {
         var profile = CreateProfile(CreateMod("mod", "mod"));
         var originalExecutable = profile.ExecutableRelativePath;
@@ -535,7 +535,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_RefreshesUnusedGeneratedWorkspaceAfterProfileRename()
+    public async Task BuildAsyncRefreshesUnusedGeneratedWorkspaceAfterProfileRename()
     {
         var profile = CreateProfile(CreateMod("mod", "mod"));
         profile.WorkspacePath = Path.Combine(_workspaceRoot, $"Profile 6-{profile.Id[..8]}");
@@ -548,7 +548,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_UsesManuallyPinnedExecutableSourceOverHigherPriorityMod()
+    public async Task BuildAsyncUsesManuallyPinnedExecutableSourceOverHigherPriorityMod()
     {
         var mainMod = CreateMod("main", "main");
         var patch = CreateMod("patch", "patch");
@@ -565,7 +565,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildAsync_BlocksLaunchWhenFsgameCannotIsolateProfileData()
+    public async Task BuildAsyncBlocksLaunchWhenFsgameCannotIsolateProfileData()
     {
         var sourceFsgame = Path.Combine(_gamePath, "fsgame.ltx");
         const string original = "$game_data$ = true | true | gamedata\\";
@@ -580,7 +580,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
         Assert.Equal(original, File.ReadAllText(sourceFsgame));
     }
 
-    private ModProfile CreateProfile(params string[] modPaths)
+    private static ModProfile CreateProfile(params string[] modPaths)
     {
         var profile = new ModProfile
         {

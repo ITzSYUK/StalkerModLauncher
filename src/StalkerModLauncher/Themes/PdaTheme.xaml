@@ -16,6 +16,10 @@
     <SolidColorBrush x:Key="ModSelectionBrush" Color="#263544"/>
     <SolidColorBrush x:Key="ModRelatedBrush" Color="#1B2B35"/>
     <SolidColorBrush x:Key="ModRelatedStrokeBrush" Color="#557080"/>
+    <SolidColorBrush x:Key="ModActionShadeBrush" Color="#CC000000"/>
+    <SolidColorBrush x:Key="ModArchiveProgressPanelBrush" Color="#101923"/>
+    <SolidColorBrush x:Key="ModArchiveProgressTrackBrush" Color="#090E16"/>
+    <SolidColorBrush x:Key="ModArchiveProgressFillBrush" Color="#CF962C"/>
 
     <Style x:Key="PdaBaseButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="#151D28"/>
@@ -73,6 +77,11 @@
         <Setter Property="Padding" Value="9,3"/>
         <Setter Property="Margin" Value="2,0"/>
         <Setter Property="MinHeight" Value="26"/>
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.72"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource PdaBaseButtonStyle}">

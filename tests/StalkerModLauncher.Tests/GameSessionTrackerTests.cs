@@ -6,7 +6,7 @@ namespace StalkerModLauncher.Tests;
 public sealed class GameSessionTrackerTests
 {
     [Fact]
-    public void CreateResult_RecordsSessionsAtLeastFiveSecondsLong()
+    public void CreateResultRecordsSessionsAtLeastFiveSecondsLong()
     {
         var started = new DateTime(2026, 6, 7, 10, 0, 0, DateTimeKind.Utc);
 
@@ -19,7 +19,7 @@ public sealed class GameSessionTrackerTests
     }
 
     [Fact]
-    public void CreateResult_IgnoresVeryShortSessions()
+    public void CreateResultIgnoresVeryShortSessions()
     {
         var started = new DateTime(2026, 6, 7, 10, 0, 0, DateTimeKind.Utc);
 
@@ -29,7 +29,7 @@ public sealed class GameSessionTrackerTests
     }
 
     [Fact]
-    public void CreateResult_ClampsNegativeDuration()
+    public void CreateResultClampsNegativeDuration()
     {
         var started = new DateTime(2026, 6, 7, 10, 0, 0, DateTimeKind.Utc);
 

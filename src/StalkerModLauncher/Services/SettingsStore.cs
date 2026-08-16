@@ -195,7 +195,7 @@ public sealed class SettingsStore : IDisposable
         }
     }
 
-    private IReadOnlyList<RecoveredSettingsFile> PreserveInvalidFiles(
+    private List<RecoveredSettingsFile> PreserveInvalidFiles(
         params SettingsFileLoadResult[] results)
     {
         var invalidFiles = results

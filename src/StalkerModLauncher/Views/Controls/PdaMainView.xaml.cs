@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -46,6 +47,13 @@ public partial class PdaMainView : UserControl
         PageStatusText.Text = status;
         ProfileTypeIcon.Visibility = showProfileTypeIcon ? Visibility.Visible : Visibility.Collapsed;
         PageSectionIcon.Visibility = showProfileTypeIcon ? Visibility.Collapsed : Visibility.Visible;
+        SetActiveNavigationButton(page switch
+        {
+            PdaScreenshotsView => ScreenshotsNavButton,
+            PdaHealthView => StatusNavButton,
+            PdaProfileSettingsView => SettingsNavButton,
+            _ => null
+        });
     }
 
     public void ShowProfilePage()
@@ -60,6 +68,14 @@ public partial class PdaMainView : UserControl
         PageStatusText.SetBinding(TextBlock.TextProperty, new Binding("ValidationSummary"));
         ProfileTypeIcon.Visibility = Visibility.Visible;
         PageSectionIcon.Visibility = Visibility.Collapsed;
+        SetActiveNavigationButton(null);
+    }
+
+    private void SetActiveNavigationButton(Button? activeButton)
+    {
+        ScreenshotsNavButton.Tag = ReferenceEquals(activeButton, ScreenshotsNavButton) ? "Active" : null;
+        StatusNavButton.Tag = ReferenceEquals(activeButton, StatusNavButton) ? "Active" : null;
+        SettingsNavButton.Tag = ReferenceEquals(activeButton, SettingsNavButton) ? "Active" : null;
     }
 
     private void PdaMainView_OnLoaded(object sender, RoutedEventArgs e)
@@ -74,7 +90,7 @@ public partial class PdaMainView : UserControl
         DisposeCurrentPage();
     }
 
-    private void UpdateClock() => ClockText.Text = DateTime.Now.ToString("HH:mm");
+    private void UpdateClock() => ClockText.Text = DateTime.Now.ToString("HH:mm", CultureInfo.CurrentCulture);
 
     private void ProfileTab_OnClick(object sender, RoutedEventArgs e) => ShowProfilePage();
     private void CatalogTab_OnClick(object sender, RoutedEventArgs e) => ModCatalogRequested?.Invoke(this, e);

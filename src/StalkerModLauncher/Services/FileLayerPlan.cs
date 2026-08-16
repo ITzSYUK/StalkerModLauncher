@@ -34,7 +34,8 @@ public sealed class FileLayerPlan
 
     public FileLayerFile? FindFinalFile(string relativePath)
     {
-        return FindAllProviders(relativePath).LastOrDefault();
+        var providers = FindAllProviders(relativePath);
+        return providers.Count == 0 ? null : providers[^1];
     }
 
     public IReadOnlyList<FileLayerFile> FindAllProviders(string relativePath)

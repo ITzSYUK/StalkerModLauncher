@@ -8,8 +8,10 @@ namespace StalkerModLauncher.Tests;
 
 public sealed class MainViewModelTests
 {
+    private static readonly string[] BoundaryTestModNames = ["First", "Second", "Third", "Fourth"];
+
     [Fact]
-    public async Task NewProfileCommand_RaisesProfileCreationRequest()
+    public async Task NewProfileCommandRaisesProfileCreationRequest()
     {
         await RunWithViewModelAsync((viewModel, _) =>
         {
@@ -24,7 +26,7 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
-    public async Task HasProfiles_TracksProfileCollectionState()
+    public async Task HasProfilesTracksProfileCollectionState()
     {
         await RunWithViewModelAsync((viewModel, _) =>
         {
@@ -39,7 +41,7 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
-    public async Task AddCreatedProfile_SelectsProfileAndDoesNotInheritPreviousGamePath()
+    public async Task AddCreatedProfileSelectsProfileAndDoesNotInheritPreviousGamePath()
     {
         await RunWithViewModelAsync((viewModel, root) =>
         {
@@ -59,7 +61,7 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
-    public async Task DuplicateProfileCommand_CreatesIndependentCopyAndSelectsIt()
+    public async Task DuplicateProfileCommandCreatesIndependentCopyAndSelectsIt()
     {
         await RunWithViewModelAsync((viewModel, root) =>
         {
@@ -96,7 +98,7 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
-    public async Task SelectedProfile_ControlsProfileActionCommandAvailability()
+    public async Task SelectedProfileControlsProfileActionCommandAvailability()
     {
         await RunWithViewModelAsync((viewModel, root) =>
         {
@@ -130,7 +132,7 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
-    public async Task MoveModToInsertionIndex_ReordersSelectedProfileAndRenumbersMods()
+    public async Task MoveModToInsertionIndexReordersSelectedProfileAndRenumbersMods()
     {
         await RunWithViewModelAsync((viewModel, root) =>
         {
@@ -151,7 +153,7 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
-    public async Task TryAddImportedProfileAsync_RollsBackWhenSettingsCannotBeSaved()
+    public async Task TryAddImportedProfileAsyncRollsBackWhenSettingsCannotBeSaved()
     {
         var dialogService = new CapturingDialogService();
         await RunWithViewModelAsync(async (viewModel, root) =>
@@ -176,12 +178,12 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
-    public async Task MoveModsToBoundaries_ReordersWholeSelection()
+    public async Task MoveModsToBoundariesReordersWholeSelection()
     {
         await RunWithViewModelAsync((viewModel, root) =>
         {
             var profile = new ModProfile { Name = "Overlay", GameInstallPath = Path.Combine(root, "game") };
-            foreach (var name in new[] { "First", "Second", "Third", "Fourth" })
+            foreach (var name in BoundaryTestModNames)
             {
                 profile.Mods.Add(new ModEntry { Name = name, SourcePath = Path.Combine(root, "mods", name) });
             }
@@ -200,7 +202,7 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
-    public async Task AddDroppedMods_IgnoresDuplicatesAndStandaloneProfileLimit()
+    public async Task AddDroppedModsIgnoresDuplicatesAndStandaloneProfileLimit()
     {
         await RunWithViewModelAsync((viewModel, root) =>
         {
@@ -218,7 +220,7 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
-    public async Task ModToggle_RefreshesAutomaticallySelectedExecutable()
+    public async Task ModToggleRefreshesAutomaticallySelectedExecutable()
     {
         await RunWithViewModelAsync((viewModel, root) =>
         {
@@ -255,7 +257,7 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
-    public async Task ModToggle_DoesNotReplaceManuallyPinnedExecutable()
+    public async Task ModToggleDoesNotReplaceManuallyPinnedExecutable()
     {
         await RunWithViewModelAsync((viewModel, root) =>
         {
@@ -289,7 +291,7 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
-    public async Task RunningProfile_BlocksModCommandsAndDirectModMutations()
+    public async Task RunningProfileBlocksModCommandsAndDirectModMutations()
     {
         await RunWithViewModelAsync((viewModel, root) =>
         {
@@ -365,22 +367,15 @@ public sealed class MainViewModelTests
         var settingsStore = new SettingsStore(paths);
         var workspaceBuilder = new WorkspaceBuilder(paths);
         var profileManager = new ProfileManager(paths, new FakeProfileWorkspaceManager());
-        var gameValidator = new GameInstallationValidator();
-
         return new MainViewModel(
             paths,
             settingsStore,
             new LaunchCoordinator(new ThrowingProfileLauncher(), new FakeGameSessionTracker()),
             dialogService ?? new DialogService(),
             new ModConflictAnalyzer(),
-            new ProfileTransferService(),
-            new ModScannerService(),
-            new ModListEditor(),
-            new Mo2ImportService(),
+            new ModArchiveInstaller(),
             profileManager,
-            new GameExitDiagnosticsService(new ProfileDataPathResolver()),
-            new ProfileReadinessService(gameValidator),
-            new LaunchPreflightService(gameValidator, profileManager),
+            new LaunchPreflightService(profileManager),
             new ApplicationLogService(paths));
     }
 

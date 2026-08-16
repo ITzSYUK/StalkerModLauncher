@@ -4,23 +4,10 @@ namespace StalkerModLauncher.Services;
 
 public sealed class ProfileHealthService
 {
-    private readonly GameInstallationValidator _gameValidator;
     private readonly ProfileManager _profileManager;
-    private readonly ProfileDataPathResolver _dataPathResolver;
-    private readonly WorkspaceManagementService _workspaceManagementService;
-    private readonly ProfileLaunchPlanResolver _launchPlanResolver = new();
-    private readonly OverlayManifestBuilder _overlayManifestBuilder = new();
-
-    public ProfileHealthService(
-        GameInstallationValidator gameValidator,
-        ProfileManager profileManager,
-        ProfileDataPathResolver dataPathResolver,
-        WorkspaceManagementService workspaceManagementService)
+    public ProfileHealthService(ProfileManager profileManager)
     {
-        _gameValidator = gameValidator;
         _profileManager = profileManager;
-        _dataPathResolver = dataPathResolver;
-        _workspaceManagementService = workspaceManagementService;
     }
 
     public async Task<ProfileHealthReport> AnalyzeAsync(
@@ -33,7 +20,7 @@ public sealed class ProfileHealthService
             return report;
         }
 
-        var workspace = await _workspaceManagementService.InspectAsync(profile, cancellationToken);
+        var workspace = await WorkspaceManagementService.InspectAsync(profile, cancellationToken);
         return report with { Workspace = workspace };
     }
 
@@ -51,11 +38,11 @@ public sealed class ProfileHealthService
             checks.Add(new ProfileHealthCheck(
                 ProfileHealthStatus.Healthy,
                 "Режим профиля",
-                "Автономный мод запускается непосредственно из своей папки."));
+                "Автономная сборка запускается непосредственно из своей папки."));
         }
         else
         {
-            var validation = _gameValidator.Validate(gamePath);
+            var validation = GameInstallationValidator.Validate(gamePath);
             checks.Add(new ProfileHealthCheck(
                 validation.IsValid ? ProfileHealthStatus.Healthy : ProfileHealthStatus.Error,
                 "Базовая игра",
@@ -92,9 +79,9 @@ public sealed class ProfileHealthService
                 ? $"Не найден: {profile.ExecutableRelativePath}"
                 : FormatExecutableSource(executableSource, profile.ExecutableRelativePath)));
 
-        var savedGamePaths = _dataPathResolver.GetSavedGameDirectories(profile);
+        var savedGamePaths = ProfileDataPathResolver.GetSavedGameDirectories(profile);
         var savedGamesPath = savedGamePaths.FirstOrDefault(Directory.Exists)
-            ?? savedGamePaths.FirstOrDefault()
+            ?? (savedGamePaths.Count > 0 ? savedGamePaths[0] : null)
             ?? string.Empty;
 
         if (!profile.IsStandalone)
@@ -113,18 +100,17 @@ public sealed class ProfileHealthService
             "Сохранения",
             Directory.Exists(savedGamesPath) ? $"{saveCount} файл(ов): {savedGamesPath}" : "Папка сохранений еще не создана."));
 
-        var logPaths = _dataPathResolver.GetLogDirectories(profile);
-        var latestLog = FindLatest(logPaths, cancellationToken, ".log", ".txt");
+        var logPaths = ProfileDataPathResolver.GetLogDirectories(profile);
+        var latestLog = FindLatest(logPaths, [".log", ".txt"], cancellationToken);
         if (IsUsvfsLog(latestLog))
         {
             latestLog = FindLatest(
                 logPaths,
-                cancellationToken,
                 file => !IsUsvfsLog(file),
-                ".log",
-                ".txt");
+                [".log", ".txt"],
+                cancellationToken);
         }
-        var latestDump = FindLatest(logPaths, cancellationToken, ".mdmp", ".dmp");
+        var latestDump = FindLatest(logPaths, [".mdmp", ".dmp"], cancellationToken);
         var usvfsLogPath = UsvfsDiagnosticPaths.Resolve(profileFolderPath);
         checks.Add(new ProfileHealthCheck(
             ProfileHealthStatus.Healthy,
@@ -148,7 +134,7 @@ public sealed class ProfileHealthService
             UsvfsLogPath: File.Exists(usvfsLogPath) ? usvfsLogPath : null);
     }
 
-    private LaunchPlanResolution? TryCreateLaunchPlan(
+    private static LaunchPlanResolution? TryCreateLaunchPlan(
         ModProfile profile,
         FileLayerPlan? fileLayerPlan,
         string profileFolderPath,
@@ -156,7 +142,7 @@ public sealed class ProfileHealthService
     {
         if (profile.IsStandalone)
         {
-            return _launchPlanResolver.PreviewStandalone(profile, cancellationToken);
+            return ProfileLaunchPlanResolver.PreviewStandalone(profile, cancellationToken);
         }
 
         if (fileLayerPlan is null || string.IsNullOrWhiteSpace(profileFolderPath))
@@ -165,11 +151,11 @@ public sealed class ProfileHealthService
         }
 
         return profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem
-            ? _launchPlanResolver.PreviewVirtualFileSystem(profile, fileLayerPlan)
-            : _launchPlanResolver.PreviewLinkedWorkspace(profile, fileLayerPlan, profileFolderPath);
+            ? ProfileLaunchPlanResolver.PreviewVirtualFileSystem(profile, fileLayerPlan)
+            : ProfileLaunchPlanResolver.PreviewLinkedWorkspace(profile, fileLayerPlan, profileFolderPath);
     }
 
-    private OverlayManifest? TryCreateOverlayManifest(
+    private static OverlayManifest? TryCreateOverlayManifest(
         ModProfile profile,
         FileLayerPlan? fileLayerPlan,
         string profileFolderPath,
@@ -181,12 +167,12 @@ public sealed class ProfileHealthService
         }
 
         return profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem
-            ? _overlayManifestBuilder.BuildVirtualFileSystem(
+            ? OverlayManifestBuilder.BuildVirtualFileSystem(
                 profile,
                 fileLayerPlan,
                 profileFolderPath,
                 cancellationToken: cancellationToken)
-            : _overlayManifestBuilder.BuildLinkedWorkspace(
+            : OverlayManifestBuilder.BuildLinkedWorkspace(
                 profile,
                 fileLayerPlan,
                 profileFolderPath,
@@ -253,7 +239,7 @@ public sealed class ProfileHealthService
         return FileLayerPlan.CreateLinkedWorkspace(profile.GameInstallPath, profile, profileFolderPath);
     }
 
-    private LaunchExecutableResolution? FindExecutableSource(
+    private static LaunchExecutableResolution? FindExecutableSource(
         ModProfile profile,
         string gamePath,
         FileLayerPlan? fileLayerPlan,
@@ -271,7 +257,7 @@ public sealed class ProfileHealthService
             return null;
         }
 
-        return _launchPlanResolver.ResolveExecutableSource(
+        return ProfileLaunchPlanResolver.ResolveExecutableSource(
             profile,
             roots,
             profile.ExecutableRelativePath,
@@ -348,17 +334,17 @@ public sealed class ProfileHealthService
 
     private static string? FindLatest(
         IEnumerable<string> paths,
-        CancellationToken cancellationToken,
-        params string[] extensions)
+        IReadOnlyCollection<string> extensions,
+        CancellationToken cancellationToken)
     {
-        return FindLatest(paths, cancellationToken, _ => true, extensions);
+        return FindLatest(paths, _ => true, extensions, cancellationToken);
     }
 
     private static string? FindLatest(
         IEnumerable<string> paths,
-        CancellationToken cancellationToken,
         Func<string, bool> predicate,
-        params string[] extensions)
+        IReadOnlyCollection<string> extensions,
+        CancellationToken cancellationToken)
     {
         try
         {

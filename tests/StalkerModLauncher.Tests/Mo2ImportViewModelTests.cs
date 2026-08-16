@@ -12,7 +12,7 @@ public sealed class Mo2ImportViewModelTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void IncludeOverwrite_RemainsDisabledWhenPreviewContainsFiles()
+    public void IncludeOverwriteRemainsDisabledWhenPreviewContainsFiles()
     {
         var mo2Root = Directory.CreateDirectory(Path.Combine(_root, "MO2")).FullName;
         var gamePath = Directory.CreateDirectory(Path.Combine(_root, "Game")).FullName;
@@ -34,8 +34,6 @@ public sealed class Mo2ImportViewModelTests : IDisposable
             $"overwrite_directory={overwritePath}"
         ]);
         var viewModel = new Mo2ImportViewModel(
-            new Mo2ImportService(),
-            new DialogService(),
             _ => Task.FromResult(true));
 
         viewModel.LoadSource(mo2Root);

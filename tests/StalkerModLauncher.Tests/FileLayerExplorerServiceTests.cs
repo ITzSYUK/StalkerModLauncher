@@ -9,7 +9,7 @@ public sealed class FileLayerExplorerServiceTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "StalkerModLauncherExplorerTests", Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public async Task BuildFinalTreeAsync_ReportsWinnerProvidersAndExclusions()
+    public async Task BuildFinalTreeAsyncReportsWinnerProvidersAndExclusions()
     {
         CreateFile("game", "shared.ltx");
         CreateFile("first", "shared.ltx");
@@ -26,7 +26,7 @@ public sealed class FileLayerExplorerServiceTests : IDisposable
         });
         var plan = FileLayerPlan.CreateLinkedWorkspace(profile.GameInstallPath, profile, Path.Combine(_root, "workspace"));
 
-        var files = await new FileLayerExplorerService().BuildFinalTreeAsync(plan);
+        var files = await FileLayerExplorerService.BuildFinalTreeAsync(plan);
 
         var shared = Assert.Single(files);
         Assert.Equal("мод: First", shared.FinalProvider);
@@ -35,7 +35,7 @@ public sealed class FileLayerExplorerServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildFinalTreeAsync_AddsProfileOverwriteAtHighestPriority()
+    public async Task BuildFinalTreeAsyncAddsProfileOverwriteAtHighestPriority()
     {
         CreateFile("game", "shared.ltx");
         var workspace = Path.Combine(_root, "profile-workspace");
@@ -45,7 +45,7 @@ public sealed class FileLayerExplorerServiceTests : IDisposable
         var profile = new ModProfile { GameInstallPath = Path.Combine(_root, "game") };
         var plan = FileLayerPlan.CreateLinkedWorkspace(profile.GameInstallPath, profile, workspace);
 
-        var files = await new FileLayerExplorerService().BuildFinalTreeAsync(plan, workspace);
+        var files = await FileLayerExplorerService.BuildFinalTreeAsync(plan, workspace);
 
         var shared = Assert.Single(files);
         Assert.Equal("профильный overwrite", shared.FinalProvider);

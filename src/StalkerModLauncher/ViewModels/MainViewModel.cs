@@ -15,13 +15,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private readonly LaunchCoordinator _launchCoordinator;
     private readonly DialogService _dialogService;
     private readonly ModConflictAnalyzer _modConflictAnalyzer;
-    private readonly ProfileTransferService _profileTransferService;
-    private readonly ModScannerService _modScannerService;
-    private readonly ModListEditor _modListEditor;
-    private readonly Mo2ImportService _mo2ImportService;
+    private readonly ModArchiveInstaller _modArchiveInstaller;
     private readonly ProfileManager _profileManager;
-    private readonly GameExitDiagnosticsService _gameExitDiagnosticsService;
-    private readonly ProfileReadinessService _profileReadinessService;
     private readonly LaunchPreflightService _launchPreflightService;
     private readonly ApplicationLogService _applicationLogService;
     private readonly DebouncedAsyncAction _autoSave;
@@ -34,6 +29,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private bool _isBuilding;
     private bool _isPdaInterfaceEnabled;
     private string _buildProgressText = string.Empty;
+    private bool _isInstallingModArchive;
+    private bool _isModArchiveInstallProgressIndeterminate;
+    private double _modArchiveInstallProgress;
+    private string _modArchiveInstallProgressText = string.Empty;
+    private bool _isModArchiveInstallCompleted;
+    private string _installedModArchiveName = string.Empty;
+    private string _installedModArchivePath = string.Empty;
+    private string _installedModArchiveDetails = string.Empty;
     private ICollectionView? _filteredMods;
     private string _modSearchText = string.Empty;
     private ModListFilter _selectedModFilter;
@@ -45,13 +48,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         LaunchCoordinator launchCoordinator,
         DialogService dialogService,
         ModConflictAnalyzer modConflictAnalyzer,
-        ProfileTransferService profileTransferService,
-        ModScannerService modScannerService,
-        ModListEditor modListEditor,
-        Mo2ImportService mo2ImportService,
+        ModArchiveInstaller modArchiveInstaller,
         ProfileManager profileManager,
-        GameExitDiagnosticsService gameExitDiagnosticsService,
-        ProfileReadinessService profileReadinessService,
         LaunchPreflightService launchPreflightService,
         ApplicationLogService applicationLogService)
     {
@@ -60,13 +58,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _launchCoordinator = launchCoordinator;
         _dialogService = dialogService;
         _modConflictAnalyzer = modConflictAnalyzer;
-        _profileTransferService = profileTransferService;
-        _modScannerService = modScannerService;
-        _modListEditor = modListEditor;
-        _mo2ImportService = mo2ImportService;
+        _modArchiveInstaller = modArchiveInstaller;
         _profileManager = profileManager;
-        _gameExitDiagnosticsService = gameExitDiagnosticsService;
-        _profileReadinessService = profileReadinessService;
         _launchPreflightService = launchPreflightService;
         _applicationLogService = applicationLogService;
         _autoSave = new DebouncedAsyncAction(SaveAsync, TimeSpan.FromMilliseconds(500));
@@ -90,6 +83,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             parameter => parameter is ModProfile { IsRunning: false });
         BrowseExecutableCommand = new RelayCommand(BrowseExecutable, () => SelectedProfile is not null);
         AddModCommand = new RelayCommand(AddMod, CanAddMod);
+        InstallModArchiveCommand = new AsyncRelayCommand(InstallModArchiveAsync, CanInstallModArchive);
+        DismissModArchiveInstallCompletedCommand = new RelayCommand(() => IsModArchiveInstallCompleted = false);
         RemoveModCommand = new RelayCommand(RemoveMod, () => CanEditSelectedProfile && SelectedMod is not null);
         MoveModUpCommand = new RelayCommand(() => MoveSelectedMod(-1), () => CanMoveSelectedMod(-1));
         MoveModDownCommand = new RelayCommand(() => MoveSelectedMod(1), () => CanMoveSelectedMod(1));
@@ -147,7 +142,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public event EventHandler? ProfileCreationRequested;
     public event EventHandler? Mo2ImportRequested;
-    public event EventHandler<ModScanSelectionRequest>? ModScanSelectionRequested;
+    public event EventHandler<ModScanSelectionEventArgs>? ModScanSelectionRequested;
     public event EventHandler<ModEntry?>? ConflictExplorerRequested;
 
     public string GameInstallPath
@@ -192,6 +187,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             }
 
             SelectedMod = null;
+            IsModArchiveInstallCompleted = false;
             CreateFilteredModsView();
             RecalculateModOverlayInfo();
             RefreshValidation();
@@ -306,6 +302,54 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         private set => SetProperty(ref _buildProgressText, value);
     }
 
+    public bool IsInstallingModArchive
+    {
+        get => _isInstallingModArchive;
+        private set => SetProperty(ref _isInstallingModArchive, value);
+    }
+
+    public bool IsModArchiveInstallProgressIndeterminate
+    {
+        get => _isModArchiveInstallProgressIndeterminate;
+        private set => SetProperty(ref _isModArchiveInstallProgressIndeterminate, value);
+    }
+
+    public double ModArchiveInstallProgress
+    {
+        get => _modArchiveInstallProgress;
+        private set => SetProperty(ref _modArchiveInstallProgress, value);
+    }
+
+    public string ModArchiveInstallProgressText
+    {
+        get => _modArchiveInstallProgressText;
+        private set => SetProperty(ref _modArchiveInstallProgressText, value);
+    }
+
+    public bool IsModArchiveInstallCompleted
+    {
+        get => _isModArchiveInstallCompleted;
+        private set => SetProperty(ref _isModArchiveInstallCompleted, value);
+    }
+
+    public string InstalledModArchiveName
+    {
+        get => _installedModArchiveName;
+        private set => SetProperty(ref _installedModArchiveName, value);
+    }
+
+    public string InstalledModArchivePath
+    {
+        get => _installedModArchivePath;
+        private set => SetProperty(ref _installedModArchivePath, value);
+    }
+
+    public string InstalledModArchiveDetails
+    {
+        get => _installedModArchiveDetails;
+        private set => SetProperty(ref _installedModArchiveDetails, value);
+    }
+
     public RelayCommand ChooseGameFolderCommand { get; }
     public RelayCommand NewProfileCommand { get; }
     public RelayCommand DuplicateProfileCommand { get; }
@@ -315,6 +359,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public RelayCommand InlineDeleteProfileCommand { get; }
     public RelayCommand BrowseExecutableCommand { get; }
     public RelayCommand AddModCommand { get; }
+    public AsyncRelayCommand InstallModArchiveCommand { get; }
+    public RelayCommand DismissModArchiveInstallCompletedCommand { get; }
     public RelayCommand RemoveModCommand { get; }
     public RelayCommand MoveModUpCommand { get; }
     public RelayCommand MoveModDownCommand { get; }
@@ -338,7 +384,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private void RefreshValidation()
     {
-        var result = _profileReadinessService.Validate(SelectedProfile);
+        var result = ProfileReadinessService.Validate(SelectedProfile);
         IsGameValid = result.IsValid;
         ValidationSummary = result.Summary;
         RaiseCommandStates();
@@ -353,6 +399,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         InlineDeleteProfileCommand.RaiseCanExecuteChanged();
         BrowseExecutableCommand.RaiseCanExecuteChanged();
         AddModCommand.RaiseCanExecuteChanged();
+        InstallModArchiveCommand.RaiseCanExecuteChanged();
         RemoveModCommand.RaiseCanExecuteChanged();
         MoveModUpCommand.RaiseCanExecuteChanged();
         MoveModDownCommand.RaiseCanExecuteChanged();
@@ -394,12 +441,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             profile,
             selectedMod,
             _modConflictAnalyzer,
-            new FileLayerExplorerService(),
             _dialogService,
             SaveOrThrowAsync,
             () =>
             {
-                _modListEditor.Renumber(profile);
+                ModListEditor.Renumber(profile);
                 RecalculateModOverlayInfo();
                 RefreshValidation();
                 CreateFilteredModsView();

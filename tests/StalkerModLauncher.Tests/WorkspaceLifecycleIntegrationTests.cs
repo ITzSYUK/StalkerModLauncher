@@ -13,7 +13,7 @@ public sealed class WorkspaceLifecycleIntegrationTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public async Task OverlayWorkspace_FullLifecyclePreservesSourcesAndProfileUserData()
+    public async Task OverlayWorkspaceFullLifecyclePreservesSourcesAndProfileUserData()
     {
         var game = Path.Combine(_root, "game");
         var mod = Path.Combine(_root, "mods", "main");

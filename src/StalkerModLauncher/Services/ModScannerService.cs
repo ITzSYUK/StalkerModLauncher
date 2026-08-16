@@ -7,16 +7,18 @@ public sealed class DiscoveredMod
     public string DetectedBy { get; set; } = string.Empty;
 }
 
-public sealed class ModScannerService
+public static class ModScannerService
 {
-    public Task<IReadOnlyList<DiscoveredMod>> ScanFolderAsync(
+    public static Task<IReadOnlyList<DiscoveredMod>> ScanFolderAsync(
         string rootPath,
         CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => ScanFolder(rootPath, cancellationToken), cancellationToken);
+        return Task.Run<IReadOnlyList<DiscoveredMod>>(
+            () => ScanFolder(rootPath, cancellationToken),
+            cancellationToken);
     }
 
-    private static IReadOnlyList<DiscoveredMod> ScanFolder(string rootPath, CancellationToken cancellationToken)
+    private static DiscoveredMod[] ScanFolder(string rootPath, CancellationToken cancellationToken)
     {
         if (!Directory.Exists(rootPath))
         {

@@ -10,10 +10,9 @@ public sealed class GameExitDiagnosticsServiceTests : IDisposable
         Path.GetTempPath(),
         "StalkerModLauncherTests",
         Guid.NewGuid().ToString("N"));
-    private readonly GameExitDiagnosticsService _service = new(new ProfileDataPathResolver());
 
     [Fact]
-    public void Analyze_ReportsQuickExitAndFreshDiagnosticFiles()
+    public void AnalyzeReportsQuickExitAndFreshDiagnosticFiles()
     {
         var started = DateTime.UtcNow.AddSeconds(-5);
         var logsPath = Path.Combine(_root, "userdata", "logs");
@@ -22,7 +21,7 @@ public sealed class GameExitDiagnosticsServiceTests : IDisposable
         var profile = new ModProfile { WorkspacePath = _root };
         var session = new GameSessionResult(TimeSpan.FromSeconds(5), true, -1, started, DateTime.UtcNow);
 
-        var result = _service.Analyze(profile, session);
+        var result = GameExitDiagnosticsService.Analyze(profile, session);
 
         Assert.True(result.IsQuickExit);
         Assert.Equal(-1, result.ExitCode);
@@ -32,7 +31,7 @@ public sealed class GameExitDiagnosticsServiceTests : IDisposable
     }
 
     [Fact]
-    public void Analyze_IgnoresOldFilesAndDoesNotFlagLongSession()
+    public void AnalyzeIgnoresOldFilesAndDoesNotFlagLongSession()
     {
         var started = DateTime.UtcNow.AddMinutes(-1);
         var logsPath = Path.Combine(_root, "userdata", "logs");
@@ -40,7 +39,7 @@ public sealed class GameExitDiagnosticsServiceTests : IDisposable
         var profile = new ModProfile { WorkspacePath = _root };
         var session = new GameSessionResult(TimeSpan.FromMinutes(1), true, 0, started, DateTime.UtcNow);
 
-        var result = _service.Analyze(profile, session);
+        var result = GameExitDiagnosticsService.Analyze(profile, session);
 
         Assert.False(result.IsQuickExit);
         Assert.False(result.IsSuspiciousExit);
@@ -49,16 +48,16 @@ public sealed class GameExitDiagnosticsServiceTests : IDisposable
     }
 
     [Fact]
-    public void Analyze_HandlesMissingWorkspace()
+    public void AnalyzeHandlesMissingWorkspace()
     {
-        var result = _service.Analyze(new ModProfile(), new GameSessionResult(TimeSpan.FromSeconds(1), false));
+        var result = GameExitDiagnosticsService.Analyze(new ModProfile(), new GameSessionResult(TimeSpan.FromSeconds(1), false));
 
         Assert.True(result.IsQuickExit);
         Assert.Null(result.LatestLogPath);
     }
 
     [Fact]
-    public void Analyze_FindsFreshStandaloneAppdataLog()
+    public void AnalyzeFindsFreshStandaloneAppdataLog()
     {
         var started = DateTime.UtcNow.AddSeconds(-5);
         var modRoot = Path.Combine(_root, "standalone");
@@ -66,7 +65,7 @@ public sealed class GameExitDiagnosticsServiceTests : IDisposable
         var profile = new ModProfile { IsStandalone = true };
         profile.Mods.Add(new ModEntry { SourcePath = modRoot, IsEnabled = true });
 
-        var result = _service.Analyze(
+        var result = GameExitDiagnosticsService.Analyze(
             profile,
             new GameSessionResult(TimeSpan.FromSeconds(5), true, -1, started, DateTime.UtcNow));
 
@@ -74,7 +73,7 @@ public sealed class GameExitDiagnosticsServiceTests : IDisposable
     }
 
     [Fact]
-    public void Analyze_DoesNotTreatUsvfsDiagnosticsAsGameLog()
+    public void AnalyzeDoesNotTreatUsvfsDiagnosticsAsGameLog()
     {
         var started = DateTime.UtcNow.AddSeconds(-5);
         var logsPath = Path.Combine(_root, "userdata", "logs");
@@ -82,7 +81,7 @@ public sealed class GameExitDiagnosticsServiceTests : IDisposable
         CreateFile(logsPath, "usvfs.log", started.AddSeconds(2));
         var profile = new ModProfile { WorkspacePath = _root };
 
-        var result = _service.Analyze(
+        var result = GameExitDiagnosticsService.Analyze(
             profile,
             new GameSessionResult(TimeSpan.FromSeconds(5), true, -1, started, DateTime.UtcNow));
 

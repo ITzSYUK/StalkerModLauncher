@@ -2,17 +2,19 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class FileLayerExplorerService
+public static class FileLayerExplorerService
 {
-    public Task<IReadOnlyList<FinalFileEntry>> BuildFinalTreeAsync(
+    public static Task<IReadOnlyList<FinalFileEntry>> BuildFinalTreeAsync(
         FileLayerPlan plan,
         string? workspacePath = null,
         CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => BuildFinalTree(plan, workspacePath, cancellationToken), cancellationToken);
+        return Task.Run<IReadOnlyList<FinalFileEntry>>(
+            () => BuildFinalTree(plan, workspacePath, cancellationToken),
+            cancellationToken);
     }
 
-    private static IReadOnlyList<FinalFileEntry> BuildFinalTree(
+    private static FinalFileEntry[] BuildFinalTree(
         FileLayerPlan plan,
         string? workspacePath,
         CancellationToken cancellationToken)

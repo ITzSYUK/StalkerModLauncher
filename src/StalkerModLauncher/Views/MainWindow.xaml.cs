@@ -16,16 +16,13 @@ public partial class MainWindow : Window
     private bool _isSwitchingToClassic;
     private PdaWindow? _pdaWindow;
     private readonly WindowNavigationService _navigation;
-    private readonly WindowSystemIntegrationService _windowSystemIntegration;
 
     public MainWindow(
         MainViewModel viewModel,
-        WindowNavigationService navigation,
-        WindowSystemIntegrationService windowSystemIntegration)
+        WindowNavigationService navigation)
     {
         InitializeComponent();
         _navigation = navigation;
-        _windowSystemIntegration = windowSystemIntegration;
         viewModel.ActivityLog.PropertyChanged += ActivityLog_PropertyChanged;
         viewModel.PropertyChanged += ViewModel_PropertyChanged;
         viewModel.ProfileCreationRequested += ViewModel_ProfileCreationRequested;
@@ -41,14 +38,14 @@ public partial class MainWindow : Window
             return;
         }
 
-        _navigation.ShowProfileCreation(this, ViewModel);
+        WindowNavigationService.ShowProfileCreation(this, ViewModel);
     }
 
     private void ViewModel_ConflictExplorerRequested(object? sender, ModEntry? mod)
     {
         if (ViewModel is not null && _pdaWindow is null)
         {
-            _navigation.ShowConflictExplorer(this, ViewModel.CreateConflictExplorerViewModel(mod));
+            WindowNavigationService.ShowConflictExplorer(this, ViewModel.CreateConflictExplorerViewModel(mod));
         }
     }
 
@@ -75,7 +72,7 @@ public partial class MainWindow : Window
 
     private void Window_OnSourceInitialized(object? sender, EventArgs e)
     {
-        _windowSystemIntegration.Initialize(this);
+        WindowSystemIntegrationService.Initialize(this);
     }
 
     public async Task<bool> ShowInitialInterfaceAsync()
@@ -106,7 +103,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        _navigation.ShowProfileSettings(this, settingsVm);
+        WindowNavigationService.ShowProfileSettings(this, settingsVm);
     }
 
     private void ScreenshotsButton_OnClick(object sender, RoutedEventArgs e)

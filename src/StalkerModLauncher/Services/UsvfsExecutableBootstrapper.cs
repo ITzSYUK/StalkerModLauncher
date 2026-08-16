@@ -10,13 +10,11 @@ internal sealed record UsvfsBootstrapResult(
     string DirectoryPath,
     int FileCount);
 
-internal sealed class UsvfsExecutableBootstrapper
+internal static class UsvfsExecutableBootstrapper
 {
     private const string LegacyBootstrapDirectoryName = "usvfs-bootstrap";
     private const string AnomalyLauncherFileName = "AnomalyLauncher.exe";
-    private readonly WorkspaceMaterializer _materializer = new();
-
-    public void Clear(string profileWorkspace, string bootstrapRoot)
+    public static void Clear(string profileWorkspace, string bootstrapRoot)
     {
         ClearManagedDirectory(bootstrapRoot, Path.GetDirectoryName(bootstrapRoot)!);
 
@@ -38,7 +36,7 @@ internal sealed class UsvfsExecutableBootstrapper
         FileSystemSafety.DeleteDirectoryContents(bootstrapRoot, allowedRoot);
     }
 
-    public UsvfsBootstrapResult Prepare(
+    public static UsvfsBootstrapResult Prepare(
         FileLayerPlan layerPlan,
         UsvfsLaunchTarget launchTarget,
         string bootstrapRoot,
@@ -68,7 +66,7 @@ internal sealed class UsvfsExecutableBootstrapper
         foreach (var file in files.OrderBy(file => file.Key, StringComparer.OrdinalIgnoreCase))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            _materializer.ReplaceFile(file.Value, bootstrapDirectory, file.Key, stats);
+            WorkspaceMaterializer.ReplaceFile(file.Value, bootstrapDirectory, file.Key, stats);
         }
 
         var executablePath = Path.Combine(bootstrapDirectory, selectedRelativeName);
@@ -82,7 +80,7 @@ internal sealed class UsvfsExecutableBootstrapper
         return new UsvfsBootstrapResult(executablePath, bootstrapRoot, bootstrapDirectory, files.Count);
     }
 
-    public UsvfsBootstrapResult PrepareAnomalyLauncher(
+    public static UsvfsBootstrapResult PrepareAnomalyLauncher(
         FileLayerPlan layerPlan,
         UsvfsLaunchTarget launchTarget,
         string bootstrapRoot,
@@ -128,7 +126,7 @@ internal sealed class UsvfsExecutableBootstrapper
             var profileFile = EnsureProfileLauncherFile(layerPlan, writeOverlayRoot, mutableFile);
             if (profileFile is not null)
             {
-                _materializer.ReplaceFile(profileFile, bootstrapRoot, mutableFile, stats);
+                WorkspaceMaterializer.ReplaceFile(profileFile, bootstrapRoot, mutableFile, stats);
             }
         }
 
@@ -143,7 +141,7 @@ internal sealed class UsvfsExecutableBootstrapper
         return new UsvfsBootstrapResult(executablePath, bootstrapRoot, bootstrapRoot, stats.FileCount);
     }
 
-    private void MaterializeFiles(
+    private static void MaterializeFiles(
         IReadOnlyDictionary<string, string> files,
         string bootstrapRoot,
         string directoryRelative,
@@ -156,7 +154,7 @@ internal sealed class UsvfsExecutableBootstrapper
             var relativePath = directoryRelative.Length == 0
                 ? file.Key
                 : Path.Combine(directoryRelative, file.Key);
-            _materializer.ReplaceFile(file.Value, bootstrapRoot, relativePath, stats);
+            WorkspaceMaterializer.ReplaceFile(file.Value, bootstrapRoot, relativePath, stats);
         }
     }
 
@@ -248,12 +246,12 @@ internal static class UsvfsBootstrapPathResolver
 
     public static void DeleteProfile(string profileWorkspace, string baseGameRoot, string profileId)
     {
-        var profileRoot = Resolve(profileWorkspace, baseGameRoot, profileId);
+        var profileRoot = Resolve(profileWorkspace);
         FileSystemSafety.DeleteDirectoryContents(profileRoot, profileWorkspace);
         DeleteLegacySharedProfile(profileWorkspace, baseGameRoot, profileId);
     }
 
-    public static string Resolve(string profileWorkspace, string baseGameRoot, string profileId)
+    public static string Resolve(string profileWorkspace)
     {
         var profileRoot = Path.Combine(
             Path.GetFullPath(profileWorkspace),

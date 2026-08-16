@@ -7,12 +7,6 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
     private readonly IUsvfsRuntime _runtime;
     private readonly IUsvfsRuntime _x86Runtime;
     private readonly string? _runtimeDirectory;
-    private readonly UsvfsMappingPlanBuilder _mappingPlanBuilder = new();
-    private readonly ProfileLaunchPlanResolver _launchPlanResolver = new();
-    private readonly UsvfsProfileDataPreparer _profileDataPreparer = new();
-    private readonly AnomalyUsvfsLaunchTargetResolver _anomalyLaunchTargetResolver = new();
-    private readonly UsvfsExecutableBootstrapper _executableBootstrapper = new();
-
     public UsvfsLaunchBackend(
         IUsvfsRuntime runtime,
         string? runtimeDirectory = null,
@@ -50,19 +44,19 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
 
         var profile = context.Profile;
         var profileWorkspace = Path.GetFullPath(Path.Combine(context.OverlayManifest.WriteOverlayRoot, "..", ".."));
-        var profileFsgamePath = _profileDataPreparer.Prepare(
+        var profileFsgamePath = UsvfsProfileDataPreparer.Prepare(
             context.FileLayerPlan,
             context.OverlayManifest,
             profileWorkspace,
             progress,
             cancellationToken);
-        var launchResolution = _launchPlanResolver.PreviewVirtualFileSystem(profile, context.FileLayerPlan);
+        var launchResolution = ProfileLaunchPlanResolver.PreviewVirtualFileSystem(profile, context.FileLayerPlan);
         if (!launchResolution.IsReady || launchResolution.Plan is null)
         {
             throw new InvalidOperationException(launchResolution.Error ?? "USVFS launch plan is not ready.");
         }
 
-        var launchTarget = _anomalyLaunchTargetResolver.Resolve(profile, context.FileLayerPlan, launchResolution);
+        var launchTarget = AnomalyUsvfsLaunchTargetResolver.Resolve(profile, context.FileLayerPlan, launchResolution);
         if (launchTarget.BypassedLauncher)
         {
             progress.Report(
@@ -94,27 +88,24 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
                                       ShouldUsePhysicalBaseGameRoot(context.FileLayerPlan, launchTarget);
         var usePhysicalArchiveRoot = !useAnomalyLauncherBootstrap &&
                                      RequiresPhysicalArchiveRoot(context.FileLayerPlan);
-        var bootstrapRoot = UsvfsBootstrapPathResolver.Resolve(
-            profileWorkspace,
-            context.FileLayerPlan.BaseGame.RootPath,
-            profile.Id);
+        var bootstrapRoot = UsvfsBootstrapPathResolver.Resolve(profileWorkspace);
         UsvfsBootstrapPathResolver.DeleteLegacySharedProfile(
             profileWorkspace,
             context.FileLayerPlan.BaseGame.RootPath,
             profile.Id);
         UsvfsBootstrapResult? bootstrap = null;
-        _executableBootstrapper.Clear(profileWorkspace, bootstrapRoot);
+        UsvfsExecutableBootstrapper.Clear(profileWorkspace, bootstrapRoot);
         if (!usePhysicalBaseGameRoot)
         {
             bootstrap = useAnomalyLauncherBootstrap
-                ? _executableBootstrapper.PrepareAnomalyLauncher(
+                ? UsvfsExecutableBootstrapper.PrepareAnomalyLauncher(
                     context.FileLayerPlan,
                     launchTarget,
                     bootstrapRoot,
                     context.OverlayManifest.WriteOverlayRoot,
                     progress,
                     cancellationToken)
-                : _executableBootstrapper.Prepare(
+                : UsvfsExecutableBootstrapper.Prepare(
                     context.FileLayerPlan,
                     launchTarget,
                     bootstrapRoot,
@@ -128,11 +119,11 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
             ? context.FileLayerPlan.BaseGame.RootPath
             : bootstrap!.RootPath;
         var mappingPlan = useAnomalyLauncherBootstrap
-            ? _mappingPlanBuilder.BuildAnomalyLauncherBootstrap(
+            ? UsvfsMappingPlanBuilder.BuildAnomalyLauncherBootstrap(
                 context.FileLayerPlan,
                 context.OverlayManifest,
                 virtualRoot)
-            : _mappingPlanBuilder.Build(
+            : UsvfsMappingPlanBuilder.Build(
                 context.FileLayerPlan,
                 context.OverlayManifest,
                 virtualRoot);

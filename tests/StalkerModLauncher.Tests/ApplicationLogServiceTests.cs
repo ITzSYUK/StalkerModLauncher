@@ -11,7 +11,7 @@ public sealed class ApplicationLogServiceTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void Write_AppendsFileEntryAndReturnsDisplayEntry()
+    public void WriteAppendsFileEntryAndReturnsDisplayEntry()
     {
         var service = new ApplicationLogService(new AppPaths(_root, Path.Combine(_root, "workspaces"), false));
         var timestamp = new DateTime(2026, 6, 8, 12, 34, 56);
@@ -23,7 +23,7 @@ public sealed class ApplicationLogServiceTests : IDisposable
     }
 
     [Fact]
-    public void Write_RotatesLargeFile()
+    public void WriteRotatesLargeFile()
     {
         Directory.CreateDirectory(_root);
         var logPath = Path.Combine(_root, "launcher.log");

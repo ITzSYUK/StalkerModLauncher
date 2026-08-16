@@ -334,7 +334,7 @@
                                 </Grid>
 
                                 <Border x:Name="ActionShade"
-                                        Background="#B3000000"
+                                        Background="{DynamicResource ModActionShadeBrush}"
                                         Opacity="0"
                                         IsHitTestVisible="False"/>
 

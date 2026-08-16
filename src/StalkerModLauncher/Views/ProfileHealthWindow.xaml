@@ -154,7 +154,7 @@
                     <TextBlock Text="Готовность"
                                FontSize="15"
                                FontWeight="SemiBold"/>
-                    <TextBlock Text="{Binding PreflightExplanation}"
+                    <TextBlock Text="Ошибки остановят запуск. Предупреждения подскажут, что стоит проверить."
                                Foreground="{StaticResource MutedTextBrush}"
                                FontSize="12"
                                Margin="0,2,0,0"/>

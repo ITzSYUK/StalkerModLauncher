@@ -12,7 +12,7 @@ public sealed class FileLayerPlanTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void CreateLinkedWorkspace_OrdersBaseGameEnabledModsAndUserData()
+    public void CreateLinkedWorkspaceOrdersBaseGameEnabledModsAndUserData()
     {
         var gamePath = Path.Combine(Path.GetTempPath(), "game");
         var workspacePath = Path.Combine(Path.GetTempPath(), "workspace");
@@ -57,7 +57,7 @@ public sealed class FileLayerPlanTests : IDisposable
     }
 
     [Fact]
-    public void CreateLinkedWorkspace_RejectsStandaloneProfiles()
+    public void CreateLinkedWorkspaceRejectsStandaloneProfiles()
     {
         var profile = new ModProfile { IsStandalone = true };
 
@@ -66,7 +66,7 @@ public sealed class FileLayerPlanTests : IDisposable
     }
 
     [Fact]
-    public void CreateLinkedWorkspace_AddsMo2OverwriteAfterModsWithoutChangingProfileModList()
+    public void CreateLinkedWorkspaceAddsMo2OverwriteAfterModsWithoutChangingProfileModList()
     {
         var profile = new ModProfile
         {
@@ -91,7 +91,7 @@ public sealed class FileLayerPlanTests : IDisposable
     }
 
     [Fact]
-    public void FindFinalFile_ReturnsHighestPriorityProvider()
+    public void FindFinalFileReturnsHighestPriorityProvider()
     {
         var game = Path.Combine(_root, "game");
         var main = Path.Combine(_root, "main");
@@ -111,7 +111,7 @@ public sealed class FileLayerPlanTests : IDisposable
     }
 
     [Fact]
-    public void GetOverwrittenFiles_ReturnsFilesReplacedByModLayer()
+    public void GetOverwrittenFilesReturnsFilesReplacedByModLayer()
     {
         var game = Path.Combine(_root, "game-overwrite");
         var main = Path.Combine(_root, "main-overwrite");
@@ -132,7 +132,7 @@ public sealed class FileLayerPlanTests : IDisposable
     }
 
     [Fact]
-    public void GetExecutableCandidates_ReturnsExecutablesByLayerOrder()
+    public void GetExecutableCandidatesReturnsExecutablesByLayerOrder()
     {
         var game = Path.Combine(_root, "game-exe");
         var main = Path.Combine(_root, "main-exe");
@@ -148,7 +148,7 @@ public sealed class FileLayerPlanTests : IDisposable
     }
 
     [Fact]
-    public void FindFinalFile_SkipsFilesExcludedByProfile()
+    public void FindFinalFileSkipsFilesExcludedByProfile()
     {
         var game = Path.Combine(_root, "excluded-game");
         var main = Path.Combine(_root, "excluded-main");
@@ -164,7 +164,7 @@ public sealed class FileLayerPlanTests : IDisposable
         Assert.Equal(mainFile, plan.FindFinalFile("shared.ltx")?.FullPath);
     }
 
-    private ModProfile CreateProfile(string game, string main, string patch)
+    private static ModProfile CreateProfile(string game, string main, string patch)
     {
         var profile = new ModProfile { GameInstallPath = game };
         profile.Mods.Add(new ModEntry { Id = "main", Name = "Main", SourcePath = main, Order = 1 });

@@ -1,11 +1,11 @@
 namespace StalkerModLauncher.ViewModels;
 
-public sealed class ModScanSelectionRequest : EventArgs
+public sealed class ModScanSelectionEventArgs : EventArgs
 {
     private readonly TaskCompletionSource<IReadOnlyList<SelectableMod>?> _completion =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    public ModScanSelectionRequest(IReadOnlyList<SelectableMod> mods)
+    public ModScanSelectionEventArgs(IReadOnlyList<SelectableMod> mods)
     {
         Mods = mods;
     }

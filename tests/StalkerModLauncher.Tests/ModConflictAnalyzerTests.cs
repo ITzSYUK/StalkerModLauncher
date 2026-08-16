@@ -12,7 +12,7 @@ public sealed class ModConflictAnalyzerTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public async Task AnalyzeAsync_MarksModsThatOverwriteEarlierMods()
+    public async Task AnalyzeAsyncMarksModsThatOverwriteEarlierMods()
     {
         var first = CreateMod("first", "gamedata/config/shared.ltx", "gamedata/config/first.ltx");
         var second = CreateMod("second", "gamedata/config/shared.ltx");
@@ -34,7 +34,7 @@ public sealed class ModConflictAnalyzerTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_IgnoresDisabledMods()
+    public async Task AnalyzeAsyncIgnoresDisabledMods()
     {
         var first = CreateMod("first", "shared.ltx");
         var second = CreateMod("second", "shared.ltx");
@@ -53,7 +53,7 @@ public sealed class ModConflictAnalyzerTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_CountsUniqueOverwrittenFilesAndSourceMods()
+    public async Task AnalyzeAsyncCountsUniqueOverwrittenFilesAndSourceMods()
     {
         var first = CreateMod("first", "shared-a.ltx", "shared-b.ltx");
         var second = CreateMod("second", "shared-b.ltx", "shared-c.ltx");
@@ -72,7 +72,7 @@ public sealed class ModConflictAnalyzerTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_MarksLastEnabledProviderOfLaunchExecutable()
+    public async Task AnalyzeAsyncMarksLastEnabledProviderOfLaunchExecutable()
     {
         var main = CreateMod("main", "bin_x64/xrEngine.exe");
         var patch = CreateMod("patch", "bin_x64/xrEngine.exe");
@@ -92,7 +92,7 @@ public sealed class ModConflictAnalyzerTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_UsesFileLayerPlanOrder()
+    public async Task AnalyzeAsyncUsesFileLayerPlanOrder()
     {
         var main = CreateMod("main", "gamedata/config/shared.ltx", "bin/xr_3da.exe");
         var patch = CreateMod("patch", "gamedata/config/shared.ltx", "bin/xr_3da.exe");
@@ -130,7 +130,7 @@ public sealed class ModConflictAnalyzerTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_MarksPinnedProviderOfLaunchExecutable()
+    public async Task AnalyzeAsyncMarksPinnedProviderOfLaunchExecutable()
     {
         var main = CreateMod("main", "bin_x64/xrEngine.exe");
         var patch = CreateMod("patch", "bin_x64/xrEngine.exe");
@@ -147,7 +147,7 @@ public sealed class ModConflictAnalyzerTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_ClassifiesConfigurationAndBinaryOverlays()
+    public async Task AnalyzeAsyncClassifiesConfigurationAndBinaryOverlays()
     {
         var main = CreateMod("main", "gamedata/config/system.ltx", "bin/xrCore.dll", "textures/test.dds");
         var patch = CreateMod("patch", "gamedata/config/system.ltx", "bin/xrCore.dll", "textures/test.dds");
@@ -165,7 +165,7 @@ public sealed class ModConflictAnalyzerTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_ClassifiesMixedAndRedundantMods()
+    public async Task AnalyzeAsyncClassifiesMixedAndRedundantMods()
     {
         var first = CreateMod("first", "shared-a.ltx");
         var mixed = CreateMod("mixed", "shared-a.ltx", "shared-b.ltx", "unique.ltx");
@@ -189,7 +189,7 @@ public sealed class ModConflictAnalyzerTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_IgnoresProfileExcludedFiles()
+    public async Task AnalyzeAsyncIgnoresProfileExcludedFiles()
     {
         var first = CreateMod("excluded-first", "shared.ltx");
         var second = CreateMod("excluded-second", "shared.ltx");

@@ -25,14 +25,10 @@ public sealed class GameLaunchReadinessMonitor
     private const long ReadyWorkingSetBytes = 32L * 1024 * 1024;
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
-    private readonly ProfileDataPathResolver _dataPathResolver;
     private readonly TimeSpan _timeout;
 
-    public GameLaunchReadinessMonitor(
-        ProfileDataPathResolver dataPathResolver,
-        TimeSpan? timeout = null)
+    public GameLaunchReadinessMonitor(TimeSpan? timeout = null)
     {
-        _dataPathResolver = dataPathResolver;
         _timeout = timeout ?? DefaultTimeout;
     }
 
@@ -110,7 +106,7 @@ public sealed class GameLaunchReadinessMonitor
         }
     }
 
-    private static IReadOnlyList<GameProcessReadinessState> ReadProcessStates(IEnumerable<int> processIds)
+    private static List<GameProcessReadinessState> ReadProcessStates(IEnumerable<int> processIds)
     {
         var result = new List<GameProcessReadinessState>();
         foreach (var processId in processIds)
@@ -140,11 +136,11 @@ public sealed class GameLaunchReadinessMonitor
         return result;
     }
 
-    private string? FindFreshGameLog(ModProfile profile, DateTime startedAtUtc)
+    private static string? FindFreshGameLog(ModProfile profile, DateTime startedAtUtc)
     {
         try
         {
-            return _dataPathResolver.GetLogDirectories(profile)
+            return ProfileDataPathResolver.GetLogDirectories(profile)
                 .Where(Directory.Exists)
                 .SelectMany(path => Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
                 .Select(path => new FileInfo(path))

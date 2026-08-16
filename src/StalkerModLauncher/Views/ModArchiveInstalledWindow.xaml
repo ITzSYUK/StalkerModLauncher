@@ -1,0 +1,47 @@
+<Window x:Class="StalkerModLauncher.Views.ModArchiveInstalledWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Мод установлен"
+        Width="540"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True"
+        Background="{StaticResource WindowBackgroundBrush}"
+        Foreground="{StaticResource TextBrush}"
+        SourceInitialized="Window_OnSourceInitialized">
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal">
+            <Image Source="{StaticResource RadiationOnImage}"
+                   Width="28"
+                   Height="28"
+                   Margin="0,0,10,0"/>
+            <TextBlock Text="Мод установлен"
+                       Foreground="{StaticResource AccentBrush}"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Margin="0,16,0,0">
+            <TextBlock x:Name="ModNameTextBlock"
+                       Foreground="{StaticResource TextBrush}"
+                       FontSize="14"
+                       FontWeight="SemiBold"/>
+            <TextBlock x:Name="ModPathTextBlock"
+                       Foreground="{StaticResource TextBrush}"
+                       Margin="0,5,0,0"
+                       TextWrapping="Wrap"/>
+            <Border Height="1"
+                    Background="{StaticResource StrokeBrush}"
+                    Margin="0,10,0,8"/>
+            <TextBlock x:Name="DetailsTextBlock"
+                       Foreground="{StaticResource TextBrush}"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -12,7 +12,7 @@ public sealed class Mo2ModListImporterTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void Import_ReversesMo2PriorityAndAppliesEnabledState()
+    public void ImportReversesMo2PriorityAndAppliesEnabledState()
     {
         var profile = CreateProfile("Fix", "High", "Low", "Middle");
         var modList = CreateModList(
@@ -21,7 +21,7 @@ public sealed class Mo2ModListImporterTests : IDisposable
             "-Middle",
             "+Low");
 
-        var result = new Mo2ModListImporter().Import(profile, modList);
+        var result = Mo2ModListImporter.Import(profile, modList);
 
         Assert.Equal(["Fix", "Low", "Middle", "High"], profile.Mods.Select(mod => mod.Name));
         Assert.True(profile.Mods.Single(mod => mod.Name == "Low").IsEnabled);
@@ -34,7 +34,7 @@ public sealed class Mo2ModListImporterTests : IDisposable
     }
 
     [Fact]
-    public void Import_MatchesFolderNameAndReportsMissingEntries()
+    public void ImportMatchesFolderNameAndReportsMissingEntries()
     {
         var profile = new ModProfile();
         profile.Mods.Add(new ModEntry
@@ -45,7 +45,7 @@ public sealed class Mo2ModListImporterTests : IDisposable
         });
         var modList = CreateModList("+Missing", "+Actual MO2 Folder");
 
-        var result = new Mo2ModListImporter().Import(profile, modList);
+        var result = Mo2ModListImporter.Import(profile, modList);
 
         Assert.Equal(1, result.MatchedCount);
         Assert.Equal(["Missing"], result.MissingProfileMods);

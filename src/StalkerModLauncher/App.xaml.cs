@@ -9,7 +9,7 @@ using StalkerModLauncher.Services;
 
 namespace StalkerModLauncher;
 
-public partial class App : Application, IDisposable
+public sealed partial class App : Application, IDisposable
 {
     private readonly AppServices _services = new();
     private readonly SingleInstanceGuard _singleInstance = new("StalkerModLauncher");
@@ -130,6 +130,7 @@ public partial class App : Application, IDisposable
         _uiSoundService.Dispose();
         _singleInstance.Dispose();
         _services.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     private void ButtonBase_OnClick(object sender, RoutedEventArgs e)
@@ -166,8 +167,7 @@ public partial class App : Application, IDisposable
     {
         return new Views.MainWindow(
             _services.CreateMainViewModel(),
-            _services.WindowNavigationService,
-            _services.WindowSystemIntegrationService);
+            _services.WindowNavigationService);
     }
 
     private async Task ShowLauncherAsync(Action? launcherShown = null)

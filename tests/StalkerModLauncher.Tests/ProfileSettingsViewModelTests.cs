@@ -13,7 +13,7 @@ public sealed class ProfileSettingsViewModelTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public async Task Save_PreservesUsvfsBackendAndAnomalyRendererOverride()
+    public async Task SavePreservesUsvfsBackendAndAnomalyRendererOverride()
     {
         Directory.CreateDirectory(_root);
         File.WriteAllText(Path.Combine(_root, "AnomalyLauncher.exe"), string.Empty);
@@ -51,7 +51,7 @@ public sealed class ProfileSettingsViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Save_StandaloneProfileAlwaysUsesLinkedWorkspace()
+    public async Task SaveStandaloneProfileAlwaysUsesLinkedWorkspace()
     {
         var profile = new ModProfile
         {
@@ -76,7 +76,7 @@ public sealed class ProfileSettingsViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Save_WhenPersistenceFails_KeepsWindowOpenAndRestoresProfile()
+    public async Task SaveWhenPersistenceFailsKeepsWindowOpenAndRestoresProfile()
     {
         var profile = new ModProfile
         {

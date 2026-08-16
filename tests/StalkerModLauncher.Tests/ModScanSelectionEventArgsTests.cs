@@ -3,14 +3,14 @@ using Xunit;
 
 namespace StalkerModLauncher.Tests;
 
-public sealed class ModScanSelectionRequestTests
+public sealed class ModScanSelectionEventArgsTests
 {
     [Fact]
-    public async Task Accept_CompletesWithSelectedMods()
+    public async Task AcceptCompletesWithSelectedMods()
     {
         var first = new SelectableMod { Name = "First" };
         var second = new SelectableMod { Name = "Second" };
-        var request = new ModScanSelectionRequest([first, second]);
+        var request = new ModScanSelectionEventArgs([first, second]);
 
         request.Accept([second]);
 
@@ -20,9 +20,9 @@ public sealed class ModScanSelectionRequestTests
     }
 
     [Fact]
-    public async Task Cancel_CompletesWithoutSelection()
+    public async Task CancelCompletesWithoutSelection()
     {
-        var request = new ModScanSelectionRequest([]);
+        var request = new ModScanSelectionEventArgs([]);
 
         request.Cancel();
 

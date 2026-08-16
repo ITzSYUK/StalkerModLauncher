@@ -10,10 +10,9 @@ public sealed class ScreenshotScannerServiceTests : IDisposable
         Path.GetTempPath(),
         "StalkerModLauncherTests",
         Guid.NewGuid().ToString("N"));
-    private readonly ProfileDataPathResolver _resolver = new();
 
     [Fact]
-    public async Task ScanAsync_FindsSupportedImagesAcrossProfileAndGamePaths()
+    public async Task ScanAsyncFindsSupportedImagesAcrossProfileAndGamePaths()
     {
         var workspace = Path.Combine(_root, "workspace");
         var game = Path.Combine(_root, "game");
@@ -21,9 +20,7 @@ public sealed class ScreenshotScannerServiceTests : IDisposable
         var gameScreenshot = CreateFile(game, "appdata", "screenshots", "game.jpg");
         CreateFile(game, "appdata", "screenshots", "ignored.dds");
         var profile = new ModProfile { WorkspacePath = workspace, GameInstallPath = game };
-        var service = new ScreenshotScannerService(_resolver);
-
-        var result = await service.ScanAsync(profile);
+        var result = await ScreenshotScannerService.ScanAsync(profile);
 
         Assert.Equal(2, result.Count);
         Assert.Contains(profileScreenshot, result);
@@ -31,28 +28,25 @@ public sealed class ScreenshotScannerServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ScanAsync_UsesStandaloneDataLocations()
+    public async Task ScanAsyncUsesStandaloneDataLocations()
     {
         var screenshot = CreateFile(_root, "bin_x64", "_appdata_", "screenshots", "standalone.bmp");
         var profile = new ModProfile { IsStandalone = true };
         profile.Mods.Add(new ModEntry { SourcePath = _root, IsEnabled = true });
-        var service = new ScreenshotScannerService(_resolver);
-
-        var result = await service.ScanAsync(profile);
+        var result = await ScreenshotScannerService.ScanAsync(profile);
 
         Assert.Contains(screenshot, result);
     }
 
     [Fact]
-    public async Task ScanAsync_HonorsCancellation()
+    public async Task ScanAsyncHonorsCancellation()
     {
         var profile = new ModProfile { WorkspacePath = _root };
-        var service = new ScreenshotScannerService(_resolver);
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => service.ScanAsync(profile, cancellation.Token));
+            () => ScreenshotScannerService.ScanAsync(profile, cancellation.Token));
     }
 
     private static string CreateFile(string root, params string[] parts)

@@ -12,7 +12,7 @@ public sealed class LaunchExecutableDetectorTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void DetectBest_PrefersLaterModWhenSameExecutableExistsInPatch()
+    public void DetectBestPrefersLaterModWhenSameExecutableExistsInPatch()
     {
         var game = CreateDirectory("game");
         var mainMod = CreateDirectory("main-mod");
@@ -36,7 +36,7 @@ public sealed class LaunchExecutableDetectorTests : IDisposable
     }
 
     [Fact]
-    public void DetectBest_IgnoresDedicatedServerExecutableByDefault()
+    public void DetectBestIgnoresDedicatedServerExecutableByDefault()
     {
         var game = CreateDirectory("game");
         CreateFile(game, "bin/dedicated/XR_3DA.exe");
@@ -49,14 +49,14 @@ public sealed class LaunchExecutableDetectorTests : IDisposable
     }
 
     [Fact]
-    public void DetectBest_PrefersAnomalyLauncherForStandaloneBuilds()
+    public void DetectBestPrefersAnomalyLauncherForStandaloneBuilds()
     {
         var anomaly = CreateDirectory("anomaly");
         var launcher = CreateFile(anomaly, "AnomalyLauncher.exe");
         CreateFile(anomaly, "bin/AnomalyDX10.exe");
 
         var detected = LaunchExecutableDetector.DetectBest(
-            [new LaunchExecutableSearchRoot(anomaly, "автономный мод", 1)],
+            [new LaunchExecutableSearchRoot(anomaly, "автономная сборка", 1)],
             requestedRelativePath: null);
 
         Assert.NotNull(detected);
@@ -65,7 +65,7 @@ public sealed class LaunchExecutableDetectorTests : IDisposable
     }
 
     [Fact]
-    public void DetectAutomaticSelection_IgnoresPreviouslyPinnedBaseGameExecutable()
+    public void DetectAutomaticSelectionIgnoresPreviouslyPinnedBaseGameExecutable()
     {
         var game = CreateDirectory("game");
         var mainMod = CreateDirectory("main-mod");

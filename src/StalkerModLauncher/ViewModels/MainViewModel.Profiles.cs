@@ -8,7 +8,7 @@ public sealed partial class MainViewModel
 {
     public void MoveProfileToInsertionIndex(ModProfile profile, int insertionIndex)
     {
-        if (!_profileManager.MoveToInsertionIndex(Profiles, profile, insertionIndex))
+        if (!ProfileManager.MoveToInsertionIndex(Profiles, profile, insertionIndex))
         {
             return;
         }
@@ -43,7 +43,7 @@ public sealed partial class MainViewModel
 
         try
         {
-            _profileTransferService.Export(dialog.FileName, profile);
+            ProfileTransferService.Export(dialog.FileName, profile);
             Log($"Profile exported: {profile.Name}");
         }
         catch (Exception ex)
@@ -69,7 +69,7 @@ public sealed partial class MainViewModel
 
         try
         {
-            var profile = _profileTransferService.Import(dialog.FileName);
+            var profile = ProfileTransferService.Import(dialog.FileName);
             _profileManager.PrepareImported(Profiles, profile);
 
             Profiles.Add(profile);
@@ -86,7 +86,7 @@ public sealed partial class MainViewModel
 
     private void ChooseGameFolder()
     {
-        var selected = _dialogService.PickFolder("Choose S.T.A.L.K.E.R. GOG folder", GameInstallPath);
+        var selected = DialogService.PickFolder("Choose S.T.A.L.K.E.R. GOG folder", GameInstallPath);
         if (selected is null)
         {
             return;
@@ -105,6 +105,7 @@ public sealed partial class MainViewModel
 
     public void AddCreatedProfile(ModProfile profile)
     {
+        _profileManager.EnsureDefaults(profile);
         profile.Name = ProfileManager.GetUniqueName(Profiles, profile.Name);
         Profiles.Add(profile);
         SelectedProfile = profile;
@@ -113,7 +114,7 @@ public sealed partial class MainViewModel
     }
 
     public Mo2ImportViewModel CreateMo2ImportViewModel() =>
-        new(_mo2ImportService, _dialogService, TryAddImportedProfileAsync);
+        new(TryAddImportedProfileAsync);
 
     public async Task<bool> TryAddImportedProfileAsync(ModProfile profile)
     {
@@ -176,7 +177,7 @@ public sealed partial class MainViewModel
         var deleteMessage = profile.IsStandalone
             ? $"Удалить профиль '{profile.Name}'? Файлы мода останутся нетронутыми."
             : $"Удалить профиль '{profile.Name}' вместе с его рабочей папкой, сохранениями и логами?";
-        if (!_dialogService.Confirm("Удалить профиль", deleteMessage))
+        if (!DialogService.Confirm("Удалить профиль", deleteMessage))
         {
             return;
         }
@@ -204,20 +205,15 @@ public sealed partial class MainViewModel
         try
         {
             var path = _profileManager.GetProfileFolderPath(SelectedProfile)
-                ?? throw new DirectoryNotFoundException("Папка включенного автономного мода не найдена.");
+                ?? throw new DirectoryNotFoundException("Папка включённой автономной сборки не найдена.");
 
             Directory.CreateDirectory(path);
-            _dialogService.OpenFolder(path);
+            DialogService.OpenFolder(path);
         }
         catch (Exception ex)
         {
             Log($"Could not open profile folder: {ex.Message}");
         }
-    }
-
-    private string? TryGetWorkspaceRelativePath(string selectedPath)
-    {
-        return TryGetExecutableSelection(selectedPath)?.RelativePath;
     }
 
     private ProfileExecutableSelection? TryGetExecutableSelection(string selectedPath)
@@ -252,6 +248,7 @@ public sealed partial class MainViewModel
             () => ProfileExecutableSourceResolver.DetectAutomaticSelection(
                 profile,
                 includeWorkspace: false),
-            name => Profiles.Any(p => p != profile && p.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase)));
+            name => Profiles.Any(p => p != profile && p.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase)),
+            paths: _paths);
     }
 }

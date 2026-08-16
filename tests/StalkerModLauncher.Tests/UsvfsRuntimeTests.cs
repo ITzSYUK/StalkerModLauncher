@@ -8,7 +8,7 @@ namespace StalkerModLauncher.Tests;
 public sealed class UsvfsRuntimeTests
 {
     [Fact]
-    public async Task RunAsync_AppliesMappingsInPriorityOrderAndRunsHookedProcess()
+    public async Task RunAsyncAppliesMappingsInPriorityOrderAndRunsHookedProcess()
     {
         var native = new FakeUsvfsNativeApi();
         var runtime = new UsvfsRuntime(native);
@@ -59,16 +59,16 @@ public sealed class UsvfsRuntimeTests
         Assert.Equal(
             ["base", "patch", "profile writable files", "profile overwrite"],
             native.Mappings.Select(mapping => mapping.SourceName).ToArray());
-        Assert.Equal(UsvfsLinkFlags.Recursive, native.Mappings[0].Flags);
+        Assert.Equal(UsvfsLinkOptions.Recursive, native.Mappings[0].Flags);
         Assert.Equal(
-            UsvfsLinkFlags.Recursive | UsvfsLinkFlags.MonitorChanges | UsvfsLinkFlags.CreateTarget,
+            UsvfsLinkOptions.Recursive | UsvfsLinkOptions.MonitorChanges | UsvfsLinkOptions.CreateTarget,
             native.Mappings[3].Flags);
         Assert.Equal("\"C:\\game\\bin\\xrEngine.exe\" -nointro", native.CommandLine);
         Assert.Equal(@"C:\game", native.WorkingDirectory);
     }
 
     [Fact]
-    public async Task RunAsync_DisconnectsAndFreesParametersWhenMappingFails()
+    public async Task RunAsyncDisconnectsAndFreesParametersWhenMappingFails()
     {
         var native = new FakeUsvfsNativeApi { FailNextMapping = true };
         var runtime = new UsvfsRuntime(native);
@@ -94,7 +94,7 @@ public sealed class UsvfsRuntimeTests
     }
 
     [Fact]
-    public async Task CreateSession_RejectsConcurrentSessionAndAllowsNextAfterDispose()
+    public async Task CreateSessionRejectsConcurrentSessionAndAllowsNextAfterDispose()
     {
         var runtime = new UsvfsRuntime(new FakeUsvfsNativeApi());
         var plan = new UsvfsMappingPlan(@"C:\game", @"C:\overwrite", []);
@@ -109,7 +109,7 @@ public sealed class UsvfsRuntimeTests
     }
 
     [Fact]
-    public async Task CreateSession_DrainsDiagnosticMessagesToProfileLog()
+    public async Task CreateSessionDrainsDiagnosticMessagesToProfileLog()
     {
         var root = Path.Combine(Path.GetTempPath(), "StalkerModLauncherUsvfsLogTests", Guid.NewGuid().ToString("N"));
         try
@@ -192,13 +192,13 @@ public sealed class UsvfsRuntimeTests
         public IReadOnlyList<int> GetVfsProcessIds() => [];
         public bool TryGetLogMessage(out string message) => LogMessages.TryDequeue(out message!);
 
-        public bool LinkDirectoryStatic(string sourcePath, string destinationPath, UsvfsLinkFlags flags)
+        public bool LinkDirectoryStatic(string sourcePath, string destinationPath, UsvfsLinkOptions flags)
         {
             Mappings.Add(new MappingCall("dir", sourcePath, destinationPath, InferSourceName(sourcePath), flags));
             return !FailNextMapping;
         }
 
-        public bool LinkFile(string sourcePath, string destinationPath, UsvfsLinkFlags flags)
+        public bool LinkFile(string sourcePath, string destinationPath, UsvfsLinkOptions flags)
         {
             Mappings.Add(new MappingCall("file", sourcePath, destinationPath, InferSourceName(sourcePath), flags));
             return !FailNextMapping;
@@ -242,5 +242,5 @@ public sealed class UsvfsRuntimeTests
         string SourcePath,
         string DestinationPath,
         string SourceName,
-        UsvfsLinkFlags Flags);
+        UsvfsLinkOptions Flags);
 }

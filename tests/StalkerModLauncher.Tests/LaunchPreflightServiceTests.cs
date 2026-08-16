@@ -9,12 +9,11 @@ public sealed class LaunchPreflightServiceTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "StalkerModLauncherTests", Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public async Task AnalyzeAsync_FindsFinalExecutableFromLastEnabledMod()
+    public async Task AnalyzeAsyncFindsFinalExecutableFromLastEnabledMod()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var builder = new WorkspaceBuilder(paths);
         var service = new LaunchPreflightService(
-            new GameInstallationValidator(),
             new ProfileManager(paths, builder));
         var game = CreateFile("game/fsgame.ltx");
         CreateFile("game/bin/xr_3da.exe");
@@ -37,12 +36,11 @@ public sealed class LaunchPreflightServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_CreatesLaunchPlanPreviewFromFileLayers()
+    public async Task AnalyzeAsyncCreatesLaunchPlanPreviewFromFileLayers()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var builder = new WorkspaceBuilder(paths);
         var service = new LaunchPreflightService(
-            new GameInstallationValidator(),
             new ProfileManager(paths, builder));
         var game = CreateFile("layered-game/fsgame.ltx");
         CreateFile("layered-game/bin/xr_3da.exe");
@@ -74,12 +72,11 @@ public sealed class LaunchPreflightServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_UsesPinnedExecutableSource()
+    public async Task AnalyzeAsyncUsesPinnedExecutableSource()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var builder = new WorkspaceBuilder(paths);
         var service = new LaunchPreflightService(
-            new GameInstallationValidator(),
             new ProfileManager(paths, builder));
         var game = CreateFile("game-pinned/fsgame.ltx");
         CreateFile("game-pinned/bin/xr_3da.exe");
@@ -106,12 +103,11 @@ public sealed class LaunchPreflightServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_ReportsFsgameFromHighestPriorityLayer()
+    public async Task AnalyzeAsyncReportsFsgameFromHighestPriorityLayer()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var builder = new WorkspaceBuilder(paths);
         var service = new LaunchPreflightService(
-            new GameInstallationValidator(),
             new ProfileManager(paths, builder));
         var game = Path.Combine(_root, "game-layered");
         CreateFile("game-layered/fsgame.ltx");
@@ -136,12 +132,11 @@ public sealed class LaunchPreflightServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_WarnsAndFallsBackWhenRequestedExecutableIsMissing()
+    public async Task AnalyzeAsyncWarnsAndFallsBackWhenRequestedExecutableIsMissing()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var builder = new WorkspaceBuilder(paths);
         var service = new LaunchPreflightService(
-            new GameInstallationValidator(),
             new ProfileManager(paths, builder));
         var game = CreateFile("game/fsgame.ltx");
         CreateFile("game/bin/xr_3da.exe");
@@ -163,12 +158,11 @@ public sealed class LaunchPreflightServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_BlocksWhenNoExecutableCanBeDetected()
+    public async Task AnalyzeAsyncBlocksWhenNoExecutableCanBeDetected()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var builder = new WorkspaceBuilder(paths);
         var service = new LaunchPreflightService(
-            new GameInstallationValidator(),
             new ProfileManager(paths, builder));
         var game = CreateFile("broken-game/fsgame.ltx");
         var profile = new ModProfile
@@ -186,12 +180,11 @@ public sealed class LaunchPreflightServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_WarnsWhenEnabledModFolderIsEmpty()
+    public async Task AnalyzeAsyncWarnsWhenEnabledModFolderIsEmpty()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var builder = new WorkspaceBuilder(paths);
         var service = new LaunchPreflightService(
-            new GameInstallationValidator(),
             new ProfileManager(paths, builder));
         var game = CreateFile("game-empty-mod/fsgame.ltx");
         CreateFile("game-empty-mod/bin/xr_3da.exe");
@@ -213,14 +206,13 @@ public sealed class LaunchPreflightServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_UsesVirtualFileSystemPreviewAndValidatesRuntime()
+    public async Task AnalyzeAsyncUsesVirtualFileSystemPreviewAndValidatesRuntime()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var builder = new WorkspaceBuilder(paths);
         var runtimeDirectory = Path.Combine(_root, "usvfs-runtime");
         CreateUsvfsRuntimeFiles(runtimeDirectory);
         var service = new LaunchPreflightService(
-            new GameInstallationValidator(),
             new ProfileManager(paths, builder),
             runtimeDirectory);
         var game = Path.Combine(_root, "usvfs-game");
@@ -251,7 +243,7 @@ public sealed class LaunchPreflightServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AnalyzeAsync_BlocksUsvfsWhenRuntimeBundleIsIncomplete()
+    public async Task AnalyzeAsyncBlocksUsvfsWhenRuntimeBundleIsIncomplete()
     {
         var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
         var builder = new WorkspaceBuilder(paths);
@@ -259,7 +251,6 @@ public sealed class LaunchPreflightServiceTests : IDisposable
         CreateUsvfsRuntimeFiles(runtimeDirectory);
         File.Delete(Path.Combine(runtimeDirectory, UsvfsRuntimeFiles.X86ProxyFileName));
         var service = new LaunchPreflightService(
-            new GameInstallationValidator(),
             new ProfileManager(paths, builder),
             runtimeDirectory);
         var game = Path.Combine(_root, "incomplete-usvfs-game");

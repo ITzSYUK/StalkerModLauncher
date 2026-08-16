@@ -18,12 +18,6 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
     private const string ManifestFileName = "build-manifest.json";
     private const string WorkspaceFormatVersion = "strict-links-v1";
     private readonly AppPaths _paths;
-    private readonly WorkspaceSourceScanner _sourceScanner = new();
-    private readonly WorkspaceManifestStore _manifestStore = new();
-    private readonly WorkspaceMaterializer _materializer = new();
-    private readonly WorkspaceExecutableResolver _executableResolver = new();
-    private readonly ProfileDataConfigurator _dataConfigurator = new();
-    private readonly ProfileWritableGameFileStore _writableGameFileStore = new();
     private static EnumerationOptions SafeEnumerationOptions { get; } = new()
     {
         RecurseSubdirectories = true,
@@ -40,25 +34,25 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         string gamePath,
         ModProfile profile,
         IProgress<string> progress,
-        CancellationToken cancellationToken = default,
-        FileLayerPlan? fileLayerPlan = null)
+        FileLayerPlan? fileLayerPlan = null,
+        CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => Build(gamePath, profile, progress, cancellationToken, fileLayerPlan), cancellationToken);
+        return Task.Run(() => Build(gamePath, profile, progress, fileLayerPlan, cancellationToken), cancellationToken);
     }
 
     private WorkspaceBuildResult Build(
         string gamePath,
         ModProfile profile,
         IProgress<string> progress,
-        CancellationToken cancellationToken,
-        FileLayerPlan? providedFileLayerPlan)
+        FileLayerPlan? providedFileLayerPlan,
+        CancellationToken cancellationToken)
     {
         FileSystemSafety.EnsureRelativePath(profile.ExecutableRelativePath, "Launch executable");
 
         if (profile.IsStandalone)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return BuildStandalone(profile, gamePath, progress, cancellationToken);
+            return BuildStandalone(profile, progress, cancellationToken);
         }
 
         if (string.IsNullOrWhiteSpace(gamePath))
@@ -78,22 +72,22 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var fileLayerPlan = providedFileLayerPlan ?? FileLayerPlan.CreateLinkedWorkspace(gamePath, profile, workspaceRoot);
         progress.Report("Проверка файлов игры и модов...");
         var scanTimer = Stopwatch.StartNew();
-        var sourceSnapshot = _sourceScanner.Capture(fileLayerPlan, cancellationToken);
-        var buildSignature = _sourceScanner.CreateBuildSignature(WorkspaceFormatVersion, profile, sourceSnapshot, fileLayerPlan);
+        var sourceSnapshot = WorkspaceSourceScanner.Capture(fileLayerPlan, cancellationToken);
+        var buildSignature = WorkspaceSourceScanner.CreateBuildSignature(WorkspaceFormatVersion, profile, sourceSnapshot, fileLayerPlan);
         scanTimer.Stop();
-        var cachedExecutable = _manifestStore.TryGetCachedExecutable(workspaceRoot, currentWorkspace, profile, buildSignature, progress);
+        var cachedExecutable = WorkspaceManifestStore.TryGetCachedExecutable(workspaceRoot, currentWorkspace, profile, buildSignature, progress);
         if (cachedExecutable is not null)
         {
-            _writableGameFileStore.EnsureWorkspaceDirectories(currentWorkspace);
-            _writableGameFileStore.RestoreToCachedWorkspace(currentWorkspace, workspaceRoot, progress);
-            var cachedWorkingDirectoryRelative = _dataConfigurator.Configure(
+            ProfileWritableGameFileStore.EnsureWorkspaceDirectories(currentWorkspace);
+            ProfileWritableGameFileStore.RestoreToCachedWorkspace(currentWorkspace, workspaceRoot, progress);
+            var cachedWorkingDirectoryRelative = ProfileDataConfigurator.Configure(
                 gamePath,
                 currentWorkspace,
                 workspaceRoot,
                 progress,
                 fileLayerPlan,
                 cancellationToken);
-            _writableGameFileStore.CaptureFromWorkspace(currentWorkspace, workspaceRoot, progress);
+            ProfileWritableGameFileStore.CaptureFromWorkspace(currentWorkspace, workspaceRoot, progress);
             progress.Report($"Проверка источников: {FormatElapsed(scanTimer.Elapsed)}. Пересборка не требуется.");
             return new WorkspaceBuildResult(
                 currentWorkspace,
@@ -103,12 +97,12 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
                 cachedWorkingDirectoryRelative);
         }
 
-        _materializer.ValidateLinkSupport(sourceSnapshot, workspaceRoot, progress);
+        WorkspaceMaterializer.ValidateLinkSupport(sourceSnapshot, workspaceRoot, progress);
 
         progress.Report("Подготовка чистой рабочей среды профиля...");
         var cleanupTimer = Stopwatch.StartNew();
-        _writableGameFileStore.CaptureFromWorkspace(currentWorkspace, workspaceRoot, progress);
-        _materializer.DeleteWorkspaceContents(currentWorkspace, workspaceRoot, () => sourceSnapshot, progress);
+        ProfileWritableGameFileStore.CaptureFromWorkspace(currentWorkspace, workspaceRoot, progress);
+        WorkspaceMaterializer.DeleteWorkspaceContents(currentWorkspace, workspaceRoot, () => sourceSnapshot, progress);
         Directory.CreateDirectory(currentWorkspace);
         cleanupTimer.Stop();
 
@@ -116,7 +110,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
 
         progress.Report("Подключение базовой игры к рабочей среде...");
         var baseGameTimer = Stopwatch.StartNew();
-        _materializer.MirrorBaseGame(sourceSnapshot.Game, currentWorkspace, progress, stats, cancellationToken);
+        WorkspaceMaterializer.MirrorBaseGame(sourceSnapshot.Game, currentWorkspace, progress, stats, cancellationToken);
         baseGameTimer.Stop();
 
         var modsTimer = Stopwatch.StartNew();
@@ -124,19 +118,19 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         {
             cancellationToken.ThrowIfCancellationRequested();
             var mod = layer.Mod!;
-            _materializer.ApplyMod(currentWorkspace, mod, sourceSnapshot.Mods[mod.Id], progress, stats, cancellationToken);
+            WorkspaceMaterializer.ApplyMod(currentWorkspace, mod, sourceSnapshot.Mods[mod.Id], progress, stats, cancellationToken);
         }
         modsTimer.Stop();
 
         var configurationTimer = Stopwatch.StartNew();
-        var workingDirectoryRelative = _dataConfigurator.Configure(
+        var workingDirectoryRelative = ProfileDataConfigurator.Configure(
             gamePath,
             currentWorkspace,
             workspaceRoot,
             progress,
             fileLayerPlan,
             cancellationToken);
-        _writableGameFileStore.RestoreToWorkspace(currentWorkspace, workspaceRoot, stats, progress);
+        ProfileWritableGameFileStore.RestoreToWorkspace(currentWorkspace, workspaceRoot, stats, progress);
         ApplyPinnedExecutableSource(profile, currentWorkspace, progress, stats);
         configurationTimer.Stop();
 
@@ -144,7 +138,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var executableRelativePath = profile.ExecutableRelativePath;
         if (!File.Exists(executablePath))
         {
-            var detectedExecutable = _executableResolver.Resolve(currentWorkspace, profile.ExecutableRelativePath, progress);
+            var detectedExecutable = WorkspaceExecutableResolver.Resolve(currentWorkspace, profile.ExecutableRelativePath, progress);
             if (detectedExecutable is null)
             {
                 var discovered = Directory.EnumerateFiles(currentWorkspace, "*.exe", SafeEnumerationOptions)
@@ -181,7 +175,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             $"Время подготовки: проверка {FormatElapsed(scanTimer.Elapsed)}; очистка {FormatElapsed(cleanupTimer.Elapsed)}; " +
             $"игра {FormatElapsed(baseGameTimer.Elapsed)}; моды {FormatElapsed(modsTimer.Elapsed)}; " +
             $"настройка {FormatElapsed(configurationTimer.Elapsed)}; всего {FormatElapsed(totalTimer.Elapsed)}.");
-        _manifestStore.Write(workspaceRoot, buildSignature, stats);
+        WorkspaceManifestStore.Write(workspaceRoot, buildSignature, stats);
         return new WorkspaceBuildResult(
             currentWorkspace,
             executablePath,
@@ -190,7 +184,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             workingDirectoryRelative);
     }
 
-    private void ApplyPinnedExecutableSource(
+    private static void ApplyPinnedExecutableSource(
         ModProfile profile,
         string currentWorkspace,
         IProgress<string> progress,
@@ -219,11 +213,11 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
                 sourceFile);
         }
 
-        _materializer.ReplaceFile(sourceFile, currentWorkspace, profile.ExecutableRelativePath, stats);
+        WorkspaceMaterializer.ReplaceFile(sourceFile, currentWorkspace, profile.ExecutableRelativePath, stats);
         progress.Report($"Используется вручную выбранный бинарник: {profile.ExecutableRelativePath}. Источник: {sourceRoot.DisplayName}.");
     }
 
-    public string GetSavedGamesPath(ModProfile profile)
+    public static string GetSavedGamesPath(ModProfile profile)
     {
         if (string.IsNullOrWhiteSpace(profile.WorkspacePath))
         {
@@ -275,10 +269,10 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             throw new InvalidOperationException($"Refusing to delete profile workspace without launcher marker file: {fullWorkspacePath}");
         }
 
-        _materializer.DeleteWorkspaceContents(
+        WorkspaceMaterializer.DeleteWorkspaceContents(
             fullWorkspacePath,
             allowedRoot,
-            () => _sourceScanner.Capture(gamePath, profile, CancellationToken.None));
+            () => WorkspaceSourceScanner.Capture(gamePath, profile, CancellationToken.None));
     }
 
     public void ClearProfileWorkspaceCache(ModProfile profile, string gamePath)
@@ -315,11 +309,11 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var current = Path.Combine(workspacePath, "current");
         if (Directory.Exists(current))
         {
-            _writableGameFileStore.CaptureFromWorkspace(current, workspacePath, progress);
-            _materializer.DeleteWorkspaceContents(
+            ProfileWritableGameFileStore.CaptureFromWorkspace(current, workspacePath, progress);
+            WorkspaceMaterializer.DeleteWorkspaceContents(
                 current,
                 workspacePath,
-                () => _sourceScanner.Capture(gamePath, profile, CancellationToken.None));
+                () => WorkspaceSourceScanner.Capture(gamePath, profile, CancellationToken.None));
         }
 
         var manifest = Path.Combine(workspacePath, ManifestFileName);
@@ -495,7 +489,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         return destination;
     }
 
-    private IReadOnlyList<string> FindGeneratedWorkspacePaths(ModProfile profile, string gamePath)
+    private List<string> FindGeneratedWorkspacePaths(ModProfile profile, string gamePath)
     {
         var matches = new List<string>();
         foreach (var managedRoot in _paths.GetManagedWorkspaceRoots(gamePath)
@@ -563,9 +557,8 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         return IsGeneratedWorkspaceOwnedByProfile(profile, workspacePath);
     }
 
-    private WorkspaceBuildResult BuildStandalone(
+    private static WorkspaceBuildResult BuildStandalone(
         ModProfile profile,
-        string gamePath,
         IProgress<string> progress,
         CancellationToken cancellationToken)
     {
@@ -583,7 +576,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         if (!File.Exists(exePath))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var found = _executableResolver.ResolveStandalone(modRoot, profile.ExecutableRelativePath, cancellationToken);
+            var found = WorkspaceExecutableResolver.ResolveStandalone(modRoot, profile.ExecutableRelativePath, cancellationToken);
 
             if (found is null)
             {
@@ -597,7 +590,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         }
 
         var workingDirectoryRelative = profile.WorkingDirectoryRelative;
-        var fsgameDir = _dataConfigurator.FindFileDirectory(modRoot, "fsgame.ltx");
+        var fsgameDir = ProfileDataConfigurator.FindFileDirectory(modRoot, "fsgame.ltx");
         if (fsgameDir is not null)
         {
             var relativeDir = Path.GetRelativePath(modRoot, fsgameDir);

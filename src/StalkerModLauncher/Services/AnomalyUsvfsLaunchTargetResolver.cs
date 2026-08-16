@@ -10,11 +10,11 @@ internal sealed record UsvfsLaunchTarget(
     string SourceName,
     bool BypassedLauncher);
 
-internal sealed class AnomalyUsvfsLaunchTargetResolver
+internal static class AnomalyUsvfsLaunchTargetResolver
 {
     private const string LauncherFileName = "AnomalyLauncher.exe";
 
-    public UsvfsLaunchTarget Resolve(
+    public static UsvfsLaunchTarget Resolve(
         ModProfile profile,
         FileLayerPlan layerPlan,
         LaunchPlanResolution launchResolution)

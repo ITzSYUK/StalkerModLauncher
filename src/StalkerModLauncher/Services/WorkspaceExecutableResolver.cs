@@ -1,8 +1,8 @@
 namespace StalkerModLauncher.Services;
 
-internal sealed class WorkspaceExecutableResolver
+internal static class WorkspaceExecutableResolver
 {
-    public LaunchExecutableDetection? Resolve(string workspaceRoot, string requestedRelativePath, IProgress<string> progress)
+    public static LaunchExecutableDetection? Resolve(string workspaceRoot, string requestedRelativePath, IProgress<string> progress)
     {
         var requestedIsDedicated = LaunchExecutableDetector.IsDedicatedExecutable(requestedRelativePath);
         var best = LaunchExecutableDetector.DetectBest(
@@ -18,10 +18,10 @@ internal sealed class WorkspaceExecutableResolver
         return best;
     }
 
-    public LaunchExecutableDetection? ResolveStandalone(string modRoot, string requestedRelativePath, CancellationToken cancellationToken)
+    public static LaunchExecutableDetection? ResolveStandalone(string modRoot, string requestedRelativePath, CancellationToken cancellationToken)
     {
         return LaunchExecutableDetector.DetectBest(
-            [new LaunchExecutableSearchRoot(modRoot, "автономный мод", 1)],
+            [new LaunchExecutableSearchRoot(modRoot, "автономная сборка", 1)],
             requestedRelativePath,
             allowDedicated: false,
             cancellationToken);

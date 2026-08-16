@@ -158,15 +158,15 @@ public sealed class X86UsvfsHostRuntime(string? runtimeDirectory = null) : IUsvf
             writer.Write((uint)operations.Length);
             foreach (var operation in operations)
             {
-                var flags = UsvfsLinkFlags.Recursive;
+                var flags = UsvfsLinkOptions.Recursive;
                 if (operation.MonitorChanges)
                 {
-                    flags |= UsvfsLinkFlags.MonitorChanges;
+                    flags |= UsvfsLinkOptions.MonitorChanges;
                 }
 
                 if (operation.CreateTarget)
                 {
-                    flags |= UsvfsLinkFlags.CreateTarget;
+                    flags |= UsvfsLinkOptions.CreateTarget;
                 }
 
                 writer.Write((uint)operation.Kind);

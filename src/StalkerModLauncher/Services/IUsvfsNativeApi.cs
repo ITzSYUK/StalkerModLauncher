@@ -1,7 +1,7 @@
 namespace StalkerModLauncher.Services;
 
 [Flags]
-public enum UsvfsLinkFlags : uint
+public enum UsvfsLinkOptions : uint
 {
     None = 0,
     FailIfExists = 0x00000001,
@@ -42,8 +42,8 @@ public interface IUsvfsNativeApi
     void ClearVirtualMappings();
     IReadOnlyList<int> GetVfsProcessIds();
     bool TryGetLogMessage(out string message);
-    bool LinkDirectoryStatic(string sourcePath, string destinationPath, UsvfsLinkFlags flags);
-    bool LinkFile(string sourcePath, string destinationPath, UsvfsLinkFlags flags);
+    bool LinkDirectoryStatic(string sourcePath, string destinationPath, UsvfsLinkOptions flags);
+    bool LinkFile(string sourcePath, string destinationPath, UsvfsLinkOptions flags);
 
     Task<UsvfsProcessHandle> CreateProcessHookedAsync(
         string executablePath,

@@ -12,7 +12,7 @@ public sealed class ProfileTransferServiceTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void ExportThenImport_PreservesPortableProfileSettings()
+    public void ExportThenImportPreservesPortableProfileSettings()
     {
         Directory.CreateDirectory(_root);
         var filePath = Path.Combine(_root, "profile.stalkerprofile");
@@ -37,10 +37,8 @@ public sealed class ProfileTransferServiceTests : IDisposable
             IsEnabled = true,
             Order = 1
         });
-        var service = new ProfileTransferService();
-
-        service.Export(filePath, source);
-        var imported = service.Import(filePath);
+        ProfileTransferService.Export(filePath, source);
+        var imported = ProfileTransferService.Import(filePath);
 
         Assert.Equal(source.Name, imported.Name);
         Assert.False(imported.IsDiscordStatusEnabled);
@@ -56,7 +54,7 @@ public sealed class ProfileTransferServiceTests : IDisposable
     }
 
     [Fact]
-    public void Import_RejectsUnsafeExecutablePath()
+    public void ImportRejectsUnsafeExecutablePath()
     {
         Directory.CreateDirectory(_root);
         var filePath = Path.Combine(_root, "unsafe.stalkerprofile");
@@ -69,13 +67,11 @@ public sealed class ProfileTransferServiceTests : IDisposable
               "mods": []
             }
             """);
-        var service = new ProfileTransferService();
-
-        Assert.Throws<InvalidDataException>(() => service.Import(filePath));
+        Assert.Throws<InvalidDataException>(() => ProfileTransferService.Import(filePath));
     }
 
     [Fact]
-    public void ExportThenImport_NormalizesLegacyVirtualFileSystemBackend()
+    public void ExportThenImportNormalizesLegacyVirtualFileSystemBackend()
     {
         Directory.CreateDirectory(_root);
         var filePath = Path.Combine(_root, "vfs.stalkerprofile");
@@ -85,10 +81,8 @@ public sealed class ProfileTransferServiceTests : IDisposable
             LaunchBackendKind = LaunchBackendKind.VirtualFileSystem,
             ExecutableRelativePath = @"bin\xrEngine.exe"
         };
-        var service = new ProfileTransferService();
-
-        service.Export(filePath, source);
-        var imported = service.Import(filePath);
+        ProfileTransferService.Export(filePath, source);
+        var imported = ProfileTransferService.Import(filePath);
 
         Assert.Equal(LaunchBackendKind.LinkedWorkspace, imported.LaunchBackendKind);
     }

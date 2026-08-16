@@ -101,15 +101,15 @@ public sealed class UsvfsRuntime(IUsvfsNativeApi nativeApi) : IUsvfsRuntime
 
     private void ApplyMapping(UsvfsMappingOperation operation, IProgress<string>? progress)
     {
-        var flags = UsvfsLinkFlags.Recursive;
+        var flags = UsvfsLinkOptions.Recursive;
         if (operation.MonitorChanges)
         {
-            flags |= UsvfsLinkFlags.MonitorChanges;
+            flags |= UsvfsLinkOptions.MonitorChanges;
         }
 
         if (operation.CreateTarget)
         {
-            flags |= UsvfsLinkFlags.CreateTarget;
+            flags |= UsvfsLinkOptions.CreateTarget;
         }
 
         var ok = operation.Kind switch

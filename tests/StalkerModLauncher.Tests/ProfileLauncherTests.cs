@@ -8,7 +8,7 @@ namespace StalkerModLauncher.Tests;
 public sealed class ProfileLauncherTests
 {
     [Fact]
-    public async Task LaunchAsync_UsesLinkedWorkspaceBackendByDefault()
+    public async Task LaunchAsyncUsesLinkedWorkspaceBackendByDefault()
     {
         using var process = Process.GetCurrentProcess();
         var linkedBackend = new RecordingLaunchBackend(LaunchBackendKind.LinkedWorkspace);
@@ -24,7 +24,7 @@ public sealed class ProfileLauncherTests
     }
 
     [Fact]
-    public async Task LaunchAsync_RejectsUnavailableVirtualFileSystemWithoutChangingProfile()
+    public async Task LaunchAsyncRejectsUnavailableVirtualFileSystemWithoutChangingProfile()
     {
         using var process = Process.GetCurrentProcess();
         var linkedBackend = new RecordingLaunchBackend(LaunchBackendKind.LinkedWorkspace);
@@ -41,7 +41,7 @@ public sealed class ProfileLauncherTests
     }
 
     [Fact]
-    public async Task LaunchAsync_ReportsSelectedBackend()
+    public async Task LaunchAsyncReportsSelectedBackend()
     {
         using var process = Process.GetCurrentProcess();
         var launcher = new ProfileLauncher(
@@ -56,7 +56,7 @@ public sealed class ProfileLauncherTests
     }
 
     [Fact]
-    public async Task LaunchAsync_PassesFileLayerPlanAndOverlayManifestToBackend()
+    public async Task LaunchAsyncPassesFileLayerPlanAndOverlayManifestToBackend()
     {
         using var process = Process.GetCurrentProcess();
         var root = Path.Combine(Path.GetTempPath(), "StalkerModLauncherProfileLauncherTests", Guid.NewGuid().ToString("N"));
@@ -101,7 +101,7 @@ public sealed class ProfileLauncherTests
     }
 
     [Fact]
-    public async Task LaunchAsync_DisposesRuntimeLeaseWhenProcessStartFails()
+    public async Task LaunchAsyncDisposesRuntimeLeaseWhenProcessStartFails()
     {
         var runtimeLease = new RecordingRuntimeLease();
         var backend = new RuntimeLeaseLaunchBackend(runtimeLease);
@@ -116,7 +116,7 @@ public sealed class ProfileLauncherTests
     }
 
     [Fact]
-    public async Task LaunchAsync_KeepsRuntimeLeaseUntilBackendSessionCompletes()
+    public async Task LaunchAsyncKeepsRuntimeLeaseUntilBackendSessionCompletes()
     {
         using var process = Process.GetCurrentProcess();
         var completion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);

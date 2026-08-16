@@ -4,7 +4,7 @@ using System.Windows.Interop;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class WindowSystemIntegrationService
+public static class WindowSystemIntegrationService
 {
     private const int DwmUseImmersiveDarkModeBefore20H1 = 19;
     private const int DwmUseImmersiveDarkMode = 20;
@@ -12,7 +12,7 @@ public sealed class WindowSystemIntegrationService
     private const int DwmCaptionColor = 35;
     private const int DwmTextColor = 36;
 
-    public void Initialize(Window window)
+    public static void Initialize(Window window)
     {
         ApplyDarkWindowFrame(window);
     }

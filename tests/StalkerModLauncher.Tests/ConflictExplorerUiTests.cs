@@ -9,7 +9,7 @@ namespace StalkerModLauncher.Tests;
 public sealed class ConflictExplorerUiTests
 {
     [Fact]
-    public void ConflictExplorer_RendersInClassicAndEmbeddedPdaThemes()
+    public void ConflictExplorerRendersInClassicAndEmbeddedPdaThemes()
     {
         Exception? failure = null;
         var thread = new Thread(() =>

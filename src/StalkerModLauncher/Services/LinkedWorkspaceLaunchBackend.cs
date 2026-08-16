@@ -8,7 +8,6 @@ public sealed class LinkedWorkspaceLaunchBackend : IProfileLaunchBackend
     private const string AutoLoadBeginMarker = "-- STALKER_MOD_LAUNCHER_AUTOLOAD_BEGIN";
     private const string AutoLoadEndMarker = "-- STALKER_MOD_LAUNCHER_AUTOLOAD_END";
     private readonly WorkspaceBuilder _workspaceBuilder;
-    private readonly ProfileLaunchPlanResolver _launchPlanResolver = new();
 
     public LinkedWorkspaceLaunchBackend(WorkspaceBuilder workspaceBuilder)
     {
@@ -27,14 +26,14 @@ public sealed class LinkedWorkspaceLaunchBackend : IProfileLaunchBackend
             context.GamePath,
             profile,
             progress,
-            cancellationToken,
-            context.FileLayerPlan);
+            context.FileLayerPlan,
+            cancellationToken);
         profile.WorkspacePath = workspace.ProfileWorkspacePath;
         profile.ExecutableRelativePath = workspace.ExecutableRelativePath;
         profile.WorkingDirectoryRelative = workspace.WorkingDirectoryRelative;
         RemoveLegacyScriptAutoloadPatch(workspace, profile, progress);
 
-        return _launchPlanResolver.CreatePreparedPlan(LaunchBackendKind.LinkedWorkspace, profile, workspace);
+        return ProfileLaunchPlanResolver.CreatePreparedPlan(LaunchBackendKind.LinkedWorkspace, profile, workspace);
     }
 
     private static void RemoveLegacyScriptAutoloadPatch(WorkspaceBuildResult workspace, ModProfile profile, IProgress<string> progress)

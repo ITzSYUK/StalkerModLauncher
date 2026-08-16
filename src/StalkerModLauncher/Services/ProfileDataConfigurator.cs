@@ -1,10 +1,8 @@
 namespace StalkerModLauncher.Services;
 
-internal sealed class ProfileDataConfigurator
+internal static class ProfileDataConfigurator
 {
-    private readonly ProfileShaderCacheSeeder _shaderCacheSeeder = new();
-
-    public string Configure(
+    public static string Configure(
         string gamePath,
         string currentWorkspace,
         string profileWorkspace,
@@ -40,14 +38,14 @@ internal sealed class ProfileDataConfigurator
         }
         if (layerPlan is not null)
         {
-            _shaderCacheSeeder.Seed(layerPlan, profileDataPath, progress, cancellationToken);
+            ProfileShaderCacheSeeder.Seed(layerPlan, profileDataPath, progress, cancellationToken);
         }
 
         progress.Report("fsgame.ltx rewritten for profile-local saves and logs.");
         return workingDirectoryRelative;
     }
 
-    internal void WriteProfileFsgame(string sourcePath, string destinationPath, string profileDataPath)
+    internal static void WriteProfileFsgame(string sourcePath, string destinationPath, string profileDataPath)
     {
         var lines = File.ReadAllLines(sourcePath, XRayTextEncoding.Config);
         var appDataLineIndex = Array.FindIndex(
@@ -72,7 +70,7 @@ internal sealed class ProfileDataConfigurator
         File.WriteAllLines(destinationPath, lines, XRayTextEncoding.Config);
     }
 
-    public string? FindFileDirectory(string searchRoot, string fileName)
+    public static string? FindFileDirectory(string searchRoot, string fileName)
     {
         var rootFile = Path.Combine(searchRoot, fileName);
         if (File.Exists(rootFile)) return searchRoot;
@@ -90,7 +88,7 @@ internal sealed class ProfileDataConfigurator
         return null;
     }
 
-    public void EnsureProfileUserLtx(string gamePath, string profileDataPath, IProgress<string>? progress)
+    public static void EnsureProfileUserLtx(string gamePath, string profileDataPath, IProgress<string>? progress)
     {
         EnsureProfileUserLtx(
             [("base game", ProfileAppDataSourceLocator.EnumerateRoots(gamePath))],
@@ -98,7 +96,7 @@ internal sealed class ProfileDataConfigurator
             progress);
     }
 
-    public void EnsureProfileUserLtx(
+    public static void EnsureProfileUserLtx(
         FileLayerPlan layerPlan,
         string profileDataPath,
         IProgress<string>? progress)

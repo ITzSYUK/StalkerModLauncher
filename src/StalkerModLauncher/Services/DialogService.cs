@@ -1,12 +1,13 @@
 using System.Diagnostics;
 using Microsoft.Win32;
 using System.Windows;
+using StalkerModLauncher.Views;
 
 namespace StalkerModLauncher.Services;
 
 public class DialogService
 {
-    public string? PickFolder(string description, string? initialPath = null)
+    public static string? PickFolder(string description, string? initialPath = null)
     {
         var dialog = new OpenFolderDialog
         {
@@ -18,7 +19,7 @@ public class DialogService
         return dialog.ShowDialog() == true ? dialog.FolderName : null;
     }
 
-    public string? PickExecutable(string title, string? initialPath = null)
+    public static string? PickExecutable(string title, string? initialPath = null)
     {
         var dialog = new OpenFileDialog
         {
@@ -32,7 +33,7 @@ public class DialogService
         return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
 
-    public string? PickFile(string title, string filter, string? initialPath = null)
+    public static string? PickFile(string title, string filter, string? initialPath = null)
     {
         var dialog = new OpenFileDialog
         {
@@ -46,7 +47,7 @@ public class DialogService
         return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
 
-    public bool Confirm(string title, string message)
+    public static bool Confirm(string title, string message)
     {
         return MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
     }
@@ -56,12 +57,19 @@ public class DialogService
         MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
-    public void ShowInfo(string title, string message)
+    public static void ShowInfo(string title, string message)
     {
         MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    public void OpenFolder(string path)
+    public virtual void ShowModArchiveInstalled(string modName, string modPath, string details)
+    {
+        var window = new ModArchiveInstalledWindow(modName, modPath, details);
+        window.Show();
+        window.Activate();
+    }
+
+    public static void OpenFolder(string path)
     {
         if (!Directory.Exists(path))
         {
@@ -76,7 +84,7 @@ public class DialogService
         });
     }
 
-    public void OpenFileLocation(string path)
+    public static void OpenFileLocation(string path)
     {
         if (!File.Exists(path))
         {
@@ -91,7 +99,7 @@ public class DialogService
         });
     }
 
-    public void OpenUrl(string url)
+    public static void OpenUrl(string url)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
@@ -106,7 +114,7 @@ public class DialogService
         });
     }
 
-    public void CopyText(string text)
+    public static void CopyText(string text)
     {
         Clipboard.SetText(text);
     }

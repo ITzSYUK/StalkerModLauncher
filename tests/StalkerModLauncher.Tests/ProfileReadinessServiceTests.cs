@@ -10,50 +10,49 @@ public sealed class ProfileReadinessServiceTests : IDisposable
         Path.GetTempPath(),
         "StalkerModLauncherTests",
         Guid.NewGuid().ToString("N"));
-    private readonly ProfileReadinessService _service = new(new GameInstallationValidator());
 
     [Fact]
-    public void Validate_AcceptsConfiguredOverlayProfile()
+    public void ValidateAcceptsConfiguredOverlayProfile()
     {
         CreateFile("game/fsgame.ltx");
         CreateFile("game/bin/xr_3da.exe");
         var profile = new ModProfile { GameInstallPath = Path.Combine(_root, "game") };
 
-        var result = _service.Validate(profile);
+        var result = ProfileReadinessService.Validate(profile);
 
         Assert.True(result.IsValid);
         Assert.Equal("Готов к запуску.", result.Summary);
     }
 
     [Fact]
-    public void Validate_RejectsOverlayProfileWithoutOwnGamePath()
+    public void ValidateRejectsOverlayProfileWithoutOwnGamePath()
     {
         CreateFile("default-game/fsgame.ltx");
         CreateFile("default-game/bin/xr_3da.exe");
         var profile = new ModProfile { GameInstallPath = string.Empty };
 
-        var result = _service.Validate(profile);
+        var result = ProfileReadinessService.Validate(profile);
 
         Assert.False(result.IsValid);
         Assert.Contains("Выберите папку с установленной игрой.", result.Summary);
     }
 
     [Fact]
-    public void Validate_RejectsMissingEnabledMod()
+    public void ValidateRejectsMissingEnabledMod()
     {
         CreateFile("game/fsgame.ltx");
         CreateFile("game/bin/xr_3da.exe");
         var profile = new ModProfile { GameInstallPath = Path.Combine(_root, "game") };
         profile.Mods.Add(new ModEntry { Name = "Missing", SourcePath = Path.Combine(_root, "missing") });
 
-        var result = _service.Validate(profile);
+        var result = ProfileReadinessService.Validate(profile);
 
         Assert.False(result.IsValid);
         Assert.Contains("Папка мода не найдена: Missing", result.Summary);
     }
 
     [Fact]
-    public void Validate_RejectsMissingMo2OverwriteLayer()
+    public void ValidateRejectsMissingMo2OverwriteLayer()
     {
         CreateFile("game/fsgame.ltx");
         CreateFile("game/bin/xr_3da.exe");
@@ -63,28 +62,28 @@ public sealed class ProfileReadinessServiceTests : IDisposable
             Mo2OverwritePath = Path.Combine(_root, "missing-overwrite")
         };
 
-        var result = _service.Validate(profile);
+        var result = ProfileReadinessService.Validate(profile);
 
         Assert.False(result.IsValid);
         Assert.Contains("Папка MO2 overwrite не найдена", result.Summary);
     }
 
     [Fact]
-    public void Validate_RequiresExactlyOneStandaloneModAndSafeExecutable()
+    public void ValidateRequiresExactlyOneStandaloneModAndSafeExecutable()
     {
         var modPath = Path.Combine(_root, "mod");
         Directory.CreateDirectory(modPath);
         var profile = new ModProfile { IsStandalone = true, ExecutableRelativePath = @"..\outside.exe" };
         profile.Mods.Add(new ModEntry { Name = "Standalone", SourcePath = modPath });
 
-        var result = _service.Validate(profile);
+        var result = ProfileReadinessService.Validate(profile);
 
         Assert.False(result.IsValid);
         Assert.Contains("must not leave", result.Summary);
     }
 
     [Fact]
-    public void Validate_RejectsExcludedUniqueFileWithoutFallbackProvider()
+    public void ValidateRejectsExcludedUniqueFileWithoutFallbackProvider()
     {
         CreateFile("game/fsgame.ltx");
         CreateFile("game/bin/xr_3da.exe");
@@ -97,21 +96,21 @@ public sealed class ProfileReadinessServiceTests : IDisposable
             ExcludedFiles = ["unique.ltx"]
         });
 
-        var result = _service.Validate(profile);
+        var result = ProfileReadinessService.Validate(profile);
 
         Assert.False(result.IsValid);
         Assert.Contains("больше не имеет другого поставщика", result.Summary);
     }
 
     [Fact]
-    public void Validate_UsesCommonReadySummaryForStandaloneProfile()
+    public void ValidateUsesCommonReadySummaryForStandaloneProfile()
     {
         var modPath = Path.Combine(_root, "standalone");
         Directory.CreateDirectory(modPath);
         var profile = new ModProfile { IsStandalone = true };
         profile.Mods.Add(new ModEntry { Name = "Standalone", SourcePath = modPath });
 
-        var result = _service.Validate(profile);
+        var result = ProfileReadinessService.Validate(profile);
 
         Assert.True(result.IsValid);
         Assert.Equal("Готов к запуску.", result.Summary);

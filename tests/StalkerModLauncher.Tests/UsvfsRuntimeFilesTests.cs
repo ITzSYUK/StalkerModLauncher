@@ -11,7 +11,7 @@ public sealed class UsvfsRuntimeFilesTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void Check_RequiresCompleteValidatedRuntime()
+    public void CheckRequiresCompleteValidatedRuntime()
     {
         Directory.CreateDirectory(_root);
         CopyRuntimeFile(UsvfsRuntimeFiles.ControllerDllFileName, WindowsExecutableArchitecture.X64);
@@ -39,7 +39,7 @@ public sealed class UsvfsRuntimeFilesTests : IDisposable
     }
 
     [Fact]
-    public void Check_RejectsWrongRuntimeArchitecture()
+    public void CheckRejectsWrongRuntimeArchitecture()
     {
         Directory.CreateDirectory(_root);
         CopyRuntimeFile(UsvfsRuntimeFiles.ControllerDllFileName, WindowsExecutableArchitecture.X64);

@@ -194,7 +194,7 @@
                                      IsChecked="{Binding IsStandalone}"
                                      Style="{StaticResource ProfileTypeCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="Автономная игра или мод"
+                                <TextBlock Text="Автономная сборка"
                                            FontSize="15"
                                            FontWeight="SemiBold"/>
                                 <TextBlock Text="Готовая сборка со своим движком и игровыми файлами."

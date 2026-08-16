@@ -11,14 +11,12 @@ public sealed class ModScannerServiceTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public async Task ScanFolderAsync_FindsMultipleNestedMods()
+    public async Task ScanFolderAsyncFindsMultipleNestedMods()
     {
         CreateFile("wrapper/first/fsgame.ltx");
         Directory.CreateDirectory(Path.Combine(_root, "wrapper", "second", "gamedata"));
         CreateFile("other/third/bin_x64/xrEngine.exe");
-        var scanner = new ModScannerService();
-
-        var result = await scanner.ScanFolderAsync(_root);
+        var result = await ModScannerService.ScanFolderAsync(_root);
 
         Assert.Equal(3, result.Count);
         Assert.Contains(result, mod => mod.Name == "first" && mod.DetectedBy.Contains("fsgame.ltx"));
@@ -27,26 +25,22 @@ public sealed class ModScannerServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ScanFolderAsync_DoesNotReportChildrenInsideDetectedMod()
+    public async Task ScanFolderAsyncDoesNotReportChildrenInsideDetectedMod()
     {
         CreateFile("parent/fsgame.ltx");
         CreateFile("parent/nested/fsgame.ltx");
-        var scanner = new ModScannerService();
-
-        var result = await scanner.ScanFolderAsync(_root);
+        var result = await ModScannerService.ScanFolderAsync(_root);
 
         Assert.Single(result);
         Assert.Equal("parent", result[0].Name);
     }
 
     [Fact]
-    public async Task ScanFolderAsync_FindsAnomalyArchiveModInsideDbMods()
+    public async Task ScanFolderAsyncFindsAnomalyArchiveModInsideDbMods()
     {
         CreateFile("Осень/db/mods/anomaly-autumn-dark.db0");
         CreateFile("Осень/meta.ini");
-        var scanner = new ModScannerService();
-
-        var result = await scanner.ScanFolderAsync(_root);
+        var result = await ModScannerService.ScanFolderAsync(_root);
 
         var mod = Assert.Single(result);
         Assert.Equal("Осень", mod.Name);
@@ -54,12 +48,10 @@ public sealed class ModScannerServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ScanFolderAsync_UsesPatchRootForArchiveInsidePatchesDirectory()
+    public async Task ScanFolderAsyncUsesPatchRootForArchiveInsidePatchesDirectory()
     {
         CreateFile("SNW Patch 1.09b (db)/patches/xpatch_03_snw8.db");
-        var scanner = new ModScannerService();
-
-        var result = await scanner.ScanFolderAsync(_root);
+        var result = await ModScannerService.ScanFolderAsync(_root);
 
         var mod = Assert.Single(result);
         Assert.Equal("SNW Patch 1.09b (db)", mod.Name);
@@ -70,11 +62,9 @@ public sealed class ModScannerServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ScanFolderAsync_ReturnsEmptyForMissingFolder()
+    public async Task ScanFolderAsyncReturnsEmptyForMissingFolder()
     {
-        var scanner = new ModScannerService();
-
-        var result = await scanner.ScanFolderAsync(Path.Combine(_root, "missing"));
+        var result = await ModScannerService.ScanFolderAsync(Path.Combine(_root, "missing"));
 
         Assert.Empty(result);
     }

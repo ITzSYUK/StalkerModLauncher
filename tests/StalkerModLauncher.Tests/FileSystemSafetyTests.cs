@@ -8,7 +8,7 @@ public sealed class FileSystemSafetyTests
     [Theory]
     [InlineData(@"bin\xrEngine.exe")]
     [InlineData(@"folder.with..dots\game.exe")]
-    public void ResolvePathInside_AcceptsSafeRelativePaths(string relativePath)
+    public void ResolvePathInsideAcceptsSafeRelativePaths(string relativePath)
     {
         var root = Path.Combine(Path.GetTempPath(), "StalkerModLauncherTests", Guid.NewGuid().ToString("N"));
 
@@ -21,7 +21,7 @@ public sealed class FileSystemSafetyTests
     [InlineData(@"..\outside.exe")]
     [InlineData(@"bin\..\..\outside.exe")]
     [InlineData(@"C:\Windows\notepad.exe")]
-    public void ResolvePathInside_RejectsPathsOutsideRoot(string relativePath)
+    public void ResolvePathInsideRejectsPathsOutsideRoot(string relativePath)
     {
         var root = Path.Combine(Path.GetTempPath(), "StalkerModLauncherTests", Guid.NewGuid().ToString("N"));
 
@@ -30,7 +30,7 @@ public sealed class FileSystemSafetyTests
     }
 
     [Fact]
-    public void DeleteDirectoryContents_DeletesManagedDirectory()
+    public void DeleteDirectoryContentsDeletesManagedDirectory()
     {
         var root = Path.Combine(Path.GetTempPath(), "StalkerModLauncherTests", Guid.NewGuid().ToString("N"));
         var child = Path.Combine(root, "profile");
@@ -43,7 +43,7 @@ public sealed class FileSystemSafetyTests
     }
 
     [Fact]
-    public void DeleteDirectoryContents_RejectsDirectoryOutsideAllowedRoot()
+    public void DeleteDirectoryContentsRejectsDirectoryOutsideAllowedRoot()
     {
         var allowedRoot = Path.Combine(Path.GetTempPath(), "StalkerModLauncherTests", Guid.NewGuid().ToString("N"));
         var outside = Path.Combine(Path.GetTempPath(), "StalkerModLauncherTests", Guid.NewGuid().ToString("N"));

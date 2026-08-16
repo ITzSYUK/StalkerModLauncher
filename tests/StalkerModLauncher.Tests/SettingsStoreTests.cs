@@ -20,7 +20,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadAsync_ReturnsBackupWhenPrimaryJsonIsCorrupted()
+    public async Task LoadAsyncReturnsBackupWhenPrimaryJsonIsCorrupted()
     {
         await _store.SaveAsync(new AppSettings { LastBrowsedGamePath = "first" });
         await _store.SaveAsync(new AppSettings { LastBrowsedGamePath = "second" });
@@ -36,7 +36,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadWithRecoveryAsync_ReportsBackupRecoveryAndPreservesBrokenPrimary()
+    public async Task LoadWithRecoveryAsyncReportsBackupRecoveryAndPreservesBrokenPrimary()
     {
         await _store.SaveAsync(new AppSettings { LastBrowsedGamePath = "backup" });
         await _store.SaveAsync(new AppSettings { LastBrowsedGamePath = "primary" });
@@ -56,7 +56,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateAsync_AppliesConcurrentChangesWithoutLosingFields()
+    public async Task UpdateAsyncAppliesConcurrentChangesWithoutLosingFields()
     {
         await _store.SaveAsync(new AppSettings());
 
@@ -78,7 +78,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAsync_CapturesSnapshotBeforeWaitingForWrite()
+    public async Task SaveAsyncCapturesSnapshotBeforeWaitingForWrite()
     {
         var settings = new AppSettings { LastBrowsedGamePath = "snapshot" };
         var save = _store.SaveAsync(settings);
@@ -90,7 +90,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadAsync_ReturnsDefaultsWhenPrimaryAndBackupAreCorrupted()
+    public async Task LoadAsyncReturnsDefaultsWhenPrimaryAndBackupAreCorrupted()
     {
         Directory.CreateDirectory(_paths.ConfigDirectory);
         await File.WriteAllTextAsync(_paths.SettingsFile, "{ broken primary");
@@ -106,7 +106,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadWithRecoveryAsync_ReportsDefaultsWhenNoValidSettingsRemain()
+    public async Task LoadWithRecoveryAsyncReportsDefaultsWhenNoValidSettingsRemain()
     {
         Directory.CreateDirectory(_paths.ConfigDirectory);
         await File.WriteAllTextAsync(_paths.SettingsFile, "{ broken primary");
@@ -120,7 +120,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadWithRecoveryAsync_RestoresMissingPrimaryFromBackup()
+    public async Task LoadWithRecoveryAsyncRestoresMissingPrimaryFromBackup()
     {
         Directory.CreateDirectory(_paths.ConfigDirectory);
         await File.WriteAllTextAsync(
@@ -136,7 +136,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadWithRecoveryAsync_DoesNotReplaceTemporarilyLockedSettings()
+    public async Task LoadWithRecoveryAsyncDoesNotReplaceTemporarilyLockedSettings()
     {
         Directory.CreateDirectory(_paths.ConfigDirectory);
         await File.WriteAllTextAsync(
@@ -165,7 +165,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadWithRecoveryAsync_PreservesRepeatedFailuresWithSameTimestamp()
+    public async Task LoadWithRecoveryAsyncPreservesRepeatedFailuresWithSameTimestamp()
     {
         var fixedTime = new DateTimeOffset(2026, 8, 2, 12, 34, 56, TimeSpan.Zero);
         var store = new SettingsStore(_paths, new FixedTimeProvider(fixedTime));
@@ -182,11 +182,13 @@ public sealed class SettingsStoreTests : IDisposable
         var recovered = Directory.GetFiles(Path.Combine(_paths.ConfigDirectory, "recovery"));
         Assert.Equal(2, recovered.Length);
         Assert.Equal(2, recovered.Select(Path.GetFileName).Distinct(StringComparer.OrdinalIgnoreCase).Count());
-        Assert.Contains(recovered, path => Path.GetFileNameWithoutExtension(path).EndsWith("-2"));
+        Assert.Contains(
+            recovered,
+            path => Path.GetFileNameWithoutExtension(path).EndsWith("-2", StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task UpdateAsync_NotifiesWhenItRecoversSettings()
+    public async Task UpdateAsyncNotifiesWhenItRecoversSettings()
     {
         await _store.SaveAsync(new AppSettings { LastBrowsedGamePath = "backup" });
         await _store.SaveAsync(new AppSettings { LastBrowsedGamePath = "primary" });
@@ -205,7 +207,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task HasSettingsFile_IsFalseUntilSettingsAreSaved()
+    public async Task HasSettingsFileIsFalseUntilSettingsAreSaved()
     {
         Assert.False(_store.HasSettingsFile);
 
@@ -215,7 +217,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAsync_PreservesProfileAndModOrder()
+    public async Task SaveAsyncPreservesProfileAndModOrder()
     {
         var first = new ModProfile { Name = "First" };
         first.Mods.Add(new ModEntry { Name = "Low priority", Order = 1 });
@@ -232,7 +234,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAndLoadAsync_PreservesPerProfileDiscordStatus()
+    public async Task SaveAndLoadAsyncPreservesPerProfileDiscordStatus()
     {
         var profile = new ModProfile { Name = "No Discord", IsDiscordStatusEnabled = false };
 
@@ -243,7 +245,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadAsync_MigratesLegacyGlobalGamePath()
+    public async Task LoadAsyncMigratesLegacyGlobalGamePath()
     {
         Directory.CreateDirectory(_paths.ConfigDirectory);
         await File.WriteAllTextAsync(
@@ -258,7 +260,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAsync_DoesNotPersistRuntimeProperties()
+    public async Task SaveAsyncDoesNotPersistRuntimeProperties()
     {
         var profile = new ModProfile { IsRunning = true };
         profile.Mods.Add(new ModEntry { HasOverlapsAbove = true });
@@ -273,7 +275,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadAsync_RepairsDuplicateIdsAndModOrder()
+    public async Task LoadAsyncRepairsDuplicateIdsAndModOrder()
     {
         Directory.CreateDirectory(_paths.ConfigDirectory);
         await File.WriteAllTextAsync(
@@ -295,7 +297,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAndLoadAsync_HandlesLargeProfileCollection()
+    public async Task SaveAndLoadAsyncHandlesLargeProfileCollection()
     {
         var settings = new AppSettings();
         for (var profileIndex = 0; profileIndex < 100; profileIndex++)

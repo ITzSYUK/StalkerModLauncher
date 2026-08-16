@@ -2,9 +2,9 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class UsvfsMappingPlanBuilder
+public static class UsvfsMappingPlanBuilder
 {
-    public UsvfsMappingPlan Build(
+    public static UsvfsMappingPlan Build(
         FileLayerPlan layerPlan,
         OverlayManifest manifest,
         string? virtualRootOverride = null)
@@ -57,7 +57,7 @@ public sealed class UsvfsMappingPlanBuilder
             operations);
     }
 
-    public UsvfsMappingPlan BuildAnomalyLauncherBootstrap(
+    public static UsvfsMappingPlan BuildAnomalyLauncherBootstrap(
         FileLayerPlan layerPlan,
         OverlayManifest manifest,
         string virtualRoot)
@@ -95,7 +95,7 @@ public sealed class UsvfsMappingPlanBuilder
     }
 
     private static void AddLayerDirectoriesAroundPhysicalBin(
-        ICollection<UsvfsMappingOperation> operations,
+        List<UsvfsMappingOperation> operations,
         FileLayer layer,
         string virtualRoot)
     {
@@ -140,7 +140,7 @@ public sealed class UsvfsMappingPlanBuilder
     }
 
     private static void AddWritableFiles(
-        ICollection<UsvfsMappingOperation> operations,
+        List<UsvfsMappingOperation> operations,
         string virtualRoot,
         OverlayManifest manifest)
     {
@@ -159,7 +159,7 @@ public sealed class UsvfsMappingPlanBuilder
     }
 
     private static void AddExcludedFileRestorations(
-        ICollection<UsvfsMappingOperation> operations,
+        List<UsvfsMappingOperation> operations,
         FileLayerPlan layerPlan,
         string virtualRoot)
     {

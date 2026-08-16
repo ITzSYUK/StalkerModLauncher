@@ -15,7 +15,7 @@ public sealed class LaunchCoordinator : IDisposable
     {
         _profileLauncher = profileLauncher;
         _sessionTracker = sessionTracker;
-        _readinessMonitor = readinessMonitor ?? new GameLaunchReadinessMonitor(new ProfileDataPathResolver());
+        _readinessMonitor = readinessMonitor ?? new GameLaunchReadinessMonitor();
     }
 
     public void ConfigureDiscord(string clientId, Action<string>? diagnostic = null)

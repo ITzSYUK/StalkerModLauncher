@@ -4,7 +4,7 @@ using StalkerModLauncher.ViewModels;
 
 namespace StalkerModLauncher.Views.Controls;
 
-public partial class PdaScanResultsView : UserControl, IDisposable
+public sealed partial class PdaScanResultsView : UserControl, IDisposable
 {
     private bool _completed;
 
@@ -28,6 +28,8 @@ public partial class PdaScanResultsView : UserControl, IDisposable
             _completed = true;
             Cancelled?.Invoke(this, EventArgs.Empty);
         }
+
+        GC.SuppressFinalize(this);
     }
 
     private void ModsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)

@@ -65,7 +65,7 @@ public sealed partial class MainViewModel
         {
             foreach (var profile in Profiles)
             {
-                _modListEditor.Renumber(profile);
+                ModListEditor.Renumber(profile);
             }
 
             await _settingsStore.UpdateAsync(existing => new AppSettings
@@ -134,7 +134,7 @@ public sealed partial class MainViewModel
             foreach (ModEntry mod in e.OldItems) mod.PropertyChanged -= ModOnPropertyChanged;
         }
 
-        if (SelectedProfile is not null) _modListEditor.Renumber(SelectedProfile);
+        if (SelectedProfile is not null) ModListEditor.Renumber(SelectedProfile);
         CreateFilteredModsView();
         RecalculateModOverlayInfo();
         RefreshValidation();
@@ -201,7 +201,7 @@ public sealed partial class MainViewModel
             ? string.Empty
             : $"{Environment.NewLine}{Environment.NewLine}Повреждённые файлы сохранены:{Environment.NewLine}" +
               string.Join(Environment.NewLine, recovery.Files.Select(file => file.RecoveryPath));
-        _dialogService.ShowInfo(
+        DialogService.ShowInfo(
             "Восстановление настроек",
             message + preservedFiles);
     }

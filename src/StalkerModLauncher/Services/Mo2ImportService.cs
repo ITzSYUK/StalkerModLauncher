@@ -109,9 +109,9 @@ public sealed record Mo2ImportPreview(
         : "overwrite пуст или не найден.";
 }
 
-public sealed class Mo2ImportService
+public static class Mo2ImportService
 {
-    public Mo2ImportDiscovery Discover(string selectedPath)
+    public static Mo2ImportDiscovery Discover(string selectedPath)
     {
         if (string.IsNullOrWhiteSpace(selectedPath))
         {
@@ -180,7 +180,7 @@ public sealed class Mo2ImportService
             selectedProfile);
     }
 
-    public Mo2ImportPreview CreatePreview(
+    public static Mo2ImportPreview CreatePreview(
         Mo2ImportDiscovery discovery,
         Mo2ProfileSource profile,
         string gamePath,
@@ -253,7 +253,7 @@ public sealed class Mo2ImportService
             executableSummary);
     }
 
-    public ModProfile CreateProfile(Mo2ImportPreview preview, string requestedName, bool includeOverwrite)
+    public static ModProfile CreateProfile(Mo2ImportPreview preview, string requestedName, bool includeOverwrite)
     {
         if (!Directory.Exists(preview.Discovery.GamePath))
         {
@@ -344,7 +344,7 @@ public sealed class Mo2ImportService
         return candidates.FirstOrDefault(File.Exists);
     }
 
-    private static IReadOnlyList<Mo2ProfileSource> FindProfiles(
+    private static List<Mo2ProfileSource> FindProfiles(
         string profilesPath,
         string? selectedProfileDirectory,
         string? selectedModList)
@@ -401,7 +401,7 @@ public sealed class Mo2ImportService
         return values;
     }
 
-    private static string GetValue(IReadOnlyDictionary<string, string> values, params string[] keys)
+    private static string GetValue(Dictionary<string, string> values, params string[] keys)
     {
         foreach (var key in keys)
         {
@@ -441,7 +441,7 @@ public sealed class Mo2ImportService
         return Path.GetFullPath(Path.IsPathRooted(decoded) ? decoded : Path.Combine(basePath, decoded));
     }
 
-    private static IReadOnlyList<ModDirectory> ReadModDirectories(string modsPath)
+    private static ModDirectory[] ReadModDirectories(string modsPath)
     {
         if (!Directory.Exists(modsPath))
         {
@@ -457,7 +457,7 @@ public sealed class Mo2ImportService
             .ToArray();
     }
 
-    private static IReadOnlyList<string> FindCandidates(string name, IReadOnlyList<ModDirectory> directories)
+    private static string[] FindCandidates(string name, IReadOnlyList<ModDirectory> directories)
     {
         var exact = directories
             .Where(directory => directory.FolderName.Equals(name, StringComparison.OrdinalIgnoreCase))
@@ -525,7 +525,7 @@ public sealed class Mo2ImportService
         return value.Trim(' ', '-', '_', '=');
     }
 
-    private static IReadOnlyList<ModListEntry> ParseModList(IEnumerable<string> lines)
+    private static List<ModListEntry> ParseModList(IEnumerable<string> lines)
     {
         var result = new List<ModListEntry>();
         foreach (var rawLine in lines)

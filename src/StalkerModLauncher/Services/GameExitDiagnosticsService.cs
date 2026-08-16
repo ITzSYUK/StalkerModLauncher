@@ -2,22 +2,15 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class GameExitDiagnosticsService
+public static class GameExitDiagnosticsService
 {
     private static readonly TimeSpan QuickExitThreshold = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan FileTimeTolerance = TimeSpan.FromMinutes(2);
 
-    private readonly ProfileDataPathResolver _dataPathResolver;
-
-    public GameExitDiagnosticsService(ProfileDataPathResolver dataPathResolver)
-    {
-        _dataPathResolver = dataPathResolver;
-    }
-
-    public GameExitDiagnostics Analyze(ModProfile profile, GameSessionResult session)
+    public static GameExitDiagnostics Analyze(ModProfile profile, GameSessionResult session)
     {
         var isQuickExit = session.Duration < QuickExitThreshold;
-        var logPaths = _dataPathResolver.GetLogDirectories(profile);
+        var logPaths = ProfileDataPathResolver.GetLogDirectories(profile);
         var earliestRelevantUtc = (session.StartedAtUtc ?? DateTime.UtcNow - session.Duration) - FileTimeTolerance;
         var latestLog = FindLatest(
             logPaths,

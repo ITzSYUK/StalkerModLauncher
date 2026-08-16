@@ -8,8 +8,6 @@ namespace StalkerModLauncher.ViewModels;
 
 public sealed class Mo2ImportViewModel : ObservableObject
 {
-    private readonly Mo2ImportService _importService;
-    private readonly DialogService _dialogService;
     private readonly Func<Models.ModProfile, Task<bool>> _commitProfileAsync;
     private Mo2ImportDiscovery? _discovery;
     private Mo2ProfileSource? _selectedMo2Profile;
@@ -25,12 +23,8 @@ public sealed class Mo2ImportViewModel : ObservableObject
     private bool _includeOverwrite;
 
     public Mo2ImportViewModel(
-        Mo2ImportService importService,
-        DialogService dialogService,
         Func<Models.ModProfile, Task<bool>> commitProfileAsync)
     {
-        _importService = importService;
-        _dialogService = dialogService;
         _commitProfileAsync = commitProfileAsync;
         BrowseSourceFolderCommand = new RelayCommand(BrowseSourceFolder);
         BrowseModListCommand = new RelayCommand(BrowseModList);
@@ -169,7 +163,7 @@ public sealed class Mo2ImportViewModel : ObservableObject
     {
         try
         {
-            var discovery = _importService.Discover(path);
+            var discovery = Mo2ImportService.Discover(path);
             _discovery = discovery;
             SourcePath = path;
             GamePath = discovery.GamePath;
@@ -192,7 +186,7 @@ public sealed class Mo2ImportViewModel : ObservableObject
 
     private void BrowseSourceFolder()
     {
-        var path = _dialogService.PickFolder("Выберите папку Mod Organizer 2 или профиль MO2", SourcePath);
+        var path = DialogService.PickFolder("Выберите папку Mod Organizer 2 или профиль MO2", SourcePath);
         if (path is not null)
         {
             LoadSource(path);
@@ -201,7 +195,7 @@ public sealed class Mo2ImportViewModel : ObservableObject
 
     private void BrowseModList()
     {
-        var path = _dialogService.PickFile(
+        var path = DialogService.PickFile(
             "Выберите modlist.txt из профиля Mod Organizer 2",
             "Mod Organizer mod list (modlist.txt)|modlist.txt|Text files (*.txt)|*.txt");
         if (path is not null)
@@ -212,7 +206,7 @@ public sealed class Mo2ImportViewModel : ObservableObject
 
     private void BrowseGame()
     {
-        var path = _dialogService.PickFolder("Выберите папку базовой игры", GamePath);
+        var path = DialogService.PickFolder("Выберите папку базовой игры", GamePath);
         if (path is not null)
         {
             GamePath = path;
@@ -221,7 +215,7 @@ public sealed class Mo2ImportViewModel : ObservableObject
 
     private void BrowseMods()
     {
-        var path = _dialogService.PickFolder("Выберите папку mods Mod Organizer 2", ModsPath);
+        var path = DialogService.PickFolder("Выберите папку mods Mod Organizer 2", ModsPath);
         if (path is not null)
         {
             ModsPath = path;
@@ -230,7 +224,7 @@ public sealed class Mo2ImportViewModel : ObservableObject
 
     private void BrowseOverwrite()
     {
-        var path = _dialogService.PickFolder("Выберите папку overwrite Mod Organizer 2", OverwritePath);
+        var path = DialogService.PickFolder("Выберите папку overwrite Mod Organizer 2", OverwritePath);
         if (path is not null)
         {
             OverwritePath = path;
@@ -252,7 +246,7 @@ public sealed class Mo2ImportViewModel : ObservableObject
 
         try
         {
-            var preview = _importService.CreatePreview(
+            var preview = Mo2ImportService.CreatePreview(
                 _discovery,
                 SelectedMo2Profile,
                 GamePath,
@@ -299,7 +293,7 @@ public sealed class Mo2ImportViewModel : ObservableObject
 
         try
         {
-            var profile = _importService.CreateProfile(Preview, ProfileName, IncludeOverwrite);
+            var profile = Mo2ImportService.CreateProfile(Preview, ProfileName, IncludeOverwrite);
             if (await _commitProfileAsync(profile))
             {
                 Completed?.Invoke(this, EventArgs.Empty);

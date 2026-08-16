@@ -9,13 +9,10 @@ namespace StalkerModLauncher.Views;
 
 public partial class ModCatalogWindow : Window
 {
-    private readonly WindowSystemIntegrationService _windowSystemIntegration;
-
-    public ModCatalogWindow(ModCatalogViewModel viewModel, WindowSystemIntegrationService windowSystemIntegration)
+    public ModCatalogWindow(ModCatalogViewModel viewModel)
     {
         InitializeComponent();
         DataContext = viewModel;
-        _windowSystemIntegration = windowSystemIntegration;
         Loaded += async (_, _) =>
         {
             UpdateCategoryButtons(ApProCatalogCategory.ShadowOfChernobyl);
@@ -32,7 +29,7 @@ public partial class ModCatalogWindow : Window
 
     private ModCatalogViewModel? ViewModel => DataContext as ModCatalogViewModel;
 
-    private void Window_OnSourceInitialized(object? sender, EventArgs e) => _windowSystemIntegration.Initialize(this);
+    private void Window_OnSourceInitialized(object? sender, EventArgs e) => WindowSystemIntegrationService.Initialize(this);
 
     private async void ShadowOfChernobylButton_OnClick(object sender, RoutedEventArgs e) => await LoadCategoryAsync(ApProCatalogCategory.ShadowOfChernobyl);
 
@@ -50,9 +47,9 @@ public partial class ModCatalogWindow : Window
         }
     }
 
-    private void ApProLink_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e) => ViewModel?.OpenWebsite();
+    private void ApProLink_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e) => ModCatalogViewModel.OpenWebsite();
 
-    private void ListingButton_OnClick(object sender, RoutedEventArgs e) => ViewModel?.OpenListing((sender as FrameworkElement)?.DataContext as ModCatalogItemViewModel);
+    private void ListingButton_OnClick(object sender, RoutedEventArgs e) => ModCatalogViewModel.OpenListing((sender as FrameworkElement)?.DataContext as ModCatalogItemViewModel);
 
     private void SearchTextBox_OnTextChanged(object sender, TextChangedEventArgs e) => CatalogScrollViewer.ScrollToTop();
 

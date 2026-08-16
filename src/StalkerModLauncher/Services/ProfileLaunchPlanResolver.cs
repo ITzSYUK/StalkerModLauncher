@@ -19,11 +19,9 @@ internal sealed record LaunchPlanResolution(
     public bool IsReady => Plan is not null && Executable is { IsAvailable: true } && string.IsNullOrWhiteSpace(Error);
 }
 
-internal sealed class ProfileLaunchPlanResolver
+internal static class ProfileLaunchPlanResolver
 {
-    private readonly ProfileDataConfigurator _dataConfigurator = new();
-
-    public LaunchPlan CreatePreparedPlan(
+    public static LaunchPlan CreatePreparedPlan(
         LaunchBackendKind backendKind,
         ModProfile profile,
         WorkspaceBuildResult workspace)
@@ -42,7 +40,7 @@ internal sealed class ProfileLaunchPlanResolver
             workingDirectory);
     }
 
-    public LaunchPlanResolution PreviewLinkedWorkspace(
+    public static LaunchPlanResolution PreviewLinkedWorkspace(
         ModProfile profile,
         FileLayerPlan fileLayerPlan,
         string profileWorkspace)
@@ -95,7 +93,7 @@ internal sealed class ProfileLaunchPlanResolver
         }
     }
 
-    public LaunchPlanResolution PreviewStandalone(ModProfile profile, CancellationToken cancellationToken = default)
+    public static LaunchPlanResolution PreviewStandalone(ModProfile profile, CancellationToken cancellationToken = default)
     {
         var modRoot = profile.Mods.FirstOrDefault(mod => mod.IsEnabled && Directory.Exists(mod.SourcePath))?.SourcePath;
         if (modRoot is null)
@@ -109,7 +107,7 @@ internal sealed class ProfileLaunchPlanResolver
             FileSystemSafety.EnsureRelativePath(profile.ExecutableRelativePath, "Launch executable");
             var executable = ResolveExecutableSource(
                 profile,
-                [new LaunchExecutableSearchRoot(modRoot, "автономный мод", 1)],
+                [new LaunchExecutableSearchRoot(modRoot, "автономная сборка", 1)],
                 profile.ExecutableRelativePath,
                 allowPinnedSource: false,
                 allowDedicatedFallback: false,
@@ -148,7 +146,7 @@ internal sealed class ProfileLaunchPlanResolver
         }
     }
 
-    public LaunchPlanResolution PreviewVirtualFileSystem(ModProfile profile, FileLayerPlan fileLayerPlan)
+    public static LaunchPlanResolution PreviewVirtualFileSystem(ModProfile profile, FileLayerPlan fileLayerPlan)
     {
         try
         {
@@ -194,7 +192,7 @@ internal sealed class ProfileLaunchPlanResolver
         }
     }
 
-    public LaunchExecutableResolution? ResolveExecutableSource(
+    public static LaunchExecutableResolution? ResolveExecutableSource(
         ModProfile profile,
         IReadOnlyList<LaunchExecutableSearchRoot> roots,
         string requestedRelativePath,
@@ -288,12 +286,12 @@ internal sealed class ProfileLaunchPlanResolver
                 IsAvailable: false);
     }
 
-    private string FindWorkingDirectoryRelative(FileLayerPlan plan)
+    private static string FindWorkingDirectoryRelative(FileLayerPlan plan)
     {
         string? result = null;
         foreach (var layer in plan.SourceLayers.Where(layer => Directory.Exists(layer.RootPath)))
         {
-            var directory = _dataConfigurator.FindFileDirectory(layer.RootPath, "fsgame.ltx");
+            var directory = ProfileDataConfigurator.FindFileDirectory(layer.RootPath, "fsgame.ltx");
             if (directory is null)
             {
                 continue;
@@ -306,9 +304,9 @@ internal sealed class ProfileLaunchPlanResolver
         return result ?? string.Empty;
     }
 
-    private string FindWorkingDirectoryRelative(string root, string currentRelative)
+    private static string FindWorkingDirectoryRelative(string root, string currentRelative)
     {
-        var fsgameDir = _dataConfigurator.FindFileDirectory(root, "fsgame.ltx");
+        var fsgameDir = ProfileDataConfigurator.FindFileDirectory(root, "fsgame.ltx");
         if (fsgameDir is null)
         {
             return currentRelative;

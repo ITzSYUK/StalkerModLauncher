@@ -157,7 +157,7 @@
                                      IsChecked="{Binding IsStandalone}"
                                      Style="{StaticResource PdaProfileTypeCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="Автономная игра или мод" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock Text="Автономная сборка" FontSize="14" FontWeight="SemiBold"/>
                                 <TextBlock Text="Готовая сборка со своим движком и игровыми файлами."
                                            Foreground="{StaticResource MutedTextBrush}" FontSize="11" Margin="0,4,0,0"/>
                             </StackPanel>

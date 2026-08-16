@@ -14,10 +14,9 @@ public interface IProfileLauncher
 
 public sealed class ProfileLauncher : IProfileLauncher
 {
-    private readonly IReadOnlyDictionary<LaunchBackendKind, IProfileLaunchBackend> _backends;
+    private readonly Dictionary<LaunchBackendKind, IProfileLaunchBackend> _backends;
     private readonly ILaunchPlanExecutor _launchPlanExecutor;
     private readonly ProfileManager? _profileManager;
-    private readonly OverlayManifestBuilder _overlayManifestBuilder = new();
 
     public ProfileLauncher(
         IEnumerable<IProfileLaunchBackend> backends,
@@ -90,8 +89,8 @@ public sealed class ProfileLauncher : IProfileLauncher
 
         var fileLayerPlan = FileLayerPlan.CreateLinkedWorkspace(gamePath, profile, workspace);
         var overlayManifest = profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem
-            ? _overlayManifestBuilder.BuildVirtualFileSystem(profile, fileLayerPlan, workspace)
-            : _overlayManifestBuilder.BuildLinkedWorkspace(profile, fileLayerPlan, workspace);
+            ? OverlayManifestBuilder.BuildVirtualFileSystem(profile, fileLayerPlan, workspace)
+            : OverlayManifestBuilder.BuildLinkedWorkspace(profile, fileLayerPlan, workspace);
         return new ProfileLaunchBackendContext(gamePath, profile, fileLayerPlan, overlayManifest);
     }
 

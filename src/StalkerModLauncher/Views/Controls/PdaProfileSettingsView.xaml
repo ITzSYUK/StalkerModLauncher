@@ -7,22 +7,160 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/StalkerModLauncher;component/Themes/PdaTheme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+
+            <Style x:Key="PdaProfileTextBoxStyle"
+                   TargetType="TextBox"
+                   BasedOn="{StaticResource {x:Type TextBox}}">
+                <Setter Property="Padding" Value="4,5"/>
+            </Style>
+
+            <Style x:Key="PdaProfileFieldBorderStyle" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource FieldBackgroundBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="3"/>
+                <Setter Property="Padding" Value="4,4"/>
+            </Style>
+
+            <Style x:Key="PdaProfileEmbeddedTextBoxStyle"
+                   TargetType="TextBox"
+                   BasedOn="{StaticResource {x:Type TextBox}}">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="0,2,0,0"/>
+            </Style>
+
+            <Style x:Key="PdaProfilePlaceholderTextBoxStyle"
+                   TargetType="TextBox"
+                   BasedOn="{StaticResource PdaProfileTextBoxStyle}">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="Foreground" Value="#727B6D"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="IsReadOnly" Value="True"/>
+                <Setter Property="Focusable" Value="False"/>
+                <Setter Property="IsHitTestVisible" Value="False"/>
+                <Setter Property="Visibility" Value="Collapsed"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding LaunchArguments}" Value="">
+                        <Setter Property="Visibility" Value="Visible"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding LaunchArguments}" Value="{x:Null}">
+                        <Setter Property="Visibility" Value="Visible"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="PdaProfileSectionDividerStyle" TargetType="Border">
+                <Setter Property="Height" Value="1"/>
+                <Setter Property="Background" Value="{StaticResource StrokeBrush}"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+            </Style>
+
+            <Style x:Key="PdaProfileRadioButtonStyle" TargetType="RadioButton">
+                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="RadioButton">
+                            <BulletDecorator Background="Transparent">
+                                <BulletDecorator.Bullet>
+                                    <Grid Width="15" Height="15">
+                                        <Ellipse x:Name="Outer" Fill="#0A1018" Stroke="#71808C" StrokeThickness="1"/>
+                                        <Ellipse x:Name="Inner" Width="7" Height="7"
+                                                 Fill="{StaticResource AccentBrush}" Visibility="Collapsed"/>
+                                    </Grid>
+                                </BulletDecorator.Bullet>
+                                <ContentPresenter Margin="4,0,0,0"
+                                                  VerticalAlignment="Center"/>
+                            </BulletDecorator>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Inner" Property="Visibility" Value="Visible"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Outer" Property="Stroke" Value="#A6B0B8"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.38"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="PdaStandaloneCheckBoxStyle" TargetType="CheckBox">
+                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="CheckBox">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image x:Name="StateImage"
+                                       Source="{StaticResource RadiationOffImage}"
+                                       Width="20" Height="20"
+                                       Stretch="Uniform"
+                                       Margin="0,0,6,0"/>
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="StateImage" Property="Source" Value="{StaticResource RadiationOnImage}"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.38"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="PdaAvxCheckBoxStyle" TargetType="CheckBox">
+                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="CheckBox">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image x:Name="StateImage"
+                                       Source="{StaticResource RadiationOffImage}"
+                                       Width="20" Height="20"
+                                       Stretch="Uniform"
+                                       Margin="0,0,6,0"/>
+                                <ContentPresenter RecognizesAccessKey="True"
+                                                  VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="StateImage" Property="Source" Value="{StaticResource RadiationOnImage}"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="StateImage" Property="Opacity" Value="0.35"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Text="НАСТРОЙКИ ПРОФИЛЯ"
-                   FontFamily="Bahnschrift SemiCondensed"
-                   FontSize="17"
-                   Foreground="#E2DDC9"
-                   Margin="0,0,0,8"/>
-
-        <Border Grid.Row="1"
+        <Border Grid.Row="0"
                 Background="#0D141E"
                 BorderBrush="#3B4755"
                 BorderThickness="1"
@@ -30,42 +168,78 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Margin="0,0,8,0">
                     <TextBlock Text="Название профиля" Foreground="#929B88" FontSize="11"/>
-                    <TextBox Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}" Margin="0,3,0,9"/>
+                    <Border Style="{StaticResource PdaProfileFieldBorderStyle}"
+                            Height="34"
+                            Margin="0,3,0,9">
+                        <TextBox Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource PdaProfileEmbeddedTextBoxStyle}"/>
+                    </Border>
 
                     <TextBlock Text="Описание" Foreground="#929B88" FontSize="11"/>
-                    <TextBox Text="{Binding ProfileDescription, UpdateSourceTrigger=PropertyChanged}"
-                             Height="48" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,3,0,10"/>
+                    <Border Style="{StaticResource PdaProfileFieldBorderStyle}"
+                            Height="60"
+                            Margin="0,3,0,0">
+                        <TextBox Text="{Binding ProfileDescription, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource PdaProfileEmbeddedTextBoxStyle}"
+                                 TextWrapping="Wrap"
+                                 AcceptsReturn="True"/>
+                    </Border>
 
-                    <CheckBox IsChecked="{Binding IsStandalone}" Margin="0,0,0,9">
-                        <TextBlock Text="Автономная сборка"/>
+                    <Border Style="{StaticResource PdaProfileSectionDividerStyle}" Margin="0,12,0,12"/>
+
+                    <CheckBox IsChecked="{Binding IsStandalone}"
+                              Style="{StaticResource PdaStandaloneCheckBoxStyle}"
+                              Margin="0,0,0,9">
+                        <TextBlock TextWrapping="Wrap">
+                            <Run Text="Автономная сборка"/>
+                            <Run Foreground="#929B88" FontSize="11"
+                                 Text=" - мод имеет свой движок и все файлы игры, запускается из своей папки"/>
+                        </TextBlock>
                     </CheckBox>
 
                     <TextBlock Text="Система запуска" Foreground="#929B88" FontSize="11" Margin="0,0,0,4"/>
                     <WrapPanel Margin="0,0,0,5">
                         <RadioButton Content="Workspace — стабильный"
+                                     Style="{StaticResource PdaProfileRadioButtonStyle}"
                                      GroupName="PdaLaunchBackend"
                                      IsChecked="{Binding UseLinkedWorkspace, Mode=TwoWay}"
                                      Margin="0,0,18,0"/>
                         <RadioButton Content="USVFS — экспериментальный"
+                                     Style="{StaticResource PdaProfileRadioButtonStyle}"
                                      GroupName="PdaLaunchBackend"
                                      IsChecked="{Binding UseVirtualFileSystem, Mode=TwoWay}"
                                      IsEnabled="{Binding CanUseUsvfs}"/>
                     </WrapPanel>
                     <TextBlock Text="{Binding UsvfsAvailabilityText}"
-                               Foreground="#727B6D" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,9"/>
+                               Foreground="#727B6D" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,9"/>
 
-                    <StackPanel Margin="0,0,0,9"
+                    <StackPanel Margin="0,8,0,9"
                                 Visibility="{Binding IsAnomalyUsvfsOptionsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock Text="Движок Anomaly" Foreground="#929B88" FontSize="11" Margin="0,0,0,4"/>
+                        <TextBlock Text="Движок Anomaly" Foreground="#929B88" FontSize="12" Margin="0,0,0,4"/>
                         <WrapPanel>
-                            <RadioButton Content="Авто" GroupName="PdaAnomalyRenderer" IsChecked="{Binding UseAutomaticAnomalyRenderer}" Margin="0,0,10,0"/>
-                            <RadioButton Content="DX8" GroupName="PdaAnomalyRenderer" IsChecked="{Binding UseAnomalyDx8}" Margin="0,0,10,0"/>
-                            <RadioButton Content="DX9" GroupName="PdaAnomalyRenderer" IsChecked="{Binding UseAnomalyDx9}" Margin="0,0,10,0"/>
-                            <RadioButton Content="DX10" GroupName="PdaAnomalyRenderer" IsChecked="{Binding UseAnomalyDx10}" Margin="0,0,10,0"/>
-                            <RadioButton Content="DX11" GroupName="PdaAnomalyRenderer" IsChecked="{Binding UseAnomalyDx11}" Margin="0,0,14,0"/>
-                            <CheckBox Content="AVX" IsChecked="{Binding AnomalyUseAvx}" IsEnabled="{Binding HasManualAnomalyRenderer}"/>
+                            <RadioButton Content="Авто" Style="{StaticResource PdaProfileRadioButtonStyle}"
+                                         GroupName="PdaAnomalyRenderer" IsChecked="{Binding UseAutomaticAnomalyRenderer}" Margin="0,0,10,0"/>
+                            <RadioButton Content="DX8" Style="{StaticResource PdaProfileRadioButtonStyle}"
+                                         GroupName="PdaAnomalyRenderer" IsChecked="{Binding UseAnomalyDx8}" Margin="0,0,10,0"/>
+                            <RadioButton Content="DX9" Style="{StaticResource PdaProfileRadioButtonStyle}"
+                                         GroupName="PdaAnomalyRenderer" IsChecked="{Binding UseAnomalyDx9}" Margin="0,0,10,0"/>
+                            <RadioButton Content="DX10" Style="{StaticResource PdaProfileRadioButtonStyle}"
+                                         GroupName="PdaAnomalyRenderer" IsChecked="{Binding UseAnomalyDx10}" Margin="0,0,10,0"/>
+                            <RadioButton Content="DX11" Style="{StaticResource PdaProfileRadioButtonStyle}"
+                                         GroupName="PdaAnomalyRenderer" IsChecked="{Binding UseAnomalyDx11}" Margin="0,0,14,0"/>
+                            <CheckBox Content="AVX"
+                                      Style="{StaticResource PdaAvxCheckBoxStyle}"
+                                      IsChecked="{Binding AnomalyUseAvx}"
+                                      IsEnabled="{Binding HasManualAnomalyRenderer}"/>
                         </WrapPanel>
+                        <TextBlock Text="Авто запускает AnomalyLauncher.exe. Ручной выбор запускает выбранный движок напрямую и сохраняет приоритет модов."
+                                   Foreground="#727B6D"
+                                   FontSize="11"
+                                   TextWrapping="Wrap"
+                                   Margin="0,4,0,0"/>
                     </StackPanel>
+
+                    <Border Style="{StaticResource PdaProfileSectionDividerStyle}" Margin="0,1,0,12"/>
 
                     <TextBlock Text="Файл запуска (.exe)" Foreground="#929B88" FontSize="11"/>
                     <Grid Margin="0,3,0,2">
@@ -73,16 +247,35 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox Text="{Binding ExecutableRelativePath, UpdateSourceTrigger=PropertyChanged}"/>
-                        <Button Grid.Column="1" Content="Обзор..." Command="{Binding BrowseExecutableCommand}" Margin="7,0,0,0" MinWidth="82"/>
+                        <TextBox Text="{Binding ExecutableRelativePath, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource PdaProfileTextBoxStyle}"/>
+                        <Button Grid.Column="1" Content="Обзор..." Command="{Binding BrowseExecutableCommand}"
+                                Margin="7,0,0,0" Width="92"/>
                     </Grid>
                     <Grid Margin="0,0,0,9">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding ExecutableSourceDisplay}" Foreground="#727B6D" FontSize="10" TextTrimming="CharacterEllipsis"/>
-                        <Button Grid.Column="1" Content="Автовыбор" Command="{Binding ClearExecutableSourceCommand}" Margin="7,0,0,0" Padding="8,2">
+                        <StackPanel>
+                            <TextBlock Text="Путь до .exe относительно папки игры или мода"
+                                       Foreground="#727B6D"
+                                       FontSize="11"/>
+                            <TextBlock Text="{Binding ExecutableSourceDisplay}"
+                                       Foreground="#929B88"
+                                       FontSize="11"
+                                       Margin="0,2,0,0"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Content="Выбирать автоматически"
+                                Command="{Binding ClearExecutableSourceCommand}"
+                                ToolTip="Снять ручной выбор источника EXE. Лаунчер будет брать файл запуска из включенного мода с самым высоким приоритетом."
+                                ToolTipService.ShowOnDisabled="True"
+                                Margin="8,0,0,0"
+                                Padding="10,4"
+                                MinHeight="26"
+                                VerticalAlignment="Center">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                                     <Style.Triggers>
@@ -96,7 +289,31 @@
                     </Grid>
 
                     <TextBlock Text="Параметры запуска" Foreground="#929B88" FontSize="11"/>
-                    <TextBox Text="{Binding LaunchArguments, UpdateSourceTrigger=PropertyChanged}" Margin="0,3,0,9"/>
+                    <Grid Margin="0,3,0,9">
+                        <TextBox Text="{Binding LaunchArguments, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource PdaProfileTextBoxStyle}"
+                                 Height="38"
+                                 VerticalContentAlignment="Center"/>
+                        <TextBox Text="Например: -nointro -nosound"
+                                 Style="{StaticResource PdaProfilePlaceholderTextBoxStyle}"
+                                 Height="38"/>
+                    </Grid>
+
+                    <TextBlock Text="Папка установленных модов" Foreground="#929B88" FontSize="11"/>
+                    <Grid Margin="0,3,0,9">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding ModInstallPath, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource PdaProfileTextBoxStyle}"
+                                 ToolTip="Архивы распаковываются сюда, отдельно от workspace."/>
+                        <Button Grid.Column="1" Content="Обзор..." Command="{Binding BrowseModInstallPathCommand}"
+                                Margin="7,0,0,0" Width="92"/>
+                        <Button Grid.Column="2" Content="По умолчанию" Command="{Binding ResetModInstallPathCommand}"
+                                Margin="7,0,0,0" Width="110"/>
+                    </Grid>
 
                     <Border Background="#101923" BorderBrush="#3B4755" BorderThickness="1" Padding="8" Margin="0,0,0,9"
                             Visibility="{Binding HasMo2Overwrite, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -115,21 +332,26 @@
                         </Grid>
                     </Border>
 
-                    <ToggleButton Content="Показывать статус профиля в Discord"
-                                  IsChecked="{Binding IsDiscordStatusEnabled}"
-                                  Style="{StaticResource ProfileToggleButtonStyle}"
-                                  HorizontalAlignment="Left"/>
+                    <TextBlock Text="Порядок модов MO2" Foreground="#929B88" FontSize="11"/>
+                    <Button Content="Применить порядок модов из профиля MO2..."
+                            Command="{Binding ImportMo2ModListCommand}"
+                            ToolTip="Выберите файл modlist.txt из профиля MO2. Лаунчер применит порядок и включённое состояние только к уже добавленным модам; новые моды и папки импортированы не будут."
+                            HorizontalAlignment="Left"
+                            Margin="0,3,0,0"/>
                 </StackPanel>
             </ScrollViewer>
         </Border>
 
-        <Grid Grid.Row="2" Margin="0,8,0,0">
+        <Grid Grid.Row="1" Margin="0,8,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <Button Content="Применить только modlist.txt..." Command="{Binding ImportMo2ModListCommand}"/>
+            <ToggleButton Content="Показывать статус профиля в Discord"
+                          IsChecked="{Binding IsDiscordStatusEnabled}"
+                          Style="{StaticResource ProfileToggleButtonStyle}"
+                          ToolTip="Статус отображается только во время запуска этого профиля. Отключите его, если мод уже публикует собственный Discord Rich Presence."/>
             <Button Grid.Column="2" Content="Сохранить" Click="SaveButton_OnClick" Style="{StaticResource PrimaryButtonStyle}" MinWidth="100"/>
         </Grid>
     </Grid>

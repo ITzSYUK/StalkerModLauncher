@@ -8,7 +8,7 @@ public sealed class Mo2ImportUiBindingTests
     [Theory]
     [InlineData("Views/Mo2ImportWindow.xaml")]
     [InlineData("Views/Controls/PdaMo2ImportView.xaml")]
-    public void EnabledStateBinding_IsOneWayForReadOnlyPreviewEntry(string relativePath)
+    public void EnabledStateBindingIsOneWayForReadOnlyPreviewEntry(string relativePath)
     {
         var projectRoot = FindProjectRoot();
         var document = XDocument.Load(Path.Combine(projectRoot, relativePath));
@@ -21,7 +21,7 @@ public sealed class Mo2ImportUiBindingTests
     }
 
     [Fact]
-    public void AmbiguousEntry_HasSharedRowHighlight()
+    public void AmbiguousEntryHasSharedRowHighlight()
     {
         var projectRoot = FindProjectRoot();
         var stylesPath = Path.Combine(projectRoot, "Themes", "Mo2ImportStyles.xaml");

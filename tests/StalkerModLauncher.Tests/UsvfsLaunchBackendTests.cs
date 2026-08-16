@@ -20,7 +20,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     }
 
     [Fact]
-    public async Task PrepareAsync_BuildsVirtualLaunchPlanAndSessionStarter()
+    public async Task PrepareAsyncBuildsVirtualLaunchPlanAndSessionStarter()
     {
         var game = CreateDirectory("game");
         var mod = CreateDirectory("mod");
@@ -52,7 +52,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             Order = 1
         });
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
         var runtime = new RecordingUsvfsRuntime();
         var backend = new UsvfsLaunchBackend(runtime, game);
 
@@ -95,7 +95,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     }
 
     [Fact]
-    public async Task PrepareAsync_BlocksLaunchWhenFsgameCannotIsolateProfileData()
+    public async Task PrepareAsyncBlocksLaunchWhenFsgameCannotIsolateProfileData()
     {
         var game = CreateDirectory("missing-app-data-root-game");
         var workspace = CreateDirectory("missing-app-data-root-workspace");
@@ -112,7 +112,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
         };
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
         var backend = new UsvfsLaunchBackend(new RecordingUsvfsRuntime(), game);
 
         var error = await Assert.ThrowsAsync<InvalidDataException>(() => backend.PrepareAsync(
@@ -125,7 +125,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     }
 
     [Fact]
-    public async Task PrepareAsync_SeedsFinalLayerShaderCacheIntoProfileUserData()
+    public async Task PrepareAsyncSeedsFinalLayerShaderCacheIntoProfileUserData()
     {
         var game = CreateDirectory("shader-cache-game");
         var mod = CreateDirectory("shader-cache-mod");
@@ -162,7 +162,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             Order = 1
         });
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
         var backend = new UsvfsLaunchBackend(new RecordingUsvfsRuntime(), game);
 
         await backend.PrepareAsync(
@@ -177,7 +177,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     }
 
     [Fact]
-    public async Task PrepareAsync_SeedsUserSettingsFromHighestPriorityModAppData()
+    public async Task PrepareAsyncSeedsUserSettingsFromHighestPriorityModAppData()
     {
         var game = CreateDirectory("user-settings-game");
         var mod = CreateDirectory("user-settings-mod");
@@ -209,7 +209,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             Order = 1
         });
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
         var backend = new UsvfsLaunchBackend(new RecordingUsvfsRuntime(), game);
 
         await backend.PrepareAsync(
@@ -224,7 +224,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     }
 
     [Fact]
-    public async Task PrepareAsync_StartsAnomalyLauncherAndKeepsManualEngineOverride()
+    public async Task PrepareAsyncStartsAnomalyLauncherAndKeepsManualEngineOverride()
     {
         var game = CreateDirectory("anomaly-game");
         var mod = CreateDirectory("anomaly-mod");
@@ -284,7 +284,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             Order = 2
         });
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
         var runtime = new RecordingUsvfsRuntime();
         var backend = new UsvfsLaunchBackend(runtime, game);
 
@@ -358,7 +358,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     }
 
     [Fact]
-    public async Task PrepareAsync_AllowsX86ExecutableWhenCrossArchitectureRuntimeIsPresent()
+    public async Task PrepareAsyncAllowsX86ExecutableWhenCrossArchitectureRuntimeIsPresent()
     {
         var game = CreateDirectory("x86-game");
         var workspace = CreateDirectory("x86-workspace");
@@ -382,7 +382,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
         };
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
         var backend = new UsvfsLaunchBackend(new RecordingUsvfsRuntime(), game);
 
         var plan = await backend.PrepareAsync(
@@ -396,7 +396,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     }
 
     [Fact]
-    public async Task PrepareAsync_UsesPhysicalRootForBaseExecutableWithoutModEngineFiles()
+    public async Task PrepareAsyncUsesPhysicalRootForBaseExecutableWithoutModEngineFiles()
     {
         var game = CreateDirectory("physical-root-game");
         var mod = CreateDirectory("physical-root-mod");
@@ -429,7 +429,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             Order = 1
         });
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
         var runtime = new RecordingUsvfsRuntime();
         var backend = new UsvfsLaunchBackend(runtime, game);
 
@@ -453,7 +453,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     }
 
     [Fact]
-    public async Task PrepareAsync_UsesPhysicalRootForXRayArchiveDirectoriesWithModEngine()
+    public async Task PrepareAsyncUsesPhysicalRootForXRayArchiveDirectoriesWithModEngine()
     {
         var game = CreateDirectory("archive-root-game");
         var mod = CreateDirectory("archive-root-mod");
@@ -487,7 +487,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             Order = 1
         });
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
         var runtime = new RecordingUsvfsRuntime();
         var backend = new UsvfsLaunchBackend(runtime, game);
 
@@ -515,7 +515,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     }
 
     [Fact]
-    public async Task PrepareAsync_DoesNotOverwriteExistingProfileUserSettings()
+    public async Task PrepareAsyncDoesNotOverwriteExistingProfileUserSettings()
     {
         var game = CreateDirectory("existing-user-game");
         var workspace = CreateDirectory("existing-user-workspace");
@@ -538,7 +538,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
         };
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
         var backend = new UsvfsLaunchBackend(new RecordingUsvfsRuntime(), game);
 
         await backend.PrepareAsync(
@@ -551,7 +551,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     }
 
     [Fact]
-    public async Task PrepareAsync_KeepsBootstrapWhenModProvidesEngineDll()
+    public async Task PrepareAsyncKeepsBootstrapWhenModProvidesEngineDll()
     {
         var game = CreateDirectory("mod-engine-game");
         var mod = CreateDirectory("mod-engine-mod");
@@ -582,7 +582,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             Order = 1
         });
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
         var backend = new UsvfsLaunchBackend(new RecordingUsvfsRuntime(), game);
 
         var plan = await backend.PrepareAsync(
@@ -601,7 +601,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     }
 
     [Fact]
-    public async Task PrepareAsync_RejectsX86ExecutableWhenX86RuntimeIsMissing()
+    public async Task PrepareAsyncRejectsX86ExecutableWhenX86RuntimeIsMissing()
     {
         var game = CreateDirectory("x86-missing-runtime-game");
         var workspace = CreateDirectory("x86-missing-runtime-workspace");
@@ -625,7 +625,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
         };
         var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
-        var manifest = new OverlayManifestBuilder().BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
         var backend = new UsvfsLaunchBackend(new RecordingUsvfsRuntime(), game);
 
         var error = await Assert.ThrowsAsync<FileNotFoundException>(() => backend.PrepareAsync(

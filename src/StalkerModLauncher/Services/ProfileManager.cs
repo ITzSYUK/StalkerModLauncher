@@ -16,11 +16,14 @@ public sealed class ProfileManager
 
     public ModProfile Create(IReadOnlyCollection<ModProfile> profiles)
     {
-        return new ModProfile
+        var profile = new ModProfile
         {
             Name = GetUniqueName(profiles, $"Profile {profiles.Count + 1}"),
             Description = "S.T.A.L.K.E.R. mod profile"
         };
+
+        profile.ModInstallPath = _paths.GetDefaultModInstallPath(profile.Id, profile.GameInstallPath);
+        return profile;
     }
 
     public ModProfile Duplicate(IReadOnlyCollection<ModProfile> profiles, ModProfile source)
@@ -60,6 +63,8 @@ public sealed class ProfileManager
             duplicate.WorkspacePath = CreateWorkspacePath(duplicate, duplicate.GameInstallPath);
         }
 
+        duplicate.ModInstallPath = _paths.GetDefaultModInstallPath(duplicate.Id, duplicate.GameInstallPath);
+
         return duplicate;
     }
 
@@ -69,7 +74,7 @@ public sealed class ProfileManager
         profile.Name = GetUniqueName(profiles, profile.Name);
     }
 
-    public bool MoveToInsertionIndex(
+    public static bool MoveToInsertionIndex(
         ObservableCollection<ModProfile> profiles,
         ModProfile profile,
         int insertionIndex)
@@ -89,6 +94,11 @@ public sealed class ProfileManager
         if (string.IsNullOrWhiteSpace(profile.ExecutableRelativePath))
         {
             profile.ExecutableRelativePath = @"bin\xr_3da.exe";
+        }
+
+        if (string.IsNullOrWhiteSpace(profile.ModInstallPath))
+        {
+            profile.ModInstallPath = _paths.GetDefaultModInstallPath(profile.Id, profile.GameInstallPath);
         }
     }
 

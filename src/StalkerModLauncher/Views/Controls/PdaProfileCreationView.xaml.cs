@@ -24,7 +24,7 @@ public partial class PdaProfileCreationView : UserControl
     private void GamePath_OnPreviewDrop(object sender, DragEventArgs e)
     {
         var directories = GetDroppedDirectories(e);
-        if (directories.Count == 1)
+        if (directories.Length == 1)
         {
             ViewModel?.SetDroppedGamePath(directories[0]);
         }
@@ -42,7 +42,7 @@ public partial class PdaProfileCreationView : UserControl
     private void StandalonePath_OnPreviewDrop(object sender, DragEventArgs e)
     {
         var directories = GetDroppedDirectories(e);
-        if (directories.Count == 1)
+        if (directories.Length == 1)
         {
             ViewModel?.SetDroppedStandalonePath(directories[0]);
         }
@@ -51,13 +51,13 @@ public partial class PdaProfileCreationView : UserControl
     private static void SetDirectoryDropEffect(DragEventArgs e, bool acceptMultiple)
     {
         var directories = GetDroppedDirectories(e);
-        e.Effects = directories.Count > 0 && (acceptMultiple || directories.Count == 1)
+        e.Effects = directories.Length > 0 && (acceptMultiple || directories.Length == 1)
             ? DragDropEffects.Copy
             : DragDropEffects.None;
         e.Handled = true;
     }
 
-    private static IReadOnlyList<string> GetDroppedDirectories(DragEventArgs e)
+    private static string[] GetDroppedDirectories(DragEventArgs e)
     {
         if (!e.Data.GetDataPresent(DataFormats.FileDrop) ||
             e.Data.GetData(DataFormats.FileDrop) is not string[] paths)

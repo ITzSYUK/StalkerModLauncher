@@ -6,7 +6,7 @@ namespace StalkerModLauncher.Tests;
 public sealed class WorkspaceFileStrategyTests
 {
     [Fact]
-    public void MustCopy_ReturnsTrueForFsgameThatLauncherRewrites()
+    public void MustCopyReturnsTrueForFsgameThatLauncherRewrites()
     {
         Assert.True(WorkspaceFileStrategy.MustCopy("fsgame.ltx"));
     }
@@ -21,7 +21,7 @@ public sealed class WorkspaceFileStrategyTests
     [InlineData("userdata/logs/xray.log")]
     [InlineData("bin/xr_3da.exe")]
     [InlineData("bin/xrCore.dll")]
-    public void MustCopy_ReturnsFalseForFilesThatCanBeLinked(string path)
+    public void MustCopyReturnsFalseForFilesThatCanBeLinked(string path)
     {
         Assert.False(WorkspaceFileStrategy.MustCopy(path));
     }

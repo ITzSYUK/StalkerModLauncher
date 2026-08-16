@@ -11,10 +11,8 @@ public sealed class WindowNavigationService
     private readonly SettingsStore _settingsStore;
     private readonly ProfileHealthService _profileHealthService;
     private readonly WorkspaceManagementService _workspaceManagementService;
-    private readonly ScreenshotScannerService _screenshotScannerService;
     private readonly IScreenshotClipboardService _screenshotClipboardService;
     private readonly ApProCatalogService _apProCatalogService;
-    private readonly WindowSystemIntegrationService _windowSystemIntegrationService;
     private readonly LauncherUpdateService _launcherUpdateService;
 
     public WindowNavigationService(
@@ -22,41 +20,36 @@ public sealed class WindowNavigationService
         SettingsStore settingsStore,
         ProfileHealthService profileHealthService,
         WorkspaceManagementService workspaceManagementService,
-        ScreenshotScannerService screenshotScannerService,
         IScreenshotClipboardService screenshotClipboardService,
         ApProCatalogService apProCatalogService,
-        WindowSystemIntegrationService windowSystemIntegrationService,
         LauncherUpdateService launcherUpdateService)
     {
         _dialogService = dialogService;
         _settingsStore = settingsStore;
         _profileHealthService = profileHealthService;
         _workspaceManagementService = workspaceManagementService;
-        _screenshotScannerService = screenshotScannerService;
         _screenshotClipboardService = screenshotClipboardService;
         _apProCatalogService = apProCatalogService;
-        _windowSystemIntegrationService = windowSystemIntegrationService;
         _launcherUpdateService = launcherUpdateService;
     }
 
-    public void ShowProfileCreation(Window owner, MainViewModel mainViewModel)
+    public static void ShowProfileCreation(Window owner, MainViewModel mainViewModel)
     {
-        var wizard = new ProfileCreationWindow(CreateProfileCreationViewModel()) { Owner = owner };
+        var wizard = new ProfileCreationWindow(CreateProfileCreationViewModel())
+        { Owner = owner };
         if (wizard.ShowDialog() == true && wizard.CreatedProfile is not null)
         {
             mainViewModel.AddCreatedProfile(wizard.CreatedProfile);
         }
     }
 
-    public ProfileCreationViewModel CreateProfileCreationViewModel() => new(_dialogService);
+    public static ProfileCreationViewModel CreateProfileCreationViewModel() => new();
 
     public void ShowMo2Import(Window owner, MainViewModel mainViewModel)
     {
         try
         {
-            var window = new Mo2ImportWindow(
-                mainViewModel.CreateMo2ImportViewModel(),
-                _windowSystemIntegrationService)
+            var window = new Mo2ImportWindow(mainViewModel.CreateMo2ImportViewModel())
             {
                 Owner = owner
             };
@@ -70,33 +63,33 @@ public sealed class WindowNavigationService
         }
     }
 
-    public void ShowProfileSettings(Window owner, ProfileSettingsViewModel viewModel)
+    public static void ShowProfileSettings(Window owner, ProfileSettingsViewModel viewModel)
     {
         new ProfileSettingsWindow(viewModel) { Owner = owner }.ShowDialog();
     }
 
-    public void ShowConflictExplorer(Window owner, ConflictExplorerViewModel viewModel)
+    public static void ShowConflictExplorer(Window owner, ConflictExplorerViewModel viewModel)
     {
-        new ConflictExplorerWindow(viewModel, _windowSystemIntegrationService) { Owner = owner }.ShowDialog();
+        new ConflictExplorerWindow(viewModel) { Owner = owner }.ShowDialog();
     }
 
     public void ShowScreenshots(Window owner, ModProfile profile)
     {
-        var viewModel = new ScreenshotsViewModel(profile, _screenshotScannerService, _screenshotClipboardService);
+        var viewModel = new ScreenshotsViewModel(profile, _screenshotClipboardService);
         new ScreenshotsWindow(viewModel) { Owner = owner }.ShowDialog();
     }
 
     public ScreenshotsViewModel CreateScreenshotsViewModel(ModProfile profile) =>
-        new(profile, _screenshotScannerService, _screenshotClipboardService);
+        new(profile, _screenshotClipboardService);
 
     public void ShowModCatalog(Window owner)
     {
-        var viewModel = new ModCatalogViewModel(_apProCatalogService, _dialogService);
-        new ModCatalogWindow(viewModel, _windowSystemIntegrationService) { Owner = owner }.ShowDialog();
+        var viewModel = new ModCatalogViewModel(_apProCatalogService);
+        new ModCatalogWindow(viewModel) { Owner = owner }.ShowDialog();
     }
 
     public ModCatalogViewModel CreateModCatalogViewModel() =>
-        new(_apProCatalogService, _dialogService);
+        new(_apProCatalogService);
 
     public void ShowProfileHealth(Window owner, ModProfile profile, Action<string>? log = null)
     {
@@ -115,7 +108,7 @@ public sealed class WindowNavigationService
     public Task<LauncherUpdateResult> CheckForUpdatesAsync(CancellationToken cancellationToken = default) =>
         _launcherUpdateService.CheckAsync(cancellationToken);
 
-    public void OpenUrl(string url) => _dialogService.OpenUrl(url);
+    public static void OpenUrl(string url) => DialogService.OpenUrl(url);
 
     public async Task ShowAboutAsync(Window? owner = null, bool onlyIfNeeded = false)
     {
@@ -128,7 +121,6 @@ public sealed class WindowNavigationService
         var aboutWindow = new AboutWindow(
             _launcherUpdateService,
             _dialogService,
-            _windowSystemIntegrationService,
             owner?.DataContext is MainViewModel mainViewModel
                 ? () => mainViewModel.ToggleInterfaceCommand.Execute(null)
                 : null)

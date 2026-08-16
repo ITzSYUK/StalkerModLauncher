@@ -9,7 +9,7 @@ public sealed class UiSoundResourcesTests
     [InlineData("StalkerModLauncher.Resources.Sounds.pda_btn_press.ogg")]
     [InlineData("StalkerModLauncher.Resources.Sounds.pda_guide.ogg")]
     [InlineData("StalkerModLauncher.Resources.Sounds.pda_guide_2.ogg")]
-    public void Assembly_ContainsUiSoundResource(string resourceName)
+    public void AssemblyContainsUiSoundResource(string resourceName)
     {
         using var stream = typeof(UiSoundService).Assembly.GetManifestResourceStream(resourceName);
 

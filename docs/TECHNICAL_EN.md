@@ -20,7 +20,7 @@ Support is based on file structure rather than a hard-coded game title. The file
 
 In practice this covers Shadow of Chernobyl, Clear Sky, Call of Pripyat, Anomaly, OGSR, iX-Ray, and many derived projects. Compatibility with every custom launcher or modified engine cannot be guaranteed.
 
-The application is not a mod installer. It does not unpack downloaded archives and cannot repair incompatible game content.
+The launcher can install mods from ZIP, 7Z, and RAR archives into separate managed storage. It does not execute EXE installers, process FOMOD scripts, or repair incompatible game content.
 
 ## 2. Core concepts
 
@@ -371,6 +371,8 @@ The internal USVFS message queue is drained continuously outside the game logs i
 ## 12. Mod management
 
 Scanning searches recursively for mod roots, but stops treating nested folders as separate mods after a valid root is found. It recognizes unpacked files and X-Ray archives, including `db` and `patches` directories.
+
+Archive installation is transactional through a temporary directory. The launcher validates entry paths, prevents extraction outside the destination, finds one X-Ray content root, and renames the temporary directory only after successful extraction. The storage path is profile-specific and defaults to `StalkerModLauncher\Mods\profile-<ID>` beside the workspace root. Source mods are never stored in the workspace because it is a rebuildable overlay result. Like MO2's Anomaly checker, loose `.db*` files are moved into `db\mods`.
 
 Grouped movement preserves the relative order of selected mods. The UI supports drag and drop plus move-to-start and move-to-end commands.
 

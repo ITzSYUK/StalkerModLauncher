@@ -2,7 +2,7 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-internal sealed class ProfileShaderCacheSeeder
+internal static class ProfileShaderCacheSeeder
 {
     private static EnumerationOptions SafeEnumerationOptions { get; } = new()
     {
@@ -11,7 +11,7 @@ internal sealed class ProfileShaderCacheSeeder
         AttributesToSkip = FileAttributes.ReparsePoint
     };
 
-    public void Seed(
+    public static void Seed(
         FileLayerPlan layerPlan,
         string profileDataPath,
         IProgress<string>? progress = null,

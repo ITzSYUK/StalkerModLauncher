@@ -2,20 +2,13 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class ProfileReadinessService
+public static class ProfileReadinessService
 {
-    private readonly GameInstallationValidator _gameValidator;
-
-    public ProfileReadinessService(GameInstallationValidator gameValidator)
-    {
-        _gameValidator = gameValidator;
-    }
-
-    public ValidationResult Validate(ModProfile? profile)
+    public static ValidationResult Validate(ModProfile? profile)
     {
         if (profile is null)
         {
-            return _gameValidator.Validate(string.Empty);
+            return GameInstallationValidator.Validate(string.Empty);
         }
 
         return profile.IsStandalone
@@ -49,9 +42,9 @@ public sealed class ProfileReadinessService
         return CreateResult(ready, ready ? "Готов к запуску." : string.Join(Environment.NewLine, messages), messages);
     }
 
-    private ValidationResult ValidateOverlay(ModProfile profile)
+    private static ValidationResult ValidateOverlay(ModProfile profile)
     {
-        var gameValidation = _gameValidator.Validate(profile.GameInstallPath);
+        var gameValidation = GameInstallationValidator.Validate(profile.GameInstallPath);
         var messages = new List<string>(gameValidation.Messages);
         if (!profile.IsEnabled)
         {

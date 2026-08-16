@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace StalkerModLauncher.Models;
 
 public sealed record WorkspaceStatus(
@@ -33,7 +35,7 @@ public sealed record WorkspaceStatus(
     public string LinkSummaryDisplay => StatisticsAvailable
         ? $"Жёсткие ссылки: {HardLinkCount:N0}  ·  Символические ссылки: {SymbolicLinkCount:N0}  ·  Локальные файлы: {LocalFileCount:N0}"
         : "Подробная статистика появится после следующей пересборки workspace.";
-    public string BuiltAtDisplay => BuiltAtUtc?.ToLocalTime().ToString("g") ?? "не подготовлен";
+    public string BuiltAtDisplay => BuiltAtUtc?.ToLocalTime().ToString("g", CultureInfo.CurrentCulture) ?? "не подготовлен";
     public string StateDisplay
     {
         get

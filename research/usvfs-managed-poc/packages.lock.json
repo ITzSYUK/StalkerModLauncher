@@ -67,6 +67,11 @@
           "System.ValueTuple": "4.5.0"
         }
       },
+      "SharpCompress": {
+        "type": "Transitive",
+        "resolved": "0.50.1",
+        "contentHash": "VY90K8BBvaAMvvRDJ8EvsfI/GgoIYxlgxMpxdgwpzaesJ0pGSHTLbZ7SD4JYxsGCnOibzua/+8HvDjV6KTw4jA=="
+      },
       "System.Memory": {
         "type": "Transitive",
         "resolved": "4.5.3",
@@ -103,6 +108,7 @@
           "DiscordRichPresence": "[1.6.1.70, )",
           "NAudio.Vorbis": "[1.5.0, )",
           "NAudio.WinMM": "[2.2.1, )",
+          "SharpCompress": "[0.50.1, )",
           "System.Text.Encoding.CodePages": "[8.0.0, )"
         }
       }

@@ -10,6 +10,10 @@
     <SolidColorBrush x:Key="ModSelectionBrush" Color="#3A3325"/>
     <SolidColorBrush x:Key="ModRelatedBrush" Color="#34301F"/>
     <SolidColorBrush x:Key="ModRelatedStrokeBrush" Color="#7B7042"/>
+    <SolidColorBrush x:Key="ModActionShadeBrush" Color="#B3000000"/>
+    <SolidColorBrush x:Key="ModArchiveProgressPanelBrush" Color="#202318"/>
+    <SolidColorBrush x:Key="ModArchiveProgressTrackBrush" Color="#11140F"/>
+    <SolidColorBrush x:Key="ModArchiveProgressFillBrush" Color="#C98A2E"/>
     <SolidColorBrush x:Key="StrokeBrush" Color="#4A4E3A"/>
     <SolidColorBrush x:Key="TextBrush" Color="#F0E8C8"/>
     <SolidColorBrush x:Key="MutedTextBrush" Color="#B2AD91"/>

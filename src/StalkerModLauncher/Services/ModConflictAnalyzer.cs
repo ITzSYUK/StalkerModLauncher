@@ -42,10 +42,12 @@ public sealed class ModConflictAnalyzer
         string? launchExecutableSourcePath,
         CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => Analyze(mods, launchExecutableRelativePath, launchExecutableSourcePath, cancellationToken), cancellationToken);
+        return Task.Run<IReadOnlyDictionary<string, ModConflictState>>(
+            () => Analyze(mods, launchExecutableRelativePath, launchExecutableSourcePath, cancellationToken),
+            cancellationToken);
     }
 
-    private IReadOnlyDictionary<string, ModConflictState> Analyze(
+    private Dictionary<string, ModConflictState> Analyze(
         IReadOnlyList<ModConflictInput> mods,
         string? launchExecutableRelativePath,
         string? launchExecutableSourcePath,
@@ -162,7 +164,7 @@ public sealed class ModConflictAnalyzer
         return result;
     }
 
-    private static IReadOnlyList<string> DistinctProviderNames(IEnumerable<string> names)
+    private static string[] DistinctProviderNames(IEnumerable<string> names)
     {
         return names.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }

@@ -1,10 +1,10 @@
 namespace StalkerModLauncher.Services;
 
-internal sealed class ProfileWritableGameFileStore
+internal static class ProfileWritableGameFileStore
 {
     private const string StoreDirectoryName = "writable-game-files";
 
-    public void CaptureFromWorkspace(string currentWorkspace, string profileWorkspace, IProgress<string>? progress = null)
+    public static void CaptureFromWorkspace(string currentWorkspace, string profileWorkspace, IProgress<string>? progress = null)
     {
         if (!Directory.Exists(currentWorkspace))
         {
@@ -35,7 +35,7 @@ internal sealed class ProfileWritableGameFileStore
         }
     }
 
-    public void EnsureWorkspaceDirectories(string currentWorkspace)
+    public static void EnsureWorkspaceDirectories(string currentWorkspace)
     {
         foreach (var rule in ProfileWritableGameFiles.Rules)
         {
@@ -45,7 +45,7 @@ internal sealed class ProfileWritableGameFileStore
         }
     }
 
-    public void RestoreToCachedWorkspace(
+    public static void RestoreToCachedWorkspace(
         string currentWorkspace,
         string profileWorkspace,
         IProgress<string>? progress = null)
@@ -75,7 +75,7 @@ internal sealed class ProfileWritableGameFileStore
         }
     }
 
-    public void RestoreToWorkspace(
+    public static void RestoreToWorkspace(
         string currentWorkspace,
         string profileWorkspace,
         WorkspaceBuildStats stats,

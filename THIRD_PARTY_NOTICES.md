@@ -20,6 +20,7 @@ The release package contains unmodified runtime binaries built from the upstream
 - [discord-rpc-csharp](https://github.com/Lachee/discord-rpc-csharp), package `DiscordRichPresence` 1.6.1.70 — MIT License.
 - [NAudio.Vorbis](https://github.com/naudio/Vorbis) 1.5.0 — MIT License.
 - [NAudio](https://github.com/naudio/NAudio), package `NAudio.WinMM` 2.2.1 — MIT License.
+- [SharpCompress](https://github.com/adamhathcock/sharpcompress) 0.50.1 — MIT License.
 - [.NET Runtime](https://github.com/dotnet/runtime), package `System.Text.Encoding.CodePages` 8.0.0 — MIT License.
 
 ## Interface assets

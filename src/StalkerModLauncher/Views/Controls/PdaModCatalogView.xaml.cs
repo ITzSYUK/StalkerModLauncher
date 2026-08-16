@@ -37,9 +37,9 @@ public partial class PdaModCatalogView : UserControl
         await ViewModel.LoadInitialAsync(ViewModel.SelectedCategory, true);
     }
 
-    private void ListingButton_OnClick(object sender, RoutedEventArgs e) => ViewModel?.OpenListing((sender as FrameworkElement)?.DataContext as ModCatalogItemViewModel);
+    private void ListingButton_OnClick(object sender, RoutedEventArgs e) => ModCatalogViewModel.OpenListing((sender as FrameworkElement)?.DataContext as ModCatalogItemViewModel);
 
-    private void ApProLink_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e) => ViewModel?.OpenWebsite();
+    private void ApProLink_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e) => ModCatalogViewModel.OpenWebsite();
 
     private void SearchTextBox_OnTextChanged(object sender, TextChangedEventArgs e) => CatalogScrollViewer.ScrollToTop();
 

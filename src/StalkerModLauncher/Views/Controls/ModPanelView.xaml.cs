@@ -281,10 +281,10 @@ public partial class ModPanelView : UserControl
         if (e.Data.GetDataPresent(typeof(ModDragPayload)))
         {
             var payload = (ModDragPayload)e.Data.GetData(typeof(ModDragPayload))!;
-            var target = e.OriginalSource is DependencyObject dependencyObject &&
-                         FindAncestor<ListViewItem>(dependencyObject) is { DataContext: ModEntry mod }
-                ? mod
-                : null;
+            var source = e.OriginalSource as DependencyObject;
+            var target = source is null
+                ? null
+                : FindAncestor<ListViewItem>(source)?.DataContext as ModEntry;
 
             if (target is not null)
             {

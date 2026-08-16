@@ -75,7 +75,7 @@ public partial class PdaWindow : Window
             return;
         }
 
-        var creationViewModel = _navigation.CreateProfileCreationViewModel();
+        var creationViewModel = WindowNavigationService.CreateProfileCreationViewModel();
         var page = new PdaProfileCreationView { DataContext = creationViewModel };
         creationViewModel.Completed += (_, profile) =>
         {
@@ -97,7 +97,7 @@ public partial class PdaWindow : Window
         }
     }
 
-    private void ViewModel_ModScanSelectionRequested(object? sender, ModScanSelectionRequest request)
+    private void ViewModel_ModScanSelectionRequested(object? sender, ModScanSelectionEventArgs request)
     {
         var page = new PdaScanResultsView(request.Mods);
         page.Accepted += (_, _) =>

@@ -18,7 +18,7 @@ public sealed class ProfileManagerTests
     }
 
     [Fact]
-    public void Create_UsesUniqueNameAndStartsWithoutInheritedPaths()
+    public void CreateUsesUniqueNameAndStartsWithoutInheritedPaths()
     {
         var existing = new List<ModProfile> { new() { Name = "Profile 2" } };
 
@@ -27,10 +27,11 @@ public sealed class ProfileManagerTests
         Assert.Equal("Profile 2 (2)", created.Name);
         Assert.Empty(created.GameInstallPath);
         Assert.Empty(created.WorkspacePath);
+        Assert.EndsWith(Path.Combine("Mods", $"profile-{created.Id}"), created.ModInstallPath);
     }
 
     [Fact]
-    public void Duplicate_CopiesConfigurationButUsesNewIdsAndWorkspace()
+    public void DuplicateCopiesConfigurationButUsesNewIdsAndWorkspace()
     {
         var source = new ModProfile
         {
@@ -51,6 +52,7 @@ public sealed class ProfileManagerTests
         Assert.NotEqual(source.Id, duplicate.Id);
         Assert.NotEqual(source.WorkspacePath, duplicate.WorkspacePath);
         Assert.EndsWith($"profile-{duplicate.Id}", duplicate.WorkspacePath);
+        Assert.EndsWith(Path.Combine("Mods", $"profile-{duplicate.Id}"), duplicate.ModInstallPath);
         Assert.Equal(0, duplicate.TotalPlaytimeSeconds);
         Assert.Null(duplicate.LastPlayedAt);
         Assert.False(duplicate.IsDiscordStatusEnabled);
@@ -62,7 +64,7 @@ public sealed class ProfileManagerTests
     }
 
     [Fact]
-    public void Duplicate_UsesStableAsciiWorkspaceName()
+    public void DuplicateUsesStableAsciiWorkspaceName()
     {
         var source = new ModProfile { Name = new string('A', 100) + ": invalid." };
 
@@ -74,7 +76,7 @@ public sealed class ProfileManagerTests
     }
 
     [Fact]
-    public void Delete_StandaloneProfileNeverDeletesModOrWorkspace()
+    public void DeleteStandaloneProfileNeverDeletesModOrWorkspace()
     {
         var profile = new ModProfile { Name = "Standalone", IsStandalone = true, WorkspacePath = @"D:\Mods\Standalone" };
         var profiles = new List<ModProfile> { profile };
@@ -87,7 +89,7 @@ public sealed class ProfileManagerTests
     }
 
     [Fact]
-    public void Delete_OverlayProfileDeletesOnlyItsWorkspaceThenSelectsRemainder()
+    public void DeleteOverlayProfileDeletesOnlyItsWorkspaceThenSelectsRemainder()
     {
         var removed = new ModProfile { Name = "Removed", GameInstallPath = @"D:\Game" };
         var remaining = new ModProfile { Name = "Remaining" };
@@ -101,7 +103,7 @@ public sealed class ProfileManagerTests
     }
 
     [Fact]
-    public void Delete_OverlayProfileDeletesItsLocalAndLegacyUsvfsBootstrap()
+    public void DeleteOverlayProfileDeletesItsLocalAndLegacyUsvfsBootstrap()
     {
         var root = Path.Combine(
             Path.GetTempPath(),
@@ -159,7 +161,7 @@ public sealed class ProfileManagerTests
     }
 
     [Fact]
-    public void Delete_KeepsProfileWhenWorkspaceDeletionFails()
+    public void DeleteKeepsProfileWhenWorkspaceDeletionFails()
     {
         var profile = new ModProfile { Name = "Keep me" };
         var profiles = new List<ModProfile> { profile };
@@ -172,7 +174,7 @@ public sealed class ProfileManagerTests
     }
 
     [Fact]
-    public void PrepareImported_AssignsDefaultsAndUniqueName()
+    public void PrepareImportedAssignsDefaultsAndUniqueName()
     {
         var existing = new List<ModProfile> { new() { Name = "Imported" } };
         var imported = new ModProfile { Id = string.Empty, Name = "Imported", ExecutableRelativePath = string.Empty, IsRunning = true };
@@ -186,7 +188,7 @@ public sealed class ProfileManagerTests
     }
 
     [Fact]
-    public void GetProfileFolderPath_ReturnsStandaloneModOrOverlayWorkspace()
+    public void GetProfileFolderPathReturnsStandaloneModOrOverlayWorkspace()
     {
         var standaloneRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(standaloneRoot);
@@ -206,7 +208,7 @@ public sealed class ProfileManagerTests
     }
 
     [Fact]
-    public void EnsureProfileFolderPath_PersistsFirstPathAcrossProfileRename()
+    public void EnsureProfileFolderPathPersistsFirstPathAcrossProfileRename()
     {
         var profile = new ModProfile { Name = "Профиль 1", GameInstallPath = @"D:\Game" };
 
@@ -219,7 +221,7 @@ public sealed class ProfileManagerTests
     }
 
     [Fact]
-    public void MoveToInsertionIndex_ReordersProfiles()
+    public void MoveToInsertionIndexReordersProfiles()
     {
         var first = new ModProfile { Name = "First" };
         var second = new ModProfile { Name = "Second" };
@@ -227,7 +229,7 @@ public sealed class ProfileManagerTests
         var profiles = new System.Collections.ObjectModel.ObservableCollection<ModProfile>(
             [first, second, third]);
 
-        var moved = _manager.MoveToInsertionIndex(profiles, first, 3);
+        var moved = ProfileManager.MoveToInsertionIndex(profiles, first, 3);
 
         Assert.True(moved);
         Assert.Equal(["Second", "Third", "First"], profiles.Select(profile => profile.Name));

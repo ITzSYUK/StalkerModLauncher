@@ -3,9 +3,9 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-public sealed class ProfileDataPathResolver
+public static class ProfileDataPathResolver
 {
-    public IReadOnlyList<string> GetLogDirectories(ModProfile profile)
+    public static IReadOnlyList<string> GetLogDirectories(ModProfile profile)
     {
         return GetDataRoots(profile)
             .Select(root => Path.Combine(root, "logs"))
@@ -13,7 +13,7 @@ public sealed class ProfileDataPathResolver
             .ToArray();
     }
 
-    public IReadOnlyList<string> GetSavedGameDirectories(ModProfile profile)
+    public static IReadOnlyList<string> GetSavedGameDirectories(ModProfile profile)
     {
         return GetDataRoots(profile)
             .Select(root => Path.Combine(root, "savedgames"))
@@ -21,7 +21,7 @@ public sealed class ProfileDataPathResolver
             .ToArray();
     }
 
-    public IReadOnlyList<string> GetScreenshotDirectories(ModProfile profile)
+    public static IReadOnlyList<string> GetScreenshotDirectories(ModProfile profile)
     {
         return GetDataRoots(profile)
             .Select(root => Path.Combine(root, "screenshots"))
@@ -29,7 +29,7 @@ public sealed class ProfileDataPathResolver
             .ToArray();
     }
 
-    private static IReadOnlyList<string> GetDataRoots(ModProfile profile)
+    private static string[] GetDataRoots(ModProfile profile)
     {
         if (!profile.IsStandalone)
         {

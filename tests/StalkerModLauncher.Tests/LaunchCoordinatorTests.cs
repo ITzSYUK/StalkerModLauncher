@@ -8,7 +8,7 @@ namespace StalkerModLauncher.Tests;
 public sealed class LaunchCoordinatorTests
 {
     [Fact]
-    public async Task StartAsync_LaunchesProfileAndStartsSessionTracking()
+    public async Task StartAsyncLaunchesProfileAndStartsSessionTracking()
     {
         using var process = Process.GetCurrentProcess();
         var launcher = new FakeProfileLauncher(process);
@@ -29,7 +29,7 @@ public sealed class LaunchCoordinatorTests
     }
 
     [Fact]
-    public void ConfigureDiscordAndDispose_AreDelegatedToTracker()
+    public void ConfigureDiscordAndDisposeAreDelegatedToTracker()
     {
         using var process = Process.GetCurrentProcess();
         var tracker = new FakeSessionTracker();
@@ -43,7 +43,7 @@ public sealed class LaunchCoordinatorTests
     }
 
     [Fact]
-    public async Task StartAsync_DoesNotPublishDiscordStatusWhenProfileDisablesIt()
+    public async Task StartAsyncDoesNotPublishDiscordStatusWhenProfileDisablesIt()
     {
         using var process = Process.GetCurrentProcess();
         var tracker = new FakeSessionTracker();

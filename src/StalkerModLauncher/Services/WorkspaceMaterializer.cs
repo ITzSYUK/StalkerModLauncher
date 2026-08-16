@@ -3,9 +3,9 @@ using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
 
-internal sealed class WorkspaceMaterializer
+internal static class WorkspaceMaterializer
 {
-    public void DeleteWorkspaceContents(
+    public static void DeleteWorkspaceContents(
         string workspaceDirectory,
         string allowedRoot,
         Func<WorkspaceSourceSnapshot> snapshotFactory,
@@ -38,7 +38,7 @@ internal sealed class WorkspaceMaterializer
         }
     }
 
-    public void ValidateLinkSupport(WorkspaceSourceSnapshot snapshot, string workspaceRoot, IProgress<string> progress)
+    public static void ValidateLinkSupport(WorkspaceSourceSnapshot snapshot, string workspaceRoot, IProgress<string> progress)
     {
         var workspaceVolume = Path.GetPathRoot(Path.GetFullPath(workspaceRoot));
         var crossVolumeFiles = new[] { snapshot.Game }.Concat(snapshot.Mods.Values)
@@ -73,7 +73,7 @@ internal sealed class WorkspaceMaterializer
         }
     }
 
-    public void MirrorBaseGame(
+    public static void MirrorBaseGame(
         DirectorySnapshot source,
         string targetRoot,
         IProgress<string> progress,
@@ -101,7 +101,7 @@ internal sealed class WorkspaceMaterializer
         }
     }
 
-    public void ApplyMod(
+    public static void ApplyMod(
         string workspaceRoot,
         ModEntry mod,
         DirectorySnapshot source,
@@ -145,7 +145,7 @@ internal sealed class WorkspaceMaterializer
         }
     }
 
-    public void ReplaceFile(
+    public static void ReplaceFile(
         string sourceFile,
         string workspaceRoot,
         string relativePath,
@@ -233,7 +233,7 @@ internal sealed class WorkspaceMaterializer
         }
     }
 
-    private static IReadOnlyList<SourceFileAttributes> CaptureReadOnlySourceAttributes(WorkspaceSourceSnapshot snapshot)
+    private static List<SourceFileAttributes> CaptureReadOnlySourceAttributes(WorkspaceSourceSnapshot snapshot)
     {
         var sourceFiles = new[] { snapshot.Game }
             .Concat(snapshot.Mods.Values)
