@@ -45,6 +45,17 @@ public sealed class ModArchiveInstallerTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallAsyncRecognizesBinVariantDirectoryAsXRayContentRoot()
+    {
+        var archive = CreateZip("ogsr.zip", ("bin_OGSR/xrEngine.exe", "engine"));
+
+        var result = await ModArchiveInstaller.InstallAsync(archive, InstallRoot);
+
+        Assert.Equal(Path.Combine(InstallRoot, "ogsr"), result.ModPath);
+        Assert.True(File.Exists(Path.Combine(result.ModPath, "bin_OGSR", "xrEngine.exe")));
+    }
+
+    [Fact]
     public async Task InstallAsyncRejectsTraversalAndRemovesStagingDirectory()
     {
         var archive = CreateZip(
@@ -70,7 +81,29 @@ public sealed class ModArchiveInstallerTests : IDisposable
         var second = await ModArchiveInstaller.InstallAsync(archive, InstallRoot);
 
         Assert.Equal(Path.Combine(InstallRoot, "repeat"), first.ModPath);
-        Assert.Equal(Path.Combine(InstallRoot, "repeat (2)"), second.ModPath);
+        Assert.Equal(Path.Combine(InstallRoot, "repeat(1)"), second.ModPath);
+    }
+
+    [Fact]
+    public async Task PlanInstallOffersNumberedFolderWhenArchiveNameAlreadyExists()
+    {
+        var archive = CreateZip("Weapons_addon.zip", ("gamedata/test.txt", "value"));
+        await ModArchiveInstaller.InstallAsync(archive, InstallRoot);
+
+        var destination = ModArchiveInstaller.PlanInstall(archive, InstallRoot);
+
+        Assert.True(destination.RequiresConfirmation);
+        Assert.Equal("Weapons_addon", destination.ModName);
+        Assert.Equal("Weapons_addon(1)", destination.PackageDirectoryName);
+        Assert.Equal(Path.Combine(InstallRoot, "Weapons_addon(1)"), destination.PackagePath);
+
+        var installed = await ModArchiveInstaller.InstallAsync(
+            archive,
+            InstallRoot,
+            destination.PackageDirectoryName,
+            new InlineProgress<ModArchiveInstallProgress>(_ => { }));
+
+        Assert.Equal(destination.PackagePath, installed.ModPath);
     }
 
     [Fact]

@@ -10,34 +10,20 @@ namespace StalkerModLauncher.Tests;
 public sealed class ModArchiveProgressUiTests
 {
     [Fact]
-    public void CompletionNotificationUsesClassicDialogAndPdaInlinePanel()
+    public void CompletionAndDestinationConflictUseSharedInlinePanels()
     {
         var projectRoot = FindProjectRoot();
         XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 
-        var classicDialog = XDocument.Load(Path.Combine(projectRoot, "Views", "ModArchiveInstalledWindow.xaml"));
-        var root = Assert.IsType<XElement>(classicDialog.Root);
-        Assert.Equal("{StaticResource WindowBackgroundBrush}", (string?)root.Attribute("Background"));
-        Assert.Equal("True", (string?)root.Attribute("ShowInTaskbar"));
-        Assert.Equal("CenterScreen", (string?)root.Attribute("WindowStartupLocation"));
-        Assert.Empty(classicDialog.Descendants(presentation + "Button"));
-        Assert.DoesNotContain(
-            classicDialog.Descendants(presentation + "Border"),
-            border => (string?)border.Attribute("Background") == "{StaticResource PanelBrush}");
-
         var modPanel = XDocument.Load(Path.Combine(projectRoot, "Views", "Controls", "ModPanelView.xaml"));
         var completionTrigger = modPanel
-            .Descendants(presentation + "MultiDataTrigger")
+            .Descendants(presentation + "DataTrigger")
             .Single(trigger => trigger
-                .Descendants(presentation + "Condition")
-                .Any(condition => ((string?)condition.Attribute("Binding"))?.Contains(
+                .Attributes("Binding")
+                .Any(binding => binding.Value.Contains(
                     "IsModArchiveInstallCompleted",
-                    StringComparison.Ordinal) == true));
-        var bindings = completionTrigger
-            .Descendants(presentation + "Condition")
-            .Select(condition => (string?)condition.Attribute("Binding"))
-            .ToArray();
-        Assert.Contains(bindings, binding => binding?.Contains("UsePdaTheme", StringComparison.Ordinal) == true);
+                    StringComparison.Ordinal)));
+        Assert.Equal("True", (string?)completionTrigger.Attribute("Value"));
         Assert.Contains(
             modPanel.Descendants(presentation + "TextBlock"),
             textBlock => ((string?)textBlock.Attribute("Text"))?.Contains(
@@ -48,11 +34,17 @@ public sealed class ModArchiveProgressUiTests
             binding => ((string?)binding.Attribute("Command"))?.Contains(
                 "DismissModArchiveInstallCompletedCommand",
                 StringComparison.Ordinal) == true);
-        Assert.DoesNotContain(
-            modPanel.Descendants(),
-            element => ((string?)element.Attribute("ToolTip"))?.Contains(
-                "ModArchiveInstall",
+        Assert.Contains(
+            modPanel.Descendants(presentation + "TextBlock"),
+            textBlock => ((string?)textBlock.Attribute("Text"))?.Contains(
+                "ModArchiveInstallDestinationConflictText",
                 StringComparison.Ordinal) == true);
+        Assert.Contains(
+            modPanel.Descendants(presentation + "Button"),
+            button => ((string?)button.Attribute("Command"))?.Contains(
+                "ContinueModArchiveInstallCommand",
+                StringComparison.Ordinal) == true);
+        Assert.False(File.Exists(Path.Combine(projectRoot, "Views", "ModArchiveInstalledWindow.xaml")));
     }
 
     [Fact]

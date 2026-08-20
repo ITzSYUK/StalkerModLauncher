@@ -96,9 +96,12 @@ public sealed class ProfileManager
             profile.ExecutableRelativePath = @"bin\xr_3da.exe";
         }
 
-        if (string.IsNullOrWhiteSpace(profile.ModInstallPath))
+        var defaultModInstallPath = _paths.GetDefaultModInstallPath(profile.Id, profile.GameInstallPath);
+        var legacyModInstallPath = _paths.GetLegacyProfileModInstallPath(profile.Id, profile.GameInstallPath);
+        if (string.IsNullOrWhiteSpace(profile.ModInstallPath) ||
+            FileSystemSafety.IsSameDirectory(profile.ModInstallPath, legacyModInstallPath))
         {
-            profile.ModInstallPath = _paths.GetDefaultModInstallPath(profile.Id, profile.GameInstallPath);
+            profile.ModInstallPath = defaultModInstallPath;
         }
     }
 

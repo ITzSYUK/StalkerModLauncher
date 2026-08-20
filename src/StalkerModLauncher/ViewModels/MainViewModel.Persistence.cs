@@ -134,7 +134,12 @@ public sealed partial class MainViewModel
             foreach (ModEntry mod in e.OldItems) mod.PropertyChanged -= ModOnPropertyChanged;
         }
 
-        if (SelectedProfile is not null) ModListEditor.Renumber(SelectedProfile);
+        var profile = Profiles.FirstOrDefault(candidate => ReferenceEquals(candidate.Mods, sender));
+        if (profile is not null)
+        {
+            ModListEditor.Renumber(profile);
+            RefreshAutomaticExecutableSelection(profile, "изменения списка модов");
+        }
         CreateFilteredModsView();
         RecalculateModOverlayInfo();
         RefreshValidation();
@@ -173,9 +178,15 @@ public sealed partial class MainViewModel
             return;
         }
 
-        if (e.PropertyName == nameof(ModEntry.IsEnabled) && sender is ModEntry changedMod)
+        if (e.PropertyName is (nameof(ModEntry.IsEnabled) or nameof(ModEntry.Order) or nameof(ModEntry.SourcePath)) &&
+            sender is ModEntry changedMod)
         {
-            RefreshAutomaticExecutableSelection(changedMod);
+            var profile = Profiles.FirstOrDefault(candidate => candidate.Mods.Contains(changedMod));
+            if (profile is not null)
+            {
+                RefreshAutomaticExecutableSelection(profile, "изменения приоритета модов");
+            }
+
             RecalculateModOverlayInfo();
         }
 
@@ -211,11 +222,9 @@ public sealed partial class MainViewModel
         _ = InvokeOnUiAsync(() => ReportSettingsRecovery(recovery));
     }
 
-    private void RefreshAutomaticExecutableSelection(ModEntry changedMod)
+    private void RefreshAutomaticExecutableSelection(ModProfile profile, string reason)
     {
-        var profile = Profiles.FirstOrDefault(candidate => candidate.Mods.Contains(changedMod));
-        if (profile is null ||
-            profile.IsStandalone ||
+        if (profile.IsStandalone ||
             !string.IsNullOrWhiteSpace(profile.ExecutableSourcePath))
         {
             return;
@@ -231,7 +240,7 @@ public sealed partial class MainViewModel
         }
 
         profile.ExecutableRelativePath = selection.RelativePath;
-        Log($"Launch executable auto-detected after mod state change: {selection.RelativePath} from {selection.SourceName}");
+        Log($"Launch executable auto-detected after {reason}: {selection.RelativePath} from {selection.SourceName}");
     }
 
     public async Task CleanupAsync()

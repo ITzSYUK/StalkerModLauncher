@@ -351,9 +351,21 @@
             </ListView>
 
                 <Border Grid.Row="2"
-                        Style="{DynamicResource ModArchiveProgressPanelStyle}"
-                        Margin="0,8,0,0"
-                        Visibility="{Binding IsInstallingModArchive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Margin="0,8,0,0">
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource ModArchiveProgressPanelStyle}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsInstallingModArchive}" Value="True"/>
+                                        <Condition Binding="{Binding IsModArchiveInstallDestinationConflict}" Value="False"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <StackPanel>
                         <TextBlock Text="{Binding ModArchiveInstallProgressText}"
                                    Foreground="{DynamicResource TextBrush}"
@@ -362,6 +374,32 @@
                                      IsIndeterminate="{Binding IsModArchiveInstallProgressIndeterminate}"
                                      Style="{DynamicResource ModArchiveProgressBarStyle}"
                                      Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="2"
+                        Style="{DynamicResource ModArchiveProgressPanelStyle}"
+                        Margin="0,8,0,0"
+                        Visibility="{Binding IsModArchiveInstallDestinationConflict, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="ПАПКА МОДА УЖЕ ЕСТЬ"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding ModArchiveInstallDestinationConflictText}"
+                                   Foreground="{DynamicResource TextBrush}"
+                                   Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding ModArchiveInstallDestinationConflictAction}"
+                                   Foreground="{DynamicResource MutedTextBrush}"
+                                   Margin="0,2,0,0"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                            <Button Content="Установить в новую папку"
+                                    Command="{Binding ContinueModArchiveInstallCommand}"
+                                    Style="{DynamicResource PrimaryButtonStyle}"
+                                    Margin="0,0,6,0"/>
+                            <Button Content="Отменить"
+                                    Command="{Binding CancelModArchiveInstallCommand}"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 
@@ -376,13 +414,9 @@
                         <Style TargetType="Border" BasedOn="{StaticResource ModArchiveProgressPanelStyle}">
                             <Setter Property="Visibility" Value="Collapsed"/>
                             <Style.Triggers>
-                                <MultiDataTrigger>
-                                    <MultiDataTrigger.Conditions>
-                                        <Condition Binding="{Binding UsePdaTheme, ElementName=Root}" Value="True"/>
-                                        <Condition Binding="{Binding IsModArchiveInstallCompleted}" Value="True"/>
-                                    </MultiDataTrigger.Conditions>
+                                <DataTrigger Binding="{Binding IsModArchiveInstallCompleted}" Value="True">
                                     <Setter Property="Visibility" Value="Visible"/>
-                                </MultiDataTrigger>
+                                </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Border.Style>

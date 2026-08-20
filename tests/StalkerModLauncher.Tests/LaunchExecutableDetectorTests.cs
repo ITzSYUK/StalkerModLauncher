@@ -65,6 +65,67 @@ public sealed class LaunchExecutableDetectorTests : IDisposable
     }
 
     [Fact]
+    public void DetectBestRecognizesOgsrEngineInBinVariantDirectory()
+    {
+        var game = CreateDirectory("game");
+        var mod = CreateDirectory("ogsr-mod");
+        CreateFile(game, "bin/xr_3da.exe");
+        var engine = CreateFile(mod, "bin_OGSR/xrEngine.exe");
+
+        var detected = LaunchExecutableDetector.DetectBest(
+            [
+                new LaunchExecutableSearchRoot(game, "базовая игра", 0),
+                new LaunchExecutableSearchRoot(mod, "мод: OGSR", 1)
+            ],
+            requestedRelativePath: null);
+
+        Assert.NotNull(detected);
+        Assert.Equal(engine, detected.FullPath);
+        Assert.Equal(@"bin_OGSR\xrEngine.exe", detected.RelativePath);
+        Assert.Equal("найден движок OGSR/X-Ray в каталоге bin_*", detected.Reason);
+    }
+
+    [Fact]
+    public void DetectBestPrefersHigherPriorityOgsrEngineOverLowerBinX64Engine()
+    {
+        var lowerMod = CreateDirectory("lower-mod");
+        var higherMod = CreateDirectory("higher-mod");
+        CreateFile(lowerMod, "bin_x64/xrEngine.exe");
+        var higherEngine = CreateFile(higherMod, "bin_OGSR/xrEngine.exe");
+
+        var detected = LaunchExecutableDetector.DetectBest(
+            [
+                new LaunchExecutableSearchRoot(lowerMod, "мод: lower", 1),
+                new LaunchExecutableSearchRoot(higherMod, "мод: higher", 2)
+            ],
+            requestedRelativePath: null);
+
+        Assert.NotNull(detected);
+        Assert.Equal(higherEngine, detected.FullPath);
+        Assert.Equal(@"bin_OGSR\xrEngine.exe", detected.RelativePath);
+        Assert.Equal("мод: higher", detected.SourceName);
+    }
+
+    [Fact]
+    public void DetectBestDoesNotPreferHigherPriorityUnrecognizedToolOverEngine()
+    {
+        var engineMod = CreateDirectory("engine-mod");
+        var toolMod = CreateDirectory("tool-mod");
+        var engine = CreateFile(engineMod, "bin_x64/xrEngine.exe");
+        CreateFile(toolMod, "tools/configurator.exe");
+
+        var detected = LaunchExecutableDetector.DetectBest(
+            [
+                new LaunchExecutableSearchRoot(engineMod, "мод: engine", 1),
+                new LaunchExecutableSearchRoot(toolMod, "мод: tool", 2)
+            ],
+            requestedRelativePath: null);
+
+        Assert.NotNull(detected);
+        Assert.Equal(engine, detected.FullPath);
+    }
+
+    [Fact]
     public void DetectAutomaticSelectionIgnoresPreviouslyPinnedBaseGameExecutable()
     {
         var game = CreateDirectory("game");

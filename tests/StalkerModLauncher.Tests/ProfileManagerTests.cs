@@ -9,12 +9,14 @@ namespace StalkerModLauncher.Tests;
 public sealed class ProfileManagerTests
 {
     private readonly FakeWorkspaceManager _workspaceManager = new();
+    private readonly AppPaths _paths;
     private readonly ProfileManager _manager;
 
     public ProfileManagerTests()
     {
         var root = Path.Combine(Path.GetTempPath(), "StalkerModLauncherTests", Guid.NewGuid().ToString("N"));
-        _manager = new ProfileManager(new AppPaths(root, Path.Combine(root, "workspaces"), false), _workspaceManager);
+        _paths = new AppPaths(root, Path.Combine(root, "workspaces"), false);
+        _manager = new ProfileManager(_paths, _workspaceManager);
     }
 
     [Fact]
@@ -27,7 +29,7 @@ public sealed class ProfileManagerTests
         Assert.Equal("Profile 2 (2)", created.Name);
         Assert.Empty(created.GameInstallPath);
         Assert.Empty(created.WorkspacePath);
-        Assert.EndsWith(Path.Combine("Mods", $"profile-{created.Id}"), created.ModInstallPath);
+        Assert.EndsWith("Mods", created.ModInstallPath);
     }
 
     [Fact]
@@ -52,7 +54,7 @@ public sealed class ProfileManagerTests
         Assert.NotEqual(source.Id, duplicate.Id);
         Assert.NotEqual(source.WorkspacePath, duplicate.WorkspacePath);
         Assert.EndsWith($"profile-{duplicate.Id}", duplicate.WorkspacePath);
-        Assert.EndsWith(Path.Combine("Mods", $"profile-{duplicate.Id}"), duplicate.ModInstallPath);
+        Assert.EndsWith("Mods", duplicate.ModInstallPath);
         Assert.Equal(0, duplicate.TotalPlaytimeSeconds);
         Assert.Null(duplicate.LastPlayedAt);
         Assert.False(duplicate.IsDiscordStatusEnabled);
@@ -185,6 +187,18 @@ public sealed class ProfileManagerTests
         Assert.False(string.IsNullOrWhiteSpace(imported.Id));
         Assert.Equal(@"bin\xr_3da.exe", imported.ExecutableRelativePath);
         Assert.False(imported.IsRunning);
+    }
+
+    [Fact]
+    public void EnsureDefaultsMigratesLegacyProfileModFolderToSharedModsFolder()
+    {
+        var profile = new ModProfile { Id = "legacy-profile", GameInstallPath = @"D:\Game" };
+        profile.ModInstallPath = _paths.GetLegacyProfileModInstallPath(profile.Id, profile.GameInstallPath);
+
+        _manager.EnsureDefaults(profile);
+
+        Assert.EndsWith("Mods", profile.ModInstallPath);
+        Assert.DoesNotContain("profile-legacy-profile", profile.ModInstallPath, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

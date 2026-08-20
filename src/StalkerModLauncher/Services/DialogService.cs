@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Microsoft.Win32;
 using System.Windows;
-using StalkerModLauncher.Views;
 
 namespace StalkerModLauncher.Services;
 
@@ -60,13 +59,6 @@ public class DialogService
     public static void ShowInfo(string title, string message)
     {
         MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
-    }
-
-    public virtual void ShowModArchiveInstalled(string modName, string modPath, string details)
-    {
-        var window = new ModArchiveInstalledWindow(modName, modPath, details);
-        window.Show();
-        window.Activate();
     }
 
     public static void OpenFolder(string path)

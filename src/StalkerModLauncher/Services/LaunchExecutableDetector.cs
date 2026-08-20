@@ -47,8 +47,9 @@ public static class LaunchExecutableDetector
         }
 
         var best = candidates
-            .OrderBy(candidate => candidate.Score)
+            .OrderBy(candidate => GetCandidateTier(candidate.Score))
             .ThenByDescending(candidate => candidate.SourceOrder)
+            .ThenBy(candidate => candidate.Score)
             .ThenBy(candidate => candidate.RelativePath, StringComparer.OrdinalIgnoreCase)
             .First();
 
@@ -65,6 +66,13 @@ public static class LaunchExecutableDetector
         Normalize(relativePath)
             .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries)
             .Contains("dedicated", StringComparer.OrdinalIgnoreCase);
+
+    private static int GetCandidateTier(int score) => score switch
+    {
+        0 => 0,
+        < 100 => 1,
+        _ => 2
+    };
 
     private static IEnumerable<string> EnumerateExecutables(string root, CancellationToken cancellationToken)
     {
@@ -109,17 +117,23 @@ public static class LaunchExecutableDetector
             return 10;
         }
 
+        if (IsEngineDirectoryExecutable(normalized))
+        {
+            reason = "найден движок OGSR/X-Ray в каталоге bin_*";
+            return 11;
+        }
+
         if (normalized.Equals(@"bin\xrEngine.exe", StringComparison.OrdinalIgnoreCase))
         {
             reason = "найден движок X-Ray/OGSR";
-            return 11;
+            return 12;
         }
 
         if (normalized.Equals(@"bin\xr_3da.exe", StringComparison.OrdinalIgnoreCase) ||
             normalized.Equals(@"bin\XR_3DA.exe", StringComparison.OrdinalIgnoreCase))
         {
             reason = "найден стандартный бинарник S.T.A.L.K.E.R.";
-            return 12;
+            return 13;
         }
 
         if (fileName.Equals("xr_3da.exe", StringComparison.OrdinalIgnoreCase) ||
@@ -157,6 +171,16 @@ public static class LaunchExecutableDetector
         return string.IsNullOrWhiteSpace(path)
             ? string.Empty
             : path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar).TrimStart(Path.DirectorySeparatorChar);
+    }
+
+    public static bool IsEngineDirectoryExecutable(string relativePath)
+    {
+        var normalized = Normalize(relativePath);
+        var directory = Path.GetDirectoryName(normalized);
+        return Path.GetFileName(normalized).Equals("xrEngine.exe", StringComparison.OrdinalIgnoreCase) &&
+               !string.IsNullOrWhiteSpace(directory) &&
+               directory.StartsWith("bin_", StringComparison.OrdinalIgnoreCase) &&
+               directory.IndexOf(Path.DirectorySeparatorChar) < 0;
     }
 
     private static EnumerationOptions SafeEnumerationOptions { get; } = new()

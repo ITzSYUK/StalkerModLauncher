@@ -10,6 +10,12 @@ public sealed record ModArchiveInstallResult(
     long ExtractedBytes,
     bool DatabaseArchivesRelocated);
 
+public sealed record ModArchiveInstallDestination(
+    string ModName,
+    string PackageDirectoryName,
+    string PackagePath,
+    bool RequiresConfirmation);
+
 public enum ModArchiveInstallStage
 {
     Inspecting,
@@ -61,6 +67,51 @@ public sealed class ModArchiveInstaller
     public static Task<ModArchiveInstallResult> InstallAsync(
         string archivePath,
         string installRoot,
+        string packageDirectoryName,
+        IProgress<ModArchiveInstallProgress> progress,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageDirectoryName);
+        ArgumentNullException.ThrowIfNull(progress);
+        return Task.Run(
+            () => InstallCore(archivePath, installRoot, packageDirectoryName, progress, cancellationToken),
+            cancellationToken);
+    }
+
+    public static ModArchiveInstallDestination PlanInstall(string archivePath, string installRoot)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(archivePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(installRoot);
+
+        var fullArchivePath = Path.GetFullPath(archivePath);
+        if (!File.Exists(fullArchivePath))
+        {
+            throw new FileNotFoundException("Archive was not found.", fullArchivePath);
+        }
+
+        if (!SupportedExtensions.Contains(Path.GetExtension(fullArchivePath)))
+        {
+            throw new InvalidDataException("Supported mod archive formats: ZIP, 7Z and RAR.");
+        }
+
+        var fullInstallRoot = Path.GetFullPath(installRoot);
+        var modName = FileSystemSafety.SanitizeName(Path.GetFileNameWithoutExtension(fullArchivePath));
+        var preferredPath = Path.Combine(fullInstallRoot, modName);
+        var requiresConfirmation = Directory.Exists(preferredPath) || File.Exists(preferredPath);
+        var packageDirectoryName = requiresConfirmation
+            ? GetUniquePackageDirectoryName(fullInstallRoot, modName, startSuffix: 1)
+            : modName;
+
+        return new ModArchiveInstallDestination(
+            modName,
+            packageDirectoryName,
+            Path.Combine(fullInstallRoot, packageDirectoryName),
+            requiresConfirmation);
+    }
+
+    public static Task<ModArchiveInstallResult> InstallAsync(
+        string archivePath,
+        string installRoot,
         IProgress<ModArchiveInstallProgress> progress,
         CancellationToken cancellationToken = default)
     {
@@ -73,6 +124,16 @@ public sealed class ModArchiveInstaller
     private static ModArchiveInstallResult InstallCore(
         string archivePath,
         string installRoot,
+        IProgress<ModArchiveInstallProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        return InstallCore(archivePath, installRoot, packageDirectoryName: null, progress, cancellationToken);
+    }
+
+    private static ModArchiveInstallResult InstallCore(
+        string archivePath,
+        string installRoot,
+        string? packageDirectoryName,
         IProgress<ModArchiveInstallProgress>? progress,
         CancellationToken cancellationToken)
     {
@@ -115,7 +176,9 @@ public sealed class ModArchiveInstaller
             var databaseArchivesRelocated = RelocateLooseDatabaseArchives(contentRoot);
             var contentRootRelativePath = Path.GetRelativePath(stagingPath, contentRoot);
             var modName = FileSystemSafety.SanitizeName(Path.GetFileNameWithoutExtension(fullArchivePath));
-            var packagePath = GetUniquePackagePath(fullInstallRoot, modName);
+            var packagePath = packageDirectoryName is null
+                ? GetUniquePackagePath(fullInstallRoot, modName)
+                : GetRequestedPackagePath(fullInstallRoot, packageDirectoryName);
 
             Directory.Move(stagingPath, packagePath);
             var installedContentRoot = contentRootRelativePath == "."
@@ -327,7 +390,7 @@ public sealed class ModArchiveInstaller
     private static bool LooksLikeXRayContentRoot(string path)
     {
         if (Directory.EnumerateDirectories(path)
-            .Any(directory => ContentDirectories.Contains(Path.GetFileName(directory))))
+            .Any(directory => IsContentDirectory(Path.GetFileName(directory))))
         {
             return true;
         }
@@ -336,6 +399,10 @@ public sealed class ModArchiveInstaller
             Path.GetFileName(file).Equals("fsgame.ltx", StringComparison.OrdinalIgnoreCase) ||
             IsDatabaseArchive(file));
     }
+
+    private static bool IsContentDirectory(string directoryName) =>
+        ContentDirectories.Contains(directoryName) ||
+        directoryName.StartsWith("bin_", StringComparison.OrdinalIgnoreCase);
 
     private static bool RelocateLooseDatabaseArchives(string contentRoot)
     {
@@ -360,15 +427,37 @@ public sealed class ModArchiveInstaller
     private static bool IsDatabaseArchive(string path) =>
         Path.GetExtension(path).StartsWith(".db", StringComparison.OrdinalIgnoreCase);
 
-    private static string GetUniquePackagePath(string installRoot, string modName)
+    private static string GetUniquePackagePath(string installRoot, string modName) =>
+        Path.Combine(installRoot, GetUniquePackageDirectoryName(installRoot, modName, startSuffix: 0));
+
+    private static string GetRequestedPackagePath(string installRoot, string packageDirectoryName)
     {
-        for (var suffix = 1; suffix < 10_000; suffix++)
+        var sanitized = FileSystemSafety.SanitizeName(packageDirectoryName);
+        if (!packageDirectoryName.Equals(sanitized, StringComparison.Ordinal))
         {
-            var directoryName = suffix == 1 ? modName : $"{modName} ({suffix})";
+            throw new InvalidDataException("Invalid archive installation folder name.");
+        }
+
+        var packagePath = Path.GetFullPath(Path.Combine(installRoot, packageDirectoryName));
+        if (!FileSystemSafety.IsDirectoryInside(packagePath, installRoot) ||
+            Directory.Exists(packagePath) ||
+            File.Exists(packagePath))
+        {
+            throw new IOException($"Archive installation folder is unavailable: {packagePath}");
+        }
+
+        return packagePath;
+    }
+
+    private static string GetUniquePackageDirectoryName(string installRoot, string modName, int startSuffix)
+    {
+        for (var suffix = startSuffix; suffix < 10_000; suffix++)
+        {
+            var directoryName = suffix == 0 ? modName : $"{modName}({suffix})";
             var candidate = Path.Combine(installRoot, directoryName);
             if (!Directory.Exists(candidate) && !File.Exists(candidate))
             {
-                return candidate;
+                return directoryName;
             }
         }
 

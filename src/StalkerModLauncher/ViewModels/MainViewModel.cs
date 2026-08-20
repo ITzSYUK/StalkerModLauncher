@@ -33,6 +33,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private bool _isModArchiveInstallProgressIndeterminate;
     private double _modArchiveInstallProgress;
     private string _modArchiveInstallProgressText = string.Empty;
+    private bool _isModArchiveInstallDestinationConflict;
+    private string _modArchiveInstallDestinationConflictText = string.Empty;
+    private string _modArchiveInstallDestinationConflictAction = string.Empty;
+    private TaskCompletionSource<bool>? _modArchiveInstallDestinationChoice;
     private bool _isModArchiveInstallCompleted;
     private string _installedModArchiveName = string.Empty;
     private string _installedModArchivePath = string.Empty;
@@ -85,6 +89,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         AddModCommand = new RelayCommand(AddMod, CanAddMod);
         InstallModArchiveCommand = new AsyncRelayCommand(InstallModArchiveAsync, CanInstallModArchive);
         DismissModArchiveInstallCompletedCommand = new RelayCommand(() => IsModArchiveInstallCompleted = false);
+        ContinueModArchiveInstallCommand = new RelayCommand(() => ResolveModArchiveInstallDestinationChoice(true));
+        CancelModArchiveInstallCommand = new RelayCommand(() => ResolveModArchiveInstallDestinationChoice(false));
         RemoveModCommand = new RelayCommand(RemoveMod, () => CanEditSelectedProfile && SelectedMod is not null);
         MoveModUpCommand = new RelayCommand(() => MoveSelectedMod(-1), () => CanMoveSelectedMod(-1));
         MoveModDownCommand = new RelayCommand(() => MoveSelectedMod(1), () => CanMoveSelectedMod(1));
@@ -188,6 +194,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
             SelectedMod = null;
             IsModArchiveInstallCompleted = false;
+            ResolveModArchiveInstallDestinationChoice(false);
+            IsModArchiveInstallDestinationConflict = false;
             CreateFilteredModsView();
             RecalculateModOverlayInfo();
             RefreshValidation();
@@ -198,6 +206,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             if (_selectedProfile is not null)
             {
                 _selectedProfile.PropertyChanged += OnSelectedProfilePropertyChanged;
+                RefreshAutomaticExecutableSelection(_selectedProfile, "выбора профиля");
             }
         }
     }
@@ -326,6 +335,24 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         private set => SetProperty(ref _modArchiveInstallProgressText, value);
     }
 
+    public bool IsModArchiveInstallDestinationConflict
+    {
+        get => _isModArchiveInstallDestinationConflict;
+        private set => SetProperty(ref _isModArchiveInstallDestinationConflict, value);
+    }
+
+    public string ModArchiveInstallDestinationConflictText
+    {
+        get => _modArchiveInstallDestinationConflictText;
+        private set => SetProperty(ref _modArchiveInstallDestinationConflictText, value);
+    }
+
+    public string ModArchiveInstallDestinationConflictAction
+    {
+        get => _modArchiveInstallDestinationConflictAction;
+        private set => SetProperty(ref _modArchiveInstallDestinationConflictAction, value);
+    }
+
     public bool IsModArchiveInstallCompleted
     {
         get => _isModArchiveInstallCompleted;
@@ -361,6 +388,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public RelayCommand AddModCommand { get; }
     public AsyncRelayCommand InstallModArchiveCommand { get; }
     public RelayCommand DismissModArchiveInstallCompletedCommand { get; }
+    public RelayCommand ContinueModArchiveInstallCommand { get; }
+    public RelayCommand CancelModArchiveInstallCommand { get; }
     public RelayCommand RemoveModCommand { get; }
     public RelayCommand MoveModUpCommand { get; }
     public RelayCommand MoveModDownCommand { get; }

@@ -291,6 +291,39 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task ModOrderAutomaticallyChoosesHighestPriorityBinVariantEngineWithoutPinningSource()
+    {
+        await RunWithViewModelAsync((viewModel, root) =>
+        {
+            var gameRoot = CreateValidGameRoot(root);
+            var firstMod = Directory.CreateDirectory(Path.Combine(root, "mods", "first")).FullName;
+            var secondMod = Directory.CreateDirectory(Path.Combine(root, "mods", "second")).FullName;
+            Directory.CreateDirectory(Path.Combine(firstMod, "bin_OGSR"));
+            Directory.CreateDirectory(Path.Combine(secondMod, "bin_x64"));
+            File.WriteAllText(Path.Combine(firstMod, "bin_OGSR", "xrEngine.exe"), string.Empty);
+            File.WriteAllText(Path.Combine(secondMod, "bin_x64", "xrEngine.exe"), string.Empty);
+            var profile = new ModProfile
+            {
+                Name = "Automatic OGSR engine",
+                GameInstallPath = gameRoot,
+                ExecutableRelativePath = @"bin\xr_3da.exe"
+            };
+            viewModel.AddCreatedProfile(profile);
+
+            viewModel.AddDroppedMods([firstMod, secondMod]);
+
+            Assert.Equal(@"bin_x64\xrEngine.exe", profile.ExecutableRelativePath);
+            Assert.Empty(profile.ExecutableSourcePath);
+
+            viewModel.MoveModToEnd(profile.Mods[0]);
+
+            Assert.Equal(@"bin_OGSR\xrEngine.exe", profile.ExecutableRelativePath);
+            Assert.Empty(profile.ExecutableSourcePath);
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
     public async Task RunningProfileBlocksModCommandsAndDirectModMutations()
     {
         await RunWithViewModelAsync((viewModel, root) =>

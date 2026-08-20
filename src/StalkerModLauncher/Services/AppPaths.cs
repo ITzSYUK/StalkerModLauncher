@@ -60,6 +60,18 @@ public sealed class AppPaths
 
     public string GetDefaultModInstallPath(string profileId, string? gameInstallPath)
     {
+        return GetDefaultModInstallPath(gameInstallPath);
+    }
+
+    public string GetDefaultModInstallPath(string? gameInstallPath)
+    {
+        var workspaceRoot = GetPreferredWorkspaceRoot(gameInstallPath);
+        var launcherRoot = Directory.GetParent(workspaceRoot)?.FullName ?? workspaceRoot;
+        return Path.Combine(launcherRoot, "Mods");
+    }
+
+    public string GetLegacyProfileModInstallPath(string profileId, string? gameInstallPath)
+    {
         var workspaceRoot = GetPreferredWorkspaceRoot(gameInstallPath);
         var launcherRoot = Directory.GetParent(workspaceRoot)?.FullName ?? workspaceRoot;
         var safeProfileId = FileSystemSafety.SanitizeName(profileId);

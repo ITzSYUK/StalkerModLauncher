@@ -265,12 +265,23 @@ public sealed partial class MainViewModel
                 : profile.ModInstallPath;
             profile.ModInstallPath = ValidateModInstallPath(profile, installRoot);
 
+            var destination = ModArchiveInstaller.PlanInstall(archivePath, profile.ModInstallPath);
+            if (destination.RequiresConfirmation && !await ConfirmModArchiveInstallDestinationAsync(destination))
+            {
+                Log($"Mod archive installation cancelled because folder already exists: {destination.PackagePath}");
+                return;
+            }
+
+            IsInstallingModArchive = true;
+            IsModArchiveInstallProgressIndeterminate = true;
+
             var progressTimer = Stopwatch.StartNew();
             var progress = new Progress<ModArchiveInstallProgress>(value =>
                 UpdateModArchiveInstallProgress(value, archiveFileName, progressTimer.Elapsed));
             var result = await ModArchiveInstaller.InstallAsync(
                 archivePath,
                 profile.ModInstallPath,
+                destination.PackageDirectoryName,
                 progress);
             var installedMod = ModListEditor.Add(profile, result.ModPath, result.ModName);
 
@@ -294,20 +305,10 @@ public sealed partial class MainViewModel
             var details = $"Файлов: {result.FileCount:N0}{databaseNote}";
             SystemSounds.Asterisk.Play();
             IsInstallingModArchive = false;
-            if (IsPdaInterfaceEnabled)
-            {
-                InstalledModArchiveName = result.ModName;
-                InstalledModArchivePath = result.ModPath;
-                InstalledModArchiveDetails = details;
-                IsModArchiveInstallCompleted = true;
-            }
-            else
-            {
-                _dialogService.ShowModArchiveInstalled(
-                    result.ModName,
-                    result.ModPath,
-                    details);
-            }
+            InstalledModArchiveName = result.ModName;
+            InstalledModArchivePath = result.ModPath;
+            InstalledModArchiveDetails = details;
+            IsModArchiveInstallCompleted = true;
         }
         catch (Exception ex)
         {
@@ -319,6 +320,8 @@ public sealed partial class MainViewModel
             IsBuilding = false;
             IsInstallingModArchive = false;
             IsModArchiveInstallProgressIndeterminate = false;
+            IsModArchiveInstallDestinationConflict = false;
+            _modArchiveInstallDestinationChoice = null;
             ModArchiveInstallProgress = 0;
             ModArchiveInstallProgressText = string.Empty;
             BuildProgressText = string.Empty;
@@ -366,6 +369,32 @@ public sealed partial class MainViewModel
         }
 
         BuildProgressText = ModArchiveInstallProgressText;
+    }
+
+    private async Task<bool> ConfirmModArchiveInstallDestinationAsync(ModArchiveInstallDestination destination)
+    {
+        IsInstallingModArchive = false;
+        IsModArchiveInstallProgressIndeterminate = false;
+        ModArchiveInstallDestinationConflictText =
+            $"Папка мода «{destination.ModName}» уже существует. Новая распаковка будет помещена в:";
+        ModArchiveInstallDestinationConflictAction = destination.PackagePath;
+        IsModArchiveInstallDestinationConflict = true;
+        var choice = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _modArchiveInstallDestinationChoice = choice;
+        try
+        {
+            return await choice.Task;
+        }
+        finally
+        {
+            IsModArchiveInstallDestinationConflict = false;
+            _modArchiveInstallDestinationChoice = null;
+        }
+    }
+
+    private void ResolveModArchiveInstallDestinationChoice(bool continueInstallation)
+    {
+        _modArchiveInstallDestinationChoice?.TrySetResult(continueInstallation);
     }
 
     private static string FormatArchiveInstallRemainingTime(
