@@ -457,7 +457,7 @@ public static class Mo2ImportService
             .ToArray();
     }
 
-    private static string[] FindCandidates(string name, IReadOnlyList<ModDirectory> directories)
+    private static string[] FindCandidates(string name, ModDirectory[] directories)
     {
         var exact = directories
             .Where(directory => directory.FolderName.Equals(name, StringComparison.OrdinalIgnoreCase))
@@ -477,14 +477,14 @@ public static class Mo2ImportService
             .ToArray();
     }
 
-    private static bool IsSeparator(string name, IReadOnlyList<string> candidates)
+    private static bool IsSeparator(string name, string[] candidates)
     {
         if (name.EndsWith("_separator", StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
 
-        return candidates.Count == 1 && IsMetaSeparator(candidates[0]);
+        return candidates.Length == 1 && IsMetaSeparator(candidates[0]);
     }
 
     private static bool IsMetaSeparator(string directory)

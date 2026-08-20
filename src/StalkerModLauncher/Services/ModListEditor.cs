@@ -130,7 +130,7 @@ public static class ModListEditor
         return true;
     }
 
-    private static void ApplyOrder(ModProfile profile, IReadOnlyList<ModEntry> desiredOrder)
+    private static void ApplyOrder(ModProfile profile, List<ModEntry> desiredOrder)
     {
         for (var targetIndex = 0; targetIndex < desiredOrder.Count; targetIndex++)
         {

@@ -103,7 +103,7 @@ public static class Mo2ModListImporter
         return string.Equals(folderName, mo2Name, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void ApplyOrder(ModProfile profile, IReadOnlyList<ModEntry> desiredOrder)
+    private static void ApplyOrder(ModProfile profile, List<ModEntry> desiredOrder)
     {
         for (var targetIndex = 0; targetIndex < desiredOrder.Count; targetIndex++)
         {
