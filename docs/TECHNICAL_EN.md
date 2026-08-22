@@ -472,7 +472,7 @@ The script creates two ZIP archives:
 
 Both packages contain the official x64/x86 USVFS runtime, x86 host, `LICENSE.txt`, and `THIRD-PARTY-NOTICES.txt`. PDB, JSON, Markdown, and intermediate files are excluded from user ZIP files.
 
-Before packaging, the USVFS source is checked against its pinned revision and tracked patch; `scripts\Prepare-UsvfsSource.ps1` prepares that state. The version and SHA-256 of all four built upstream components are checked against `scripts\UsvfsRuntimeManifest.psd1`. Every package contains a `checksums.txt`, and the release directory contains another checksum file for the ZIP archives. After packaging, both ZIP files are extracted to a temporary directory and compared completely with their prepared packages, including EXE version, source commit, and absence of unexpected files.
+Before packaging, the USVFS source is checked against its pinned revision and tracked patch; `scripts\Prepare-UsvfsSource.ps1` prepares that state. The version and SHA-256 of the four upstream components intended for the package are checked against `scripts\UsvfsRuntimeManifest.psd1`. Source builds and CI validate source provenance and the x64/x86 smoke test instead of comparing binary hashes: output bytes may differ between Windows SDK versions. Every package contains a `checksums.txt`, and the release directory contains another checksum file for the ZIP archives. After packaging, both ZIP files are extracted to a temporary directory and compared completely with their prepared packages, including EXE version, source commit, and absence of unexpected files.
 
 Experimental VFS publish:
 
