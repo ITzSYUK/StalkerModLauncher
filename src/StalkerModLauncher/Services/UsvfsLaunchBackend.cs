@@ -155,6 +155,9 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
             ? _x86Runtime
             : _runtime;
         var diagnosticLogPath = UsvfsDiagnosticPaths.Prepare(profileWorkspace, progress);
+        progress.Report(
+            $"USVFS overlay plan: {mappingPlan.Operations.Count:N0} mappings; " +
+            $"diagnostic log: {diagnosticLogPath}");
         var session = selectedRuntime.CreateSession(
             mappingPlan,
             new UsvfsRuntimeOptions(

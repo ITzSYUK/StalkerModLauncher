@@ -477,12 +477,17 @@ Before packaging, the USVFS source is checked against its pinned revision and tr
 Experimental VFS publish:
 
 ```powershell
-.\scripts\Build-VfsExperimental.ps1 -CleanPublishRoot
+.\scripts\Build-UsvfsDependencies.ps1
+.\scripts\Build-VfsExperimental.ps1
 ```
 
-This is a local test build. After publishing, the script automatically runs the same x64/x86 USVFS smoke tests.
+`Build-UsvfsDependencies.ps1` reproducibly prepares the pinned USVFS source, builds the x64/x86 runtime, x86 host, and both x86 smoke-process executables. For a clean clone, pass `-BootstrapUsvfs`; Visual Studio 2022 Build Tools with MSVC v143 for x64/x86 C++, CMake, Git, and `VCPKG_ROOT` are required. The script forces vcpkg to use VS 2022 and temporarily maps the repository root to a free drive letter so MSVC does not depend on non-ASCII characters in the original path. This is a local test build. After publishing, the script automatically runs the same x64/x86 USVFS smoke tests.
 
-Official USVFS native artifacts and the x86 host must be prepared locally. The automated x86 smoke test also requires locally prepared `research\usvfs-poc\build32\usvfs_overlay_child_x86.exe` and `usvfs_overlay_launcher_x86.exe`. Compiled third-party binaries are not stored in Git.
+After changing Visual Studio or vcpkg, use `-CleanUsvfsBuild`: it removes only `.external\usvfs\vsbuild64` and `vsbuild32` before configuring again.
+
+Without `-CleanPublishRoot`, the script recreates only `publish\vfs-experimental`; the switch deletes all of `publish`. Compiled third-party binaries are not stored in Git.
+
+The `.github\workflows\usvfs.yml` workflow repeats the complete build and smoke test on Windows 2022 when USVFS, the native helper, or related scripts change.
 
 ## 17. Known limitations
 

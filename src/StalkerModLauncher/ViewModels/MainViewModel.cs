@@ -206,7 +206,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             if (_selectedProfile is not null)
             {
                 _selectedProfile.PropertyChanged += OnSelectedProfilePropertyChanged;
-                RefreshAutomaticExecutableSelection(_selectedProfile, "выбора профиля");
+                RefreshAutomaticExecutableSelection(
+                    _selectedProfile,
+                    "выбора профиля",
+                    preferExistingRelativePath: true);
             }
         }
     }

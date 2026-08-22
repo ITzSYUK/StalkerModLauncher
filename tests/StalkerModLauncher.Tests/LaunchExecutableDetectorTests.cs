@@ -169,6 +169,49 @@ public sealed class LaunchExecutableDetectorTests : IDisposable
         Assert.False(selection.PinsSource);
     }
 
+    [Fact]
+    public void ExistingAutomaticSelectionUsesHighestPriorityProviderWithoutRecursiveScan()
+    {
+        var game = CreateDirectory("game");
+        var lowerMod = CreateDirectory("lower-mod");
+        var higherMod = CreateDirectory("higher-mod");
+        CreateFile(game, "bin/xr_3da.exe");
+        CreateFile(lowerMod, "bin_OGSR/xrEngine.exe");
+        CreateFile(higherMod, "bin_OGSR/xrEngine.exe");
+        var profile = new ModProfile
+        {
+            GameInstallPath = game,
+            ExecutableRelativePath = @"bin_OGSR\xrEngine.exe",
+            Mods =
+            {
+                new ModEntry { Name = "lower", SourcePath = lowerMod, IsEnabled = true, Order = 1 },
+                new ModEntry { Name = "higher", SourcePath = higherMod, IsEnabled = true, Order = 2 }
+            }
+        };
+
+        var selection = ProfileExecutableSourceResolver.TryResolveExistingAutomaticSelection(profile);
+
+        Assert.NotNull(selection);
+        Assert.Equal(@"bin_OGSR\xrEngine.exe", selection.RelativePath);
+        Assert.Equal("мод: higher", selection.SourceName);
+        Assert.False(selection.PinsSource);
+    }
+
+    [Fact]
+    public void ExistingAutomaticSelectionReturnsNullWhenStoredExecutableNoLongerExists()
+    {
+        var game = CreateDirectory("game");
+        var profile = new ModProfile
+        {
+            GameInstallPath = game,
+            ExecutableRelativePath = @"bin\missing.exe"
+        };
+
+        var selection = ProfileExecutableSourceResolver.TryResolveExistingAutomaticSelection(profile);
+
+        Assert.Null(selection);
+    }
+
     private string CreateDirectory(string relativePath)
     {
         var path = Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));

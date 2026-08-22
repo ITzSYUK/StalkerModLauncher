@@ -39,6 +39,28 @@ public sealed class ProfileLauncher : IProfileLauncher
         IProgress<string> progress,
         CancellationToken cancellationToken = default)
     {
+        try
+        {
+            return await LaunchCoreAsync(gamePath, profile, progress, cancellationToken);
+        }
+        catch (Exception ex) when (
+            profile.LaunchBackendKind == LaunchBackendKind.VirtualFileSystem &&
+            ex is not OperationCanceledException)
+        {
+            progress.Report($"USVFS launch failed: {ex.Message}");
+            progress.Report(
+                "USVFS fallback to Workspace was not performed. " +
+                "The selected backend was preserved; choose Workspace in the profile settings to retry safely.");
+            throw;
+        }
+    }
+
+    private async Task<ProfileLaunchHandle> LaunchCoreAsync(
+        string gamePath,
+        ModProfile profile,
+        IProgress<string> progress,
+        CancellationToken cancellationToken)
+    {
         var backend = ResolveBackend(profile.LaunchBackendKind);
         progress.Report($"Launch backend: {backend.Kind}.");
         var context = CreateBackendContext(gamePath, profile, progress);

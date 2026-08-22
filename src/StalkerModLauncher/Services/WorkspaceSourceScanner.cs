@@ -86,23 +86,34 @@ internal static class WorkspaceSourceScanner
     private static DirectorySnapshot CaptureDirectory(string directoryPath, CancellationToken cancellationToken)
     {
         var fullRoot = Path.GetFullPath(directoryPath);
-        var directories = Directory.EnumerateDirectories(fullRoot, "*", SafeEnumerationOptions)
-            .Select(path => Path.GetRelativePath(fullRoot, path))
-            .ToArray();
-        var files = Directory.EnumerateFiles(fullRoot, "*", SafeEnumerationOptions)
-            .Select(path =>
+        var directories = new List<string>();
+        var files = new List<SourceFileSnapshot>();
+        var root = new DirectoryInfo(fullRoot);
+
+        foreach (var entry in root.EnumerateFileSystemInfos("*", SafeEnumerationOptions))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var relativePath = Path.GetRelativePath(fullRoot, entry.FullName);
+            if (entry is DirectoryInfo)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                var info = new FileInfo(path);
-                return new SourceFileSnapshot(
-                    path,
-                    Path.GetRelativePath(fullRoot, path),
-                    info.Length,
-                    info.LastWriteTimeUtc.Ticks);
-            })
-            .OrderBy(file => file.RelativePath, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        return new DirectorySnapshot(fullRoot, directories, files);
+                directories.Add(relativePath);
+                continue;
+            }
+
+            if (entry is FileInfo file)
+            {
+                files.Add(new SourceFileSnapshot(
+                    file.FullName,
+                    relativePath,
+                    file.Length,
+                    file.LastWriteTimeUtc.Ticks));
+            }
+        }
+
+        return new DirectorySnapshot(
+            fullRoot,
+            directories,
+            files.OrderBy(file => file.RelativePath, StringComparer.OrdinalIgnoreCase).ToArray());
     }
 
     private static void AppendDirectoryFingerprint(StringBuilder builder, DirectorySnapshot snapshot)

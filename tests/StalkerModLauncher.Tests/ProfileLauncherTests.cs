@@ -56,6 +56,29 @@ public sealed class ProfileLauncherTests
     }
 
     [Fact]
+    public async Task LaunchAsyncReportsVirtualFileSystemFailureWithoutSilentFallback()
+    {
+        using var process = Process.GetCurrentProcess();
+        var linkedBackend = new RecordingLaunchBackend(LaunchBackendKind.LinkedWorkspace);
+        var launcher = new ProfileLauncher(
+            [linkedBackend, new ThrowingLaunchBackend(LaunchBackendKind.VirtualFileSystem)],
+            new RecordingLaunchPlanExecutor(process));
+        var profile = new ModProfile { LaunchBackendKind = LaunchBackendKind.VirtualFileSystem };
+        var progress = new ListProgress();
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            launcher.LaunchAsync("game", profile, progress));
+
+        Assert.Equal("overlay setup failed", error.Message);
+        Assert.Contains("USVFS launch failed: overlay setup failed", progress.Messages);
+        Assert.Contains(
+            progress.Messages,
+            message => message.Contains("fallback to Workspace was not performed", StringComparison.Ordinal));
+        Assert.Equal(LaunchBackendKind.VirtualFileSystem, profile.LaunchBackendKind);
+        Assert.Null(linkedBackend.Profile);
+    }
+
+    [Fact]
     public async Task LaunchAsyncPassesFileLayerPlanAndOverlayManifestToBackend()
     {
         using var process = Process.GetCurrentProcess();
@@ -153,6 +176,19 @@ public sealed class ProfileLauncherTests
                 $"C:\\Game\\{Kind}.exe",
                 "-nointro",
                 "C:\\Game"));
+        }
+    }
+
+    private sealed class ThrowingLaunchBackend(LaunchBackendKind kind) : IProfileLaunchBackend
+    {
+        public LaunchBackendKind Kind { get; } = kind;
+
+        public Task<LaunchPlan> PrepareAsync(
+            ProfileLaunchBackendContext context,
+            IProgress<string> progress,
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("overlay setup failed");
         }
     }
 

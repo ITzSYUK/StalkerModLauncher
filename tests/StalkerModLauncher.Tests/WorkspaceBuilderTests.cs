@@ -46,6 +46,22 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildAsyncPreservesEmptySourceDirectories()
+    {
+        var emptyGameDirectory = Path.Combine(_gamePath, "gamedata", "empty-game-directory");
+        var modPath = CreateMod("empty-directory-mod", "mod");
+        var emptyModDirectory = Path.Combine(modPath, "gamedata", "empty-mod-directory");
+        Directory.CreateDirectory(emptyGameDirectory);
+        Directory.CreateDirectory(emptyModDirectory);
+        var profile = CreateProfile(modPath);
+
+        var result = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+        Assert.True(Directory.Exists(Path.Combine(result.WorkspaceRoot, "gamedata", "empty-game-directory")));
+        Assert.True(Directory.Exists(Path.Combine(result.WorkspaceRoot, "gamedata", "empty-mod-directory")));
+    }
+
+    [Fact]
     public async Task BuildAsyncSkipsProfileExcludedConflictFile()
     {
         var firstMod = CreateMod("excluded-first", "first");

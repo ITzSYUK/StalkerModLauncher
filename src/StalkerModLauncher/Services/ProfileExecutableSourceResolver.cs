@@ -65,6 +65,43 @@ public static class ProfileExecutableSourceResolver
                 PinsSource: false);
     }
 
+    public static ProfileExecutableSelection? TryResolveExistingAutomaticSelection(ModProfile profile)
+    {
+        if (profile.IsStandalone || string.IsNullOrWhiteSpace(profile.ExecutableRelativePath))
+        {
+            return null;
+        }
+
+        try
+        {
+            FileSystemSafety.EnsureRelativePath(profile.ExecutableRelativePath, "Automatic launch executable");
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+
+        foreach (var root in GetSourceRoots(profile, includeWorkspace: false)
+                     .Where(root => Directory.Exists(root.RootPath))
+                     .OrderByDescending(root => root.Order))
+        {
+            var candidate = FileSystemSafety.ResolvePathInside(
+                root.RootPath,
+                profile.ExecutableRelativePath,
+                "Automatic launch executable");
+            if (File.Exists(candidate))
+            {
+                return new ProfileExecutableSelection(
+                    profile.ExecutableRelativePath,
+                    string.Empty,
+                    root.DisplayName,
+                    PinsSource: false);
+            }
+        }
+
+        return null;
+    }
+
     public static ProfileFileSourceRoot? FindPinnedSourceRoot(ModProfile profile)
     {
         if (string.IsNullOrWhiteSpace(profile.ExecutableSourcePath))

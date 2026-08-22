@@ -479,12 +479,17 @@ dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 Тестовая VFS-сборка:
 
 ```powershell
-.\scripts\Build-VfsExperimental.ps1 -CleanPublishRoot
+.\scripts\Build-UsvfsDependencies.ps1
+.\scripts\Build-VfsExperimental.ps1
 ```
 
-Это локальная тестовая сборка. После публикации скрипт автоматически запускает те же x64/x86 USVFS smoke-тесты.
+`Build-UsvfsDependencies.ps1` воспроизводимо подготавливает pinned-исходники USVFS, собирает runtime x64/x86, x86 host и два x86 процесса smoke-теста. Для чистого клона укажите `-BootstrapUsvfs`; нужны Visual Studio 2022 Build Tools с MSVC v143 для C++ x64/x86, CMake, Git и `VCPKG_ROOT`. Сценарий принудительно выбирает VS 2022 для vcpkg и временно подключает корень проекта к свободной букве диска, чтобы MSVC не зависел от кириллицы в исходном пути. Это локальная тестовая сборка. После публикации скрипт автоматически запускает те же x64/x86 USVFS smoke-тесты.
 
-Собранные служебные файлы официального USVFS и вспомогательная x86-программа должны быть подготовлены локально. Для автоматического x86 smoke также нужны подготовленные локально `research\usvfs-poc\build32\usvfs_overlay_child_x86.exe` и `usvfs_overlay_launcher_x86.exe`. Скомпилированные сторонние бинарники в Git не хранятся.
+После смены Visual Studio или vcpkg используйте `-CleanUsvfsBuild`: он удаляет только `.external\usvfs\vsbuild64` и `vsbuild32` перед повторной конфигурацией.
+
+Без `-CleanPublishRoot` скрипт пересоздаёт только `publish\vfs-experimental`; параметр удаляет весь `publish`. Скомпилированные сторонние бинарники в Git не хранятся.
+
+Workflow `.github\workflows\usvfs.yml` повторяет полную сборку и smoke-тест на Windows 2022 при изменениях USVFS, native helper или связанных сценариев.
 
 ## 17. Известные ограничения
 

@@ -222,7 +222,10 @@ public sealed partial class MainViewModel
         _ = InvokeOnUiAsync(() => ReportSettingsRecovery(recovery));
     }
 
-    private void RefreshAutomaticExecutableSelection(ModProfile profile, string reason)
+    private void RefreshAutomaticExecutableSelection(
+        ModProfile profile,
+        string reason,
+        bool preferExistingRelativePath = false)
     {
         if (profile.IsStandalone ||
             !string.IsNullOrWhiteSpace(profile.ExecutableSourcePath))
@@ -230,7 +233,10 @@ public sealed partial class MainViewModel
             return;
         }
 
-        var selection = ProfileExecutableSourceResolver.DetectAutomaticSelection(
+        var selection = preferExistingRelativePath
+            ? ProfileExecutableSourceResolver.TryResolveExistingAutomaticSelection(profile)
+            : null;
+        selection ??= ProfileExecutableSourceResolver.DetectAutomaticSelection(
             profile,
             includeWorkspace: false);
         if (selection is null ||

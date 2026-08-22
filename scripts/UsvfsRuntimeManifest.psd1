@@ -8,22 +8,22 @@
         @{
             Name = 'usvfs_x64.dll'
             RelativePath = 'lib\usvfs_x64.dll'
-            Sha256 = '859B270437006DEF03934775B606A687D68EB1CD7EA9DE39D7F35E1918FB52F4'
+            Sha256 = 'D70ED1F903D2394E9486FAEE7413E035EBED05FEF3411300ABDBD35E4D21C255'
         }
         @{
             Name = 'usvfs_proxy_x64.exe'
             RelativePath = 'bin\usvfs_proxy_x64.exe'
-            Sha256 = '346A5903A1F434AEB93B288397FC6688F8387827FD9D6BF1DDD64A8465E66B16'
+            Sha256 = '35A6AA7ED8CB2E0DEE32E00A26D8175732858762CDC33B25BC6250C2EC02B11B'
         }
         @{
             Name = 'usvfs_x86.dll'
             RelativePath = 'lib\usvfs_x86.dll'
-            Sha256 = '01566E6FC327E1E8354BB1E704C735FF94FBA9E07B066C6D404251C63FAAF01C'
+            Sha256 = '72686B11AD6804482FC30540C6C0FABDFB9D94FCB75E3E5D02264C850887C069'
         }
         @{
             Name = 'usvfs_proxy_x86.exe'
             RelativePath = 'bin\usvfs_proxy_x86.exe'
-            Sha256 = '57F1EBDF226077029E4386E15A5F788298FD68A5DB90AFC8192262120FCA77C2'
+            Sha256 = '8487D49C428293F40B4B2B0CB3C06B5C5676FB30461D8C3A0F5E297C91EBB5EB'
         }
     )
 }

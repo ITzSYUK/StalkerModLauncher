@@ -1,0 +1,52 @@
+name: USVFS
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/usvfs.yml'
+      - 'native/**'
+      - 'research/usvfs-poc/**'
+      - 'scripts/Build-UsvfsDependencies.ps1'
+      - 'scripts/Prepare-UsvfsSource.ps1'
+      - 'scripts/ReleaseIntegrity.ps1'
+      - 'scripts/Test-UsvfsRuntime.ps1'
+      - 'scripts/UsvfsRuntimeManifest.psd1'
+      - 'scripts/patches/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/usvfs.yml'
+      - 'native/**'
+      - 'research/usvfs-poc/**'
+      - 'scripts/Build-UsvfsDependencies.ps1'
+      - 'scripts/Prepare-UsvfsSource.ps1'
+      - 'scripts/ReleaseIntegrity.ps1'
+      - 'scripts/Test-UsvfsRuntime.ps1'
+      - 'scripts/UsvfsRuntimeManifest.psd1'
+      - 'scripts/patches/**'
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke-test:
+    runs-on: windows-2022
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build and smoke-test USVFS x64/x86
+        shell: pwsh
+        run: >-
+          .\scripts\Build-UsvfsDependencies.ps1
+          -BootstrapUsvfs
+          -CleanUsvfsBuild
+          -VcpkgRoot $env:VCPKG_INSTALLATION_ROOT
