@@ -513,7 +513,7 @@ public sealed partial class MainViewModel
         }
 
         var found = LaunchExecutableDetector.DetectBest(
-            [new LaunchExecutableSearchRoot(modRoot, "автономная сборка", 1)],
+            [new LaunchExecutableSearchRoot(modRoot, "автономная сборка", 1, IsBaseGameRoot: true)],
             currentExe);
 
         if (found is null)

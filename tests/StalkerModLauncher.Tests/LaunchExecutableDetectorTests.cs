@@ -65,6 +65,69 @@ public sealed class LaunchExecutableDetectorTests : IDisposable
     }
 
     [Fact]
+    public void DetectBestPrefersBaseAnomalyLauncherOverHigherPriorityModEngine()
+    {
+        var game = CreateDirectory("anomaly-game");
+        var engineMod = CreateDirectory("anomaly-engine-mod");
+        var launcher = CreateFile(game, "AnomalyLauncher.exe");
+        CreateFile(game, "AnomalyLauncher.cfg");
+        CreateFile(engineMod, "bin/AnomalyDX10.exe");
+
+        var detected = LaunchExecutableDetector.DetectBest(
+            [
+                new LaunchExecutableSearchRoot(game, "базовая игра", 0, IsBaseGameRoot: true),
+                new LaunchExecutableSearchRoot(engineMod, "мод: движок", 1)
+            ],
+            requestedRelativePath: null);
+
+        Assert.NotNull(detected);
+        Assert.Equal(launcher, detected.FullPath);
+        Assert.Equal("AnomalyLauncher.exe", detected.RelativePath);
+        Assert.Equal("найден Anomaly Launcher базовой игры", detected.Reason);
+    }
+
+    [Fact]
+    public void DetectBestRecognizesRenamedAnomalyLauncherWhenItIsOnlyRootExecutable()
+    {
+        var game = CreateDirectory("renamed-anomaly-game");
+        var engineMod = CreateDirectory("renamed-anomaly-engine-mod");
+        var launcher = CreateFile(game, "MyAnomalyLauncher.exe");
+        CreateFile(game, "AnomalyLauncher.cfg");
+        CreateFile(engineMod, "bin/AnomalyDX10.exe");
+
+        var detected = LaunchExecutableDetector.DetectBest(
+            [
+                new LaunchExecutableSearchRoot(game, "базовая игра", 0, IsBaseGameRoot: true),
+                new LaunchExecutableSearchRoot(engineMod, "мод: движок", 1)
+            ],
+            requestedRelativePath: null);
+
+        Assert.NotNull(detected);
+        Assert.Equal(launcher, detected.FullPath);
+        Assert.Equal("MyAnomalyLauncher.exe", detected.RelativePath);
+    }
+
+    [Fact]
+    public void DetectBestDoesNotGuessAnomalyLauncherWhenItsIdentityIsAmbiguous()
+    {
+        var game = CreateDirectory("ambiguous-anomaly-game");
+        var engineMod = CreateDirectory("ambiguous-anomaly-engine-mod");
+        CreateFile(game, "First.exe");
+        CreateFile(game, "Second.exe");
+        CreateFile(game, "AnomalyLauncher.cfg");
+        CreateFile(engineMod, "bin/AnomalyDX10.exe");
+
+        var detected = LaunchExecutableDetector.DetectBest(
+            [
+                new LaunchExecutableSearchRoot(game, "базовая игра", 0, IsBaseGameRoot: true),
+                new LaunchExecutableSearchRoot(engineMod, "мод: движок", 1)
+            ],
+            requestedRelativePath: null);
+
+        Assert.Null(detected);
+    }
+
+    [Fact]
     public void DetectBestRecognizesOgsrEngineInBinVariantDirectory()
     {
         var game = CreateDirectory("game");
@@ -195,6 +258,31 @@ public sealed class LaunchExecutableDetectorTests : IDisposable
         Assert.Equal(@"bin_OGSR\xrEngine.exe", selection.RelativePath);
         Assert.Equal("мод: higher", selection.SourceName);
         Assert.False(selection.PinsSource);
+    }
+
+    [Fact]
+    public void ExistingAutomaticSelectionMigratesAnomalyEngineToBaseLauncher()
+    {
+        var game = CreateDirectory("existing-anomaly-game");
+        var engineMod = CreateDirectory("existing-anomaly-engine-mod");
+        CreateFile(game, "AnomalyLauncher.exe");
+        CreateFile(game, "AnomalyLauncher.cfg");
+        CreateFile(engineMod, "bin/AnomalyDX10.exe");
+        var profile = new ModProfile
+        {
+            GameInstallPath = game,
+            ExecutableRelativePath = @"bin\AnomalyDX10.exe",
+            Mods =
+            {
+                new ModEntry { Name = "engine", SourcePath = engineMod, IsEnabled = true, Order = 1 }
+            }
+        };
+
+        var selection = ProfileExecutableSourceResolver.TryResolveExistingAutomaticSelection(profile);
+
+        Assert.NotNull(selection);
+        Assert.Equal("AnomalyLauncher.exe", selection.RelativePath);
+        Assert.Equal("базовая игра", selection.SourceName);
     }
 
     [Fact]

@@ -6,7 +6,8 @@ public sealed record ProfileFileSourceRoot(
     string RootPath,
     string DisplayName,
     int Order,
-    bool CanPinExecutableSource);
+    bool CanPinExecutableSource,
+    bool IsBaseGameRoot = false);
 
 public sealed record ProfileExecutableSelection(
     string RelativePath,
@@ -52,7 +53,11 @@ public static class ProfileExecutableSourceResolver
             .Where(root => Directory.Exists(root.RootPath))
             .ToList();
         var detected = LaunchExecutableDetector.DetectBest(
-            roots.Select(root => new LaunchExecutableSearchRoot(root.RootPath, root.DisplayName, root.Order)),
+            roots.Select(root => new LaunchExecutableSearchRoot(
+                root.RootPath,
+                root.DisplayName,
+                root.Order,
+                root.IsBaseGameRoot)),
             requestedRelativePath: null,
             cancellationToken: cancellationToken);
 
@@ -81,8 +86,23 @@ public static class ProfileExecutableSourceResolver
             return null;
         }
 
-        foreach (var root in GetSourceRoots(profile, includeWorkspace: false)
-                     .Where(root => Directory.Exists(root.RootPath))
+        var sourceRoots = GetSourceRoots(profile, includeWorkspace: false)
+            .Where(root => Directory.Exists(root.RootPath))
+            .ToArray();
+        foreach (var root in sourceRoots.Where(root => root.IsBaseGameRoot))
+        {
+            var launcherPath = AnomalyLauncherLocator.TryFind(root.RootPath);
+            if (launcherPath is not null)
+            {
+                return new ProfileExecutableSelection(
+                    Path.GetFileName(launcherPath),
+                    string.Empty,
+                    root.DisplayName,
+                    PinsSource: false);
+            }
+        }
+
+        foreach (var root in sourceRoots
                      .OrderByDescending(root => root.Order))
         {
             var candidate = FileSystemSafety.ResolvePathInside(
@@ -132,7 +152,8 @@ public static class ProfileExecutableSourceResolver
                 Path.GetFullPath(profile.GameInstallPath),
                 "базовая игра",
                 0,
-                true));
+                true,
+                IsBaseGameRoot: true));
         }
 
         roots.AddRange(profile.Mods
@@ -142,7 +163,8 @@ public static class ProfileExecutableSourceResolver
                 Path.GetFullPath(mod.SourcePath),
                 $"мод: {mod.Name}",
                 mod.Order,
-                true)));
+                true,
+                IsBaseGameRoot: profile.IsStandalone)));
 
         if (includeWorkspace && !string.IsNullOrWhiteSpace(profile.WorkspacePath))
         {

@@ -483,12 +483,16 @@ public sealed class ProfileCreationViewModel : ObservableObject
     {
         if (!IsStandalone && Directory.Exists(GamePath))
         {
-            yield return new LaunchExecutableSearchRoot(GamePath, "базовая игра", 0);
+            yield return new LaunchExecutableSearchRoot(GamePath, "базовая игра", 0, IsBaseGameRoot: true);
         }
 
         foreach (var mod in Mods.OrderBy(mod => mod.Order).Where(mod => Directory.Exists(mod.SourcePath)))
         {
-            yield return new LaunchExecutableSearchRoot(mod.SourcePath, $"мод: {mod.Name}", mod.Order);
+            yield return new LaunchExecutableSearchRoot(
+                mod.SourcePath,
+                $"мод: {mod.Name}",
+                mod.Order,
+                IsBaseGameRoot: IsStandalone);
         }
     }
 

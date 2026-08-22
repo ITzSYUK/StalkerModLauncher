@@ -3,7 +3,8 @@ namespace StalkerModLauncher.Services;
 public sealed record LaunchExecutableSearchRoot(
     string RootPath,
     string DisplayName,
-    int Order);
+    int Order,
+    bool IsBaseGameRoot = false);
 
 public sealed record LaunchExecutableDetection(
     string FullPath,
@@ -25,8 +26,32 @@ public static class LaunchExecutableDetector
         CancellationToken cancellationToken = default)
     {
         var normalizedRequested = Normalize(requestedRelativePath);
+        var availableRoots = roots.Where(root => Directory.Exists(root.RootPath)).ToArray();
+        if (string.IsNullOrWhiteSpace(normalizedRequested))
+        {
+            foreach (var root in availableRoots.Where(root => root.IsBaseGameRoot))
+            {
+                var launcherPath = AnomalyLauncherLocator.TryFind(root.RootPath);
+                if (launcherPath is not null)
+                {
+                    return new LaunchExecutableDetection(
+                        launcherPath,
+                        Path.GetFileName(launcherPath),
+                        root.DisplayName,
+                        "найден Anomaly Launcher базовой игры",
+                        Score: 0,
+                        CandidateCount: 1);
+                }
+
+                if (AnomalyLauncherLocator.HasConfiguration(root.RootPath))
+                {
+                    return null;
+                }
+            }
+        }
+
         var candidates = new List<Candidate>();
-        foreach (var root in roots.Where(root => Directory.Exists(root.RootPath)))
+        foreach (var root in availableRoots)
         {
             foreach (var file in EnumerateExecutables(root.RootPath, cancellationToken))
             {

@@ -13,7 +13,6 @@ internal sealed record UsvfsBootstrapResult(
 internal static class UsvfsExecutableBootstrapper
 {
     private const string LegacyBootstrapDirectoryName = "usvfs-bootstrap";
-    private const string AnomalyLauncherFileName = "AnomalyLauncher.exe";
     public static void Clear(string profileWorkspace, string bootstrapRoot)
     {
         ClearManagedDirectory(bootstrapRoot, Path.GetDirectoryName(bootstrapRoot)!);
@@ -89,11 +88,12 @@ internal static class UsvfsExecutableBootstrapper
         CancellationToken cancellationToken = default)
     {
         FileSystemSafety.EnsureRelativePath(launchTarget.ExecutableRelativePath, "USVFS Anomaly launcher");
-        if (!launchTarget.ExecutableRelativePath.Equals(AnomalyLauncherFileName, StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrEmpty(Path.GetDirectoryName(launchTarget.ExecutableRelativePath)))
         {
             throw new InvalidOperationException(
-                $"Anomaly launcher bootstrap requires {AnomalyLauncherFileName}: {launchTarget.ExecutableRelativePath}");
+                $"USVFS Anomaly launcher must be in the game root: {launchTarget.ExecutableRelativePath}");
         }
+        var launcherFileName = Path.GetFileName(launchTarget.ExecutableRelativePath);
 
         var bootstrapCacheRoot = Path.GetDirectoryName(bootstrapRoot)!;
         FileSystemSafety.EnsureDirectoryInside(bootstrapRoot, bootstrapCacheRoot);
@@ -104,7 +104,7 @@ internal static class UsvfsExecutableBootstrapper
         var rootFiles = CollectFinalDirectoryFiles(
             layerPlan,
             executableDirectoryRelative: string.Empty,
-            AnomalyLauncherFileName,
+            launcherFileName,
             cancellationToken);
         foreach (var excludedFile in AnomalyLauncherExcludedRootFiles)
         {
@@ -130,7 +130,7 @@ internal static class UsvfsExecutableBootstrapper
             }
         }
 
-        var executablePath = Path.Combine(bootstrapRoot, AnomalyLauncherFileName);
+        var executablePath = Path.Combine(bootstrapRoot, launcherFileName);
         if (!File.Exists(executablePath))
         {
             throw new FileNotFoundException("USVFS Anomaly launcher bootstrap executable was not created.", executablePath);

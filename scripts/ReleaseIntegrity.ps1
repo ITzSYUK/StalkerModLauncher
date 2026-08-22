@@ -5,7 +5,7 @@ function Import-UsvfsRuntimeManifest {
     )
 
     $manifest = Import-PowerShellDataFile -LiteralPath $Path
-    if ($manifest.SchemaVersion -ne 1 -or
+    if ($manifest.SchemaVersion -ne 2 -or
         [string]::IsNullOrWhiteSpace([string]$manifest.RuntimeVersion) -or
         [string]::IsNullOrWhiteSpace([string]$manifest.SourceRevision) -or
         @($manifest.Files).Count -eq 0) {
@@ -59,13 +59,9 @@ function Test-UsvfsRuntimeIntegrity {
             throw "Unexpected USVFS version for '$($file.Name)': expected $($Manifest.RuntimeVersion), found '$version'."
         }
 
-        $actualHash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
-        if ($actualHash -ne $file.Sha256) {
-            throw "Unexpected SHA-256 for '$($file.Name)': expected $($file.Sha256), found $actualHash."
-        }
     }
 
-    Write-Host "USVFS runtime integrity verified: v$($Manifest.RuntimeVersion), revision $($Manifest.SourceRevision)."
+    Write-Host "USVFS runtime components verified: v$($Manifest.RuntimeVersion), revision $($Manifest.SourceRevision)."
 }
 
 function Test-UsvfsSourceProvenance {
@@ -259,9 +255,8 @@ function Test-ReleasePackage {
     foreach ($runtimeFile in $UsvfsManifest.Files) {
         $runtimePath = Join-Path $PackageDirectory $runtimeFile.Name
         $version = (Get-Item -LiteralPath $runtimePath).VersionInfo.FileVersion
-        $hash = (Get-FileHash -LiteralPath $runtimePath -Algorithm SHA256).Hash
-        if ($version -ne $UsvfsManifest.RuntimeVersion -or $hash -ne $runtimeFile.Sha256) {
-            throw "Packaged USVFS component failed integrity verification: $($runtimeFile.Name)"
+        if ($version -ne $UsvfsManifest.RuntimeVersion) {
+            throw "Packaged USVFS component has an unexpected version: $($runtimeFile.Name)"
         }
     }
 

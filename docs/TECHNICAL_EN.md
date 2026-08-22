@@ -115,10 +115,12 @@ This allows a user to intentionally select an executable from a lower layer even
 
 For Anomaly under USVFS there are two supported paths:
 
-- automatic mode starts `AnomalyLauncher.exe` through a small 32-bit helper, and the game process it creates inherits USVFS;
+- automatic mode starts the Anomaly Launcher found in the base-game root through a small 32-bit helper, and the game process it creates inherits USVFS;
 - a manually selected renderer starts the chosen `AnomalyDX*.exe` directly, including AVX variants.
 
 If a mod provides the selected renderer at the same relative path, the file from the highest-priority layer is selected.
+
+Automatic mode always prefers the base-game Anomaly Launcher over engine executables from mods. The standard `AnomalyLauncher.exe` name is recognized directly; after a rename, EXE metadata (`OriginalFilename`, `InternalName`, description) is used, or `AnomalyLauncher.cfg` when there is a single root EXE. Ambiguous cases are not guessed and require manual selection.
 
 ## 6. Workspace: stable mode
 
@@ -203,7 +205,7 @@ The launcher chooses a virtual-root strategy according to the launch layout:
 
 - the physical base-game root is used when its own EXE starts and mods do not provide loader-time files;
 - the physical Anomaly root is preferred when an `AnomalyDX*.exe` is selected directly;
-- Anomaly automatic mode uses an isolated launcher bootstrap so `AnomalyLauncher.exe` can start physically prepared final engine files;
+- Anomaly automatic mode uses an isolated launcher bootstrap so the base-game Anomaly Launcher can start physically prepared final engine files;
 - a physical X-Ray 1.6 root is used when `$arch_dir_*` entries are present so archives in `patches` and similar directories remain visible;
 - an isolated bootstrap root is used when a mod provides the engine or the selected executable needs its own neighboring DLL set.
 
@@ -472,7 +474,7 @@ The script creates two ZIP archives:
 
 Both packages contain the official x64/x86 USVFS runtime, x86 host, `LICENSE.txt`, and `THIRD-PARTY-NOTICES.txt`. PDB, JSON, Markdown, and intermediate files are excluded from user ZIP files.
 
-Before packaging, the USVFS source is checked against its pinned revision and tracked patch; `scripts\Prepare-UsvfsSource.ps1` prepares that state. The version and SHA-256 of the four upstream components intended for the package are checked against `scripts\UsvfsRuntimeManifest.psd1`. Source builds and CI validate source provenance and the x64/x86 smoke test instead of comparing binary hashes: output bytes may differ between Windows SDK versions. Every package contains a `checksums.txt`, and the release directory contains another checksum file for the ZIP archives. After packaging, both ZIP files are extracted to a temporary directory and compared completely with their prepared packages, including EXE version, source commit, and absence of unexpected files.
+Before packaging, the USVFS source is checked against its pinned revision and tracked patch; `scripts\Prepare-UsvfsSource.ps1` prepares that state. The names, paths, and version of the four upstream components are checked against `scripts\UsvfsRuntimeManifest.psd1`. Source builds and CI do not compare binary hashes: output bytes may differ between Windows SDK and vcpkg versions. Every package contains a `checksums.txt`, and the release directory contains another checksum file for the ZIP archives. After packaging, both ZIP files are extracted to a temporary directory and compared completely with their prepared packages, including EXE version, source commit, and absence of unexpected files.
 
 Experimental VFS publish:
 

@@ -556,8 +556,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
 
     private static bool IsAnomalyProfile(ModProfile profile)
     {
-        return (!string.IsNullOrWhiteSpace(profile.GameInstallPath) &&
-                File.Exists(Path.Combine(profile.GameInstallPath, "AnomalyLauncher.exe"))) ||
+        return AnomalyLauncherLocator.HasConfiguration(profile.GameInstallPath) ||
                Path.GetFileName(profile.ExecutableRelativePath)
                    .StartsWith("Anomaly", StringComparison.OrdinalIgnoreCase);
     }

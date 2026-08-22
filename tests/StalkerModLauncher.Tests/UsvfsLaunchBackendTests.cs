@@ -358,6 +358,49 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     }
 
     [Fact]
+    public async Task PrepareAsyncStartsRenamedAnomalyLauncherThroughBootstrap()
+    {
+        var game = CreateDirectory("renamed-anomaly-game");
+        var workspace = CreateDirectory("renamed-anomaly-workspace");
+        var runtimeDirectory = CreateDirectory("renamed-anomaly-runtime");
+        const string launcherName = "MyAnomalyLauncher.exe";
+        File.WriteAllText(
+            Path.Combine(game, "fsgame.ltx"),
+            "$app_data_root$ = true | false | $fs_root$ | appdata\\");
+        File.WriteAllText(Path.Combine(game, "AnomalyLauncher.cfg"), "DX11\nNOAVX\n1");
+        File.Copy(
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "SysWOW64", "cmd.exe"),
+            Path.Combine(game, launcherName));
+        Directory.CreateDirectory(Path.Combine(game, "bin"));
+        CopyExecutable(Path.Combine(game, "bin", "AnomalyDX11.exe"), WindowsExecutableArchitecture.X64);
+        CreateUsvfsRuntimeFiles(runtimeDirectory);
+
+        var profile = new ModProfile
+        {
+            Id = "profile-renamed-anomaly-usvfs",
+            Name = "Renamed Anomaly",
+            GameInstallPath = game,
+            ExecutableRelativePath = launcherName,
+            LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
+        };
+        var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
+        var manifest = OverlayManifestBuilder.BuildLinkedWorkspace(profile, layerPlan, workspace);
+        var runtime = new RecordingUsvfsRuntime();
+        var backend = new UsvfsLaunchBackend(runtime, runtimeDirectory);
+
+        var plan = await backend.PrepareAsync(
+            new ProfileLaunchBackendContext(game, profile, layerPlan, manifest),
+            new Progress<string>());
+
+        Assert.EndsWith(launcherName, plan.ExecutablePath);
+        Assert.True(FileSystemSafety.IsDirectoryInside(
+            plan.ExecutablePath,
+            Path.Combine(workspace, ".usvfs-bootstrap")));
+        Assert.Equal(Path.GetDirectoryName(plan.ExecutablePath), plan.WorkingDirectory);
+        Assert.Equal(Path.GetDirectoryName(plan.ExecutablePath), runtime.MappingPlan?.VirtualRoot);
+    }
+
+    [Fact]
     public async Task PrepareAsyncAllowsX86ExecutableWhenCrossArchitectureRuntimeIsPresent()
     {
         var game = CreateDirectory("x86-game");

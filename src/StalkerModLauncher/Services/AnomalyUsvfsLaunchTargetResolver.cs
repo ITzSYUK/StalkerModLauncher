@@ -12,8 +12,6 @@ internal sealed record UsvfsLaunchTarget(
 
 internal static class AnomalyUsvfsLaunchTargetResolver
 {
-    private const string LauncherFileName = "AnomalyLauncher.exe";
-
     public static UsvfsLaunchTarget Resolve(
         ModProfile profile,
         FileLayerPlan layerPlan,
@@ -24,7 +22,9 @@ internal static class AnomalyUsvfsLaunchTargetResolver
         var executable = launchResolution.Executable
             ?? throw new InvalidOperationException("USVFS launch executable is not ready.");
 
-        var isLauncher = Path.GetFileName(plan.ExecutablePath).Equals(LauncherFileName, StringComparison.OrdinalIgnoreCase);
+        var isLauncher = AnomalyLauncherLocator.IsBaseGameLauncher(
+            profile.GameInstallPath,
+            plan.ExecutablePath);
         if (!string.IsNullOrWhiteSpace(profile.UsvfsExecutableOverrideRelativePath))
         {
             if (!AnomalyUsvfsEngineSelection.TryParseRelativePath(

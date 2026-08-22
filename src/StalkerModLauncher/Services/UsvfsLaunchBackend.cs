@@ -82,7 +82,9 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
             ? "USVFS architecture: x86 target through same-bitness host."
             : "USVFS architecture: x64 target.");
 
-        var useAnomalyLauncherBootstrap = IsAnomalyLauncher(launchTarget.ExecutableRelativePath);
+        var useAnomalyLauncherBootstrap = AnomalyLauncherLocator.IsBaseGameLauncher(
+            profile.GameInstallPath,
+            launchTarget.ExecutablePath);
         var usePhysicalAnomalyRoot = IsAnomalyEngine(launchTarget.ExecutableRelativePath);
         var usePhysicalBaseGameRoot = !useAnomalyLauncherBootstrap &&
                                       ShouldUsePhysicalBaseGameRoot(context.FileLayerPlan, launchTarget);
@@ -179,9 +181,6 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
             () => session.GetExitCodeAsync(),
             session.GetActiveProcessIds));
     }
-
-    private static bool IsAnomalyLauncher(string executableRelativePath) =>
-        executableRelativePath.Equals("AnomalyLauncher.exe", StringComparison.OrdinalIgnoreCase);
 
     private static void MaterializeBootstrapFsgame(string? profileFsgamePath, string bootstrapRoot)
     {

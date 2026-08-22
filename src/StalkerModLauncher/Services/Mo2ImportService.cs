@@ -609,7 +609,7 @@ public static class Mo2ImportService
         var roots = new List<LaunchExecutableSearchRoot>();
         if (Directory.Exists(gamePath))
         {
-            roots.Add(new LaunchExecutableSearchRoot(gamePath, "базовая игра", 0));
+            roots.Add(new LaunchExecutableSearchRoot(gamePath, "базовая игра", 0, IsBaseGameRoot: true));
         }
 
         roots.AddRange(mods
