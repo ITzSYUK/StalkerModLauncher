@@ -52,6 +52,15 @@ public sealed class OverlayManifestBuilderTests : IDisposable
                     file.StoragePath.EndsWith(
                         Path.Combine("userdata", "writable-game-files", "gamedata", "configs", "localization.ltx"),
                         StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            manifest.WritableFiles,
+            file => file.RelativePath == Path.Combine("gamedata", "configs", "axr_options.ltx") &&
+                    file.StoragePath.EndsWith(
+                        Path.Combine("userdata", "writable-game-files", "gamedata", "configs", "axr_options.ltx"),
+                        StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            manifest.SystemFiles,
+            file => file.RelativePath == Path.Combine("gamedata", "configs", "axr_options.ltx"));
         Assert.EndsWith(Path.Combine("userdata", "overwrite"), manifest.WriteOverlayRoot);
         Assert.Contains(
             manifest.Overwrites,

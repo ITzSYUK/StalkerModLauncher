@@ -418,8 +418,9 @@
                     <TextBlock x:Name="PageTitleText" Grid.Column="1" Text="{Binding SelectedProfile.Name, FallbackValue=Профиль не выбран}"
                                Margin="8,0" VerticalAlignment="Center" FontFamily="Bahnschrift SemiCondensed" FontSize="17"
                                Foreground="#E6E2D1" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock x:Name="PageStatusText" Grid.Column="2" Text="{Binding ValidationSummary}" MaxWidth="270"
-                               VerticalAlignment="Center" FontSize="11" Foreground="#929B88" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="PageStatusText" Grid.Column="2" Text="{Binding ValidationSummary}" MaxWidth="420"
+                               VerticalAlignment="Center" FontSize="11" Foreground="#929B88" TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding ValidationSummary}"/>
                 </Grid>
             </Border>
 

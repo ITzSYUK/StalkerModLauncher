@@ -16,7 +16,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
     private const string MarkerFileName = ".stalker-launcher-workspace";
     internal const string RootMarkerFileName = ".stalker-launcher-workspace-root";
     private const string ManifestFileName = "build-manifest.json";
-    private const string WorkspaceFormatVersion = "strict-links-v1";
+    private const string WorkspaceFormatVersion = "strict-links-v2";
     private readonly AppPaths _paths;
     private static EnumerationOptions SafeEnumerationOptions { get; } = new()
     {
@@ -73,12 +73,18 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         progress.Report("Проверка файлов игры и модов...");
         var scanTimer = Stopwatch.StartNew();
         var sourceSnapshot = WorkspaceSourceScanner.Capture(fileLayerPlan, cancellationToken);
-        var buildSignature = WorkspaceSourceScanner.CreateBuildSignature(WorkspaceFormatVersion, profile, sourceSnapshot, fileLayerPlan);
+        var buildFingerprint = WorkspaceSourceScanner.CreateBuildFingerprint(WorkspaceFormatVersion, profile, sourceSnapshot, fileLayerPlan);
         scanTimer.Stop();
-        var cachedExecutable = WorkspaceManifestStore.TryGetCachedExecutable(workspaceRoot, currentWorkspace, profile, buildSignature, progress);
+        var cachedExecutable = WorkspaceManifestStore.TryGetCachedExecutable(
+            workspaceRoot,
+            currentWorkspace,
+            profile,
+            buildFingerprint,
+            progress);
         if (cachedExecutable is not null)
         {
             ProfileWritableGameFileStore.EnsureWorkspaceDirectories(currentWorkspace);
+            ProfileWritableGameFileStore.CaptureFromWorkspace(currentWorkspace, workspaceRoot, progress);
             ProfileWritableGameFileStore.RestoreToCachedWorkspace(currentWorkspace, workspaceRoot, progress);
             var cachedWorkingDirectoryRelative = ProfileDataConfigurator.Configure(
                 gamePath,
@@ -87,7 +93,6 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
                 progress,
                 fileLayerPlan,
                 cancellationToken);
-            ProfileWritableGameFileStore.CaptureFromWorkspace(currentWorkspace, workspaceRoot, progress);
             progress.Report($"Проверка источников: {FormatElapsed(scanTimer.Elapsed)}. Пересборка не требуется.");
             return new WorkspaceBuildResult(
                 currentWorkspace,
@@ -175,7 +180,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
             $"Время подготовки: проверка {FormatElapsed(scanTimer.Elapsed)}; очистка {FormatElapsed(cleanupTimer.Elapsed)}; " +
             $"игра {FormatElapsed(baseGameTimer.Elapsed)}; моды {FormatElapsed(modsTimer.Elapsed)}; " +
             $"настройка {FormatElapsed(configurationTimer.Elapsed)}; всего {FormatElapsed(totalTimer.Elapsed)}.");
-        WorkspaceManifestStore.Write(workspaceRoot, buildSignature, stats);
+        WorkspaceManifestStore.Write(workspaceRoot, buildFingerprint, stats);
         return new WorkspaceBuildResult(
             currentWorkspace,
             executablePath,

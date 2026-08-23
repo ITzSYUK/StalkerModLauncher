@@ -21,6 +21,10 @@ internal static class UsvfsProfileDataPreparer
 
         var profileDataPath = Path.Combine(profileWorkspace, "userdata");
         var destination = Path.Combine(manifest.WriteOverlayRoot, "fsgame.ltx");
+        ProfileWritableGameFileStore.PrepareForVirtualFileSystem(
+            layerPlan,
+            profileWorkspace,
+            progress);
         ProfileDataConfigurator.WriteProfileFsgame(source.FullPath, destination, profileDataPath);
         Directory.CreateDirectory(profileDataPath);
         ProfileDataConfigurator.EnsureProfileUserLtx(

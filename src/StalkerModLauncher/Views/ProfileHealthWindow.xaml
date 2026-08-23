@@ -15,16 +15,12 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <StackPanel>
-            <TextBlock Text="Состояние профиля"
-                       FontSize="24"
-                       FontWeight="SemiBold"/>
-            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+            <StackPanel Orientation="Horizontal">
                 <TextBlock Text="{Binding ProfileName}"
                            Foreground="{StaticResource AccentBrush}"
                            FontSize="15"/>
@@ -38,24 +34,12 @@
         </StackPanel>
 
         <Border Grid.Row="1"
-                Background="{StaticResource CommandPanelBrush}"
-                BorderBrush="{StaticResource StrokeBrush}"
-                BorderThickness="1"
-                CornerRadius="6"
-                Padding="12"
-                Margin="0,14,0,12">
-            <TextBlock Text="{Binding Summary}"
-                       FontSize="14"
-                       FontWeight="SemiBold"/>
-        </Border>
-
-        <Border Grid.Row="2"
                 Background="{StaticResource PanelBrush}"
                 BorderBrush="{StaticResource StrokeBrush}"
                 BorderThickness="1"
                 CornerRadius="6"
                 Padding="10,8"
-                Margin="0,0,0,10">
+                Margin="0,12,0,8">
             <Border.Style>
                 <Style TargetType="Border">
                     <Setter Property="Visibility" Value="Visible"/>
@@ -139,7 +123,7 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="3"
+        <Border Grid.Row="2"
                 Background="{StaticResource FieldBackgroundBrush}"
                 BorderBrush="{StaticResource StrokeBrush}"
                 BorderThickness="1"
@@ -151,7 +135,7 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <StackPanel Margin="0,0,0,8">
-                    <TextBlock Text="Готовность"
+                    <TextBlock Text="{Binding Summary}"
                                FontSize="15"
                                FontWeight="SemiBold"/>
                     <TextBlock Text="Ошибки остановят запуск. Предупреждения подскажут, что стоит проверить."
@@ -212,26 +196,24 @@
             </Grid>
         </Border>
 
-        <WrapPanel Grid.Row="4"
-                   HorizontalAlignment="Right"
-                   Margin="0,14,0,0">
-            <Button Content="Обновить"
-                    Command="{Binding RefreshCommand}"
-                    Margin="0,0,8,0"/>
-            <Button Content="Профиль"
-                    Command="{Binding OpenProfileCommand}"
-                    Margin="0,0,8,0"/>
-            <Button Content="Сохранения"
-                    Command="{Binding OpenSavesCommand}"
-                    Margin="0,0,8,0"/>
-            <Button Content="Последний лог"
-                    Command="{Binding OpenLatestLogCommand}"
-                    Margin="0,0,8,0"/>
-            <Button Content="Crash dump"
-                    Command="{Binding OpenCrashDumpCommand}"
-                    Margin="0,0,8,0"/>
-            <Button Content="Копировать отчет"
-                    Command="{Binding CopyReportCommand}"/>
+        <WrapPanel Grid.Row="3" HorizontalAlignment="Right" Margin="0,14,0,0">
+                <Button Content="Обновить"
+                        Command="{Binding RefreshCommand}"
+                        Margin="0,0,8,0"/>
+                <Button Content="Профиль"
+                        Command="{Binding OpenProfileCommand}"
+                        Margin="0,0,8,0"/>
+                <Button Content="Сохранения"
+                        Command="{Binding OpenSavesCommand}"
+                        Margin="0,0,8,0"/>
+                <Button Content="Последний лог"
+                        Command="{Binding OpenLatestLogCommand}"
+                        Margin="0,0,8,0"/>
+                <Button Content="Crash dump"
+                        Command="{Binding OpenCrashDumpCommand}"
+                        Margin="0,0,8,0"/>
+                <Button Content="Копировать отчет"
+                        Command="{Binding CopyReportCommand}"/>
         </WrapPanel>
     </Grid>
 </Window>

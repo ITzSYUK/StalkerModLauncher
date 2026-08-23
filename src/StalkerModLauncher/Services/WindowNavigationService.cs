@@ -120,7 +120,6 @@ public sealed class WindowNavigationService
 
         var aboutWindow = new AboutWindow(
             _launcherUpdateService,
-            _dialogService,
             owner?.DataContext is MainViewModel mainViewModel
                 ? () => mainViewModel.ToggleInterfaceCommand.Execute(null)
                 : null)

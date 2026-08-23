@@ -14,6 +14,7 @@ internal static class ProfileWritableGameFileStore
         DeleteLegacyStoredFsgame(profileWorkspace, progress);
 
         var captured = 0;
+        var skippedAsStale = 0;
         foreach (var rule in ProfileWritableGameFiles.Rules)
         {
             var relativePath = rule.RelativePath;
@@ -24,6 +25,21 @@ internal static class ProfileWritableGameFileStore
             }
 
             var storedFile = GetStoredFilePath(profileWorkspace, relativePath);
+            if (File.Exists(storedFile))
+            {
+                var writeTimeComparison = File.GetLastWriteTimeUtc(workspaceFile)
+                    .CompareTo(File.GetLastWriteTimeUtc(storedFile));
+                if (writeTimeComparison <= 0)
+                {
+                    if (writeTimeComparison < 0)
+                    {
+                        skippedAsStale++;
+                    }
+
+                    continue;
+                }
+            }
+
             Directory.CreateDirectory(Path.GetDirectoryName(storedFile)!);
             CopyThroughTemporaryFile(workspaceFile, storedFile);
             captured++;
@@ -32,6 +48,12 @@ internal static class ProfileWritableGameFileStore
         if (captured > 0)
         {
             progress?.Report($"Сохранены профильные игровые настройки из workspace: {captured:N0}.");
+        }
+
+        if (skippedAsStale > 0)
+        {
+            progress?.Report(
+                $"Сохранена более свежая профильная версия; устаревшие файлы current пропущены: {skippedAsStale:N0}.");
         }
     }
 
@@ -42,6 +64,55 @@ internal static class ProfileWritableGameFileStore
             var relativePath = rule.RelativePath;
             var workspaceFile = Path.Combine(currentWorkspace, relativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(workspaceFile)!);
+        }
+    }
+
+    public static void PrepareForVirtualFileSystem(
+        FileLayerPlan layerPlan,
+        string profileWorkspace,
+        IProgress<string>? progress = null)
+    {
+        var seeded = 0;
+        var migrated = 0;
+        foreach (var rule in ProfileWritableGameFiles.Rules)
+        {
+            var storedFile = GetStoredFilePath(profileWorkspace, rule.RelativePath);
+            var overwriteFile = Path.Combine(
+                profileWorkspace,
+                ProfileWritableGameFiles.DefaultOverwriteRootRelativePath,
+                rule.RelativePath);
+            if (File.Exists(overwriteFile))
+            {
+                CopyThroughTemporaryFile(overwriteFile, storedFile);
+                File.Delete(overwriteFile);
+                migrated++;
+                continue;
+            }
+
+            if (File.Exists(storedFile))
+            {
+                continue;
+            }
+
+            var source = layerPlan.FindFinalFile(rule.RelativePath);
+            if (source is null)
+            {
+                continue;
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(storedFile)!);
+            CopyThroughTemporaryFile(source.FullPath, storedFile);
+            seeded++;
+        }
+
+        if (seeded > 0)
+        {
+            progress?.Report($"Подготовлены профильные изменяемые файлы для USVFS: {seeded:N0}.");
+        }
+
+        if (migrated > 0)
+        {
+            progress?.Report($"Перенесены изменяемые файлы из USVFS overwrite в профильное хранилище: {migrated:N0}.");
         }
     }
 

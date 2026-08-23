@@ -348,6 +348,112 @@ public sealed class WorkspaceBuilderTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildAsyncKeepsAnomalyOptionsIndependentFromBaseGameAcrossRebuild()
+    {
+        var sourceOptions = Path.Combine(_gamePath, "gamedata", "configs", "axr_options.ltx");
+        CreateFileAtPath(sourceOptions, "base options");
+        var modPath = CreateMod("anomaly-options", "mod");
+        var profile = CreateProfile(modPath);
+
+        var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+        var workspaceOptions = Path.Combine(
+            first.WorkspaceRoot,
+            "gamedata",
+            "configs",
+            "axr_options.ltx");
+        File.WriteAllText(workspaceOptions, "profile options");
+
+        Assert.Equal("base options", File.ReadAllText(sourceOptions));
+
+        CreateFile(modPath, "gamedata/config/rebuild-marker.ltx", "changed");
+        var rebuilt = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+
+        Assert.Equal("base options", File.ReadAllText(sourceOptions));
+        Assert.Equal("profile options", File.ReadAllText(Path.Combine(
+            rebuilt.WorkspaceRoot,
+            "gamedata",
+            "configs",
+            "axr_options.ltx")));
+        Assert.Equal("profile options", File.ReadAllText(Path.Combine(
+            rebuilt.ProfileWorkspacePath,
+            "userdata",
+            "writable-game-files",
+            "gamedata",
+            "configs",
+            "axr_options.ltx")));
+    }
+
+    [Fact]
+    public async Task BuildAsyncCapturesAnomalyOptionsBeforeReusingCachedWorkspace()
+    {
+        var sourceOptions = Path.Combine(_gamePath, "gamedata", "configs", "axr_options.ltx");
+        CreateFileAtPath(sourceOptions, "base options");
+        var profile = CreateProfile();
+        var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+        var workspaceOptions = Path.Combine(
+            first.WorkspaceRoot,
+            "gamedata",
+            "configs",
+            "axr_options.ltx");
+        File.WriteAllText(workspaceOptions, "changed by game");
+        var progress = new ProgressLog();
+
+        var cached = await _builder.BuildAsync(_gamePath, profile, progress);
+
+        Assert.Contains(
+            progress.Messages,
+            message => message.Contains("Пересборка не требуется", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("base options", File.ReadAllText(sourceOptions));
+        Assert.Equal("changed by game", File.ReadAllText(Path.Combine(
+            cached.ProfileWorkspacePath,
+            "userdata",
+            "writable-game-files",
+            "gamedata",
+            "configs",
+            "axr_options.ltx")));
+        Assert.Equal("changed by game", File.ReadAllText(workspaceOptions));
+    }
+
+    [Fact]
+    public async Task BuildAsyncPreservesNewerProfileOptionsWhenReturningFromUsvfs()
+    {
+        var sourceOptions = Path.Combine(_gamePath, "gamedata", "configs", "axr_options.ltx");
+        CreateFileAtPath(sourceOptions, "base options");
+        var profile = CreateProfile();
+        var first = await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+        var workspaceOptions = Path.Combine(
+            first.WorkspaceRoot,
+            "gamedata",
+            "configs",
+            "axr_options.ltx");
+        var workspaceWriteTime = DateTime.UtcNow.AddMinutes(-2);
+        File.WriteAllText(workspaceOptions, "workspace options");
+        File.SetLastWriteTimeUtc(workspaceOptions, workspaceWriteTime);
+        await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+        var storedOptions = Path.Combine(
+            first.ProfileWorkspacePath,
+            "userdata",
+            "writable-game-files",
+            "gamedata",
+            "configs",
+            "axr_options.ltx");
+        var usvfsWriteTime = DateTime.UtcNow;
+        File.WriteAllText(storedOptions, "usvfs options");
+        File.SetLastWriteTimeUtc(storedOptions, usvfsWriteTime);
+        var progress = new ProgressLog();
+
+        await _builder.BuildAsync(_gamePath, profile, progress);
+
+        Assert.Equal("base options", File.ReadAllText(sourceOptions));
+        Assert.Equal("usvfs options", File.ReadAllText(storedOptions));
+        Assert.Equal("usvfs options", File.ReadAllText(workspaceOptions));
+        Assert.Equal(usvfsWriteTime, File.GetLastWriteTimeUtc(workspaceOptions));
+        Assert.Contains(
+            progress.Messages,
+            message => message.Contains("устаревшие файлы current пропущены", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task BuildAsyncUsesCacheUntilOverlayInputChanges()
     {
         var modPath = CreateMod("mod", "first");
@@ -365,7 +471,28 @@ public sealed class WorkspaceBuilderTests : IDisposable
 
         Assert.DoesNotContain(rebuildProgress.Messages, message => message.Contains("Workspace уже актуален", StringComparison.Ordinal));
         Assert.Contains(rebuildProgress.Messages, message => message.Contains("Workspace будет пересобран", StringComparison.Ordinal));
+        Assert.Contains(
+            rebuildProgress.Messages,
+            message => message.Contains("gamedata", StringComparison.OrdinalIgnoreCase) &&
+                       message.Contains("shared.ltx", StringComparison.OrdinalIgnoreCase));
         Assert.Equal("updated content", File.ReadAllText(Path.Combine(rebuilt.WorkspaceRoot, "gamedata", "config", "shared.ltx")));
+    }
+
+    [Fact]
+    public async Task BuildAsyncReportsExecutableChangeAsRebuildReason()
+    {
+        CreateFile(_gamePath, "bin/alternate.exe", "alternate executable");
+        var profile = CreateProfile();
+        await _builder.BuildAsync(_gamePath, profile, new ProgressLog());
+        profile.ExecutableRelativePath = @"bin\alternate.exe";
+        var progress = new ProgressLog();
+
+        await _builder.BuildAsync(_gamePath, profile, progress);
+
+        Assert.Contains(
+            progress.Messages,
+            message => message.Contains("сменился файл запуска", StringComparison.OrdinalIgnoreCase) &&
+                       message.Contains("alternate.exe", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

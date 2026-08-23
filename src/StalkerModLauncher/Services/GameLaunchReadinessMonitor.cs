@@ -23,7 +23,7 @@ public sealed record GameProcessReadinessState(
 public sealed class GameLaunchReadinessMonitor
 {
     private const long ReadyWorkingSetBytes = 32L * 1024 * 1024;
-    private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
     private readonly TimeSpan _timeout;
 
@@ -67,7 +67,7 @@ public sealed class GameLaunchReadinessMonitor
 
         return new GameLaunchReadinessResult(
             GameLaunchReadinessStatus.Stalled,
-            "За 30 секунд не появилось окно игры, свежий игровой лог или процесс с нормальной загрузкой памяти.",
+            "За 1 минуту не появилось окно игры, свежий игровой лог или процесс с нормальной загрузкой памяти.",
             launch.GetActiveProcessIds());
     }
 

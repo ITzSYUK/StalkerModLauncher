@@ -8,7 +8,8 @@ public static class OverlayManifestBuilder
     [
         "fsgame.ltx",
         "user.ltx",
-        Path.Combine("gamedata", "configs", "localization.ltx")
+        Path.Combine("gamedata", "configs", "localization.ltx"),
+        Path.Combine("gamedata", "configs", "axr_options.ltx")
     ];
 
     public static OverlayManifest BuildLinkedWorkspace(

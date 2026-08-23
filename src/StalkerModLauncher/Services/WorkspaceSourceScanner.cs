@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 using StalkerModLauncher.Models;
 
 namespace StalkerModLauncher.Services;
@@ -42,15 +43,77 @@ internal static class WorkspaceSourceScanner
         return new WorkspaceSourceSnapshot(game, mods);
     }
 
-    public static string CreateBuildSignature(
+    public static WorkspaceBuildFingerprint CreateBuildFingerprint(
         string formatVersion,
         ModProfile profile,
         WorkspaceSourceSnapshot snapshot,
         FileLayerPlan plan)
     {
+        var fingerprint = new WorkspaceBuildFingerprint
+        {
+            FormatVersion = formatVersion,
+            ExecutableRelativePath = profile.ExecutableRelativePath,
+            ExecutableSourcePath = profile.ExecutableSourcePath,
+            ProfileMode = profile.IsStandalone ? "standalone" : "overlay",
+            Layers = plan.SourceLayers
+                .Select(layer => new WorkspaceBuildLayerFingerprint
+                {
+                    Kind = layer.Kind.ToString(),
+                    Id = layer.Id,
+                    DisplayName = FileLayerPlan.GetDisplayName(layer),
+                    RootPath = layer.RootPath,
+                    Order = layer.Order
+                })
+                .ToList()
+        };
+
+        fingerprint.Sources.Add(CreateSourceFingerprint(
+            plan.BaseGame,
+            snapshot.Game,
+            excludedFiles: []));
+        foreach (var layer in plan.Mods)
+        {
+            var mod = layer.Mod!;
+            if (snapshot.Mods.TryGetValue(mod.Id, out var modSnapshot))
+            {
+                fingerprint.Sources.Add(CreateSourceFingerprint(
+                    layer,
+                    modSnapshot,
+                    mod.ExcludedFiles.OrderBy(path => path, StringComparer.OrdinalIgnoreCase)));
+            }
+        }
+
+        fingerprint.Signature = ComputeSignature(fingerprint);
+        return fingerprint;
+    }
+
+    private static WorkspaceBuildSourceFingerprint CreateSourceFingerprint(
+        FileLayer layer,
+        DirectorySnapshot snapshot,
+        IEnumerable<string> excludedFiles)
+    {
+        return new WorkspaceBuildSourceFingerprint
+        {
+            LayerId = layer.Id,
+            DisplayName = FileLayerPlan.GetDisplayName(layer),
+            RootPath = snapshot.RootPath,
+            ExcludedFiles = excludedFiles.ToList(),
+            Files = snapshot.Files
+                .Select(file => new WorkspaceBuildFileFingerprint
+                {
+                    RelativePath = file.RelativePath,
+                    Length = file.Length,
+                    LastWriteTimeUtcTicks = file.LastWriteTimeUtcTicks
+                })
+                .ToList()
+        };
+    }
+
+    private static string ComputeSignature(WorkspaceBuildFingerprint fingerprint)
+    {
         var builder = new StringBuilder();
-        builder.AppendLine(formatVersion);
-        foreach (var layer in plan.SourceLayers)
+        builder.AppendLine(fingerprint.FormatVersion);
+        foreach (var layer in fingerprint.Layers)
         {
             builder.Append(layer.Kind).Append('|')
                 .Append(layer.Order).Append('|')
@@ -58,25 +121,24 @@ internal static class WorkspaceSourceScanner
                 .Append(layer.RootPath).AppendLine();
         }
 
-        AppendDirectoryFingerprint(builder, snapshot.Game);
-        builder.AppendLine(profile.ExecutableRelativePath);
-        builder.AppendLine(profile.ExecutableSourcePath);
-        builder.AppendLine(profile.IsStandalone ? "standalone" : "overlay");
+        builder.AppendLine(fingerprint.ExecutableRelativePath);
+        builder.AppendLine(fingerprint.ExecutableSourcePath);
+        builder.AppendLine(fingerprint.ProfileMode);
 
-        foreach (var layer in plan.Mods)
+        foreach (var source in fingerprint.Sources)
         {
-            var mod = layer.Mod!;
-            builder.Append(layer.Order).Append('|')
-                .Append(mod.IsEnabled).Append('|')
-                .Append(layer.RootPath).AppendLine();
-            foreach (var excluded in mod.ExcludedFiles.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+            builder.Append(source.LayerId).Append('|')
+                .Append(source.RootPath).AppendLine();
+            foreach (var excluded in source.ExcludedFiles)
             {
                 builder.Append("excluded|").AppendLine(excluded);
             }
 
-            if (snapshot.Mods.TryGetValue(mod.Id, out var modSnapshot))
+            foreach (var file in source.Files)
             {
-                AppendDirectoryFingerprint(builder, modSnapshot);
+                builder.Append(file.RelativePath).Append('|')
+                    .Append(file.Length).Append('|')
+                    .Append(file.LastWriteTimeUtcTicks).AppendLine();
             }
         }
 
@@ -116,17 +178,6 @@ internal static class WorkspaceSourceScanner
             files.OrderBy(file => file.RelativePath, StringComparer.OrdinalIgnoreCase).ToArray());
     }
 
-    private static void AppendDirectoryFingerprint(StringBuilder builder, DirectorySnapshot snapshot)
-    {
-        builder.AppendLine(snapshot.RootPath);
-        foreach (var file in snapshot.Files)
-        {
-            builder.Append(file.RelativePath).Append('|')
-                .Append(file.Length).Append('|')
-                .Append(file.LastWriteTimeUtcTicks).AppendLine();
-        }
-    }
-
     private static EnumerationOptions SafeEnumerationOptions { get; } = new()
     {
         RecurseSubdirectories = true,
@@ -149,3 +200,40 @@ internal sealed record SourceFileSnapshot(
     string RelativePath,
     long Length,
     long LastWriteTimeUtcTicks);
+
+internal sealed class WorkspaceBuildFingerprint
+{
+    [JsonIgnore]
+    public string Signature { get; set; } = string.Empty;
+    public string FormatVersion { get; set; } = string.Empty;
+    public string ExecutableRelativePath { get; set; } = string.Empty;
+    public string ExecutableSourcePath { get; set; } = string.Empty;
+    public string ProfileMode { get; set; } = string.Empty;
+    public List<WorkspaceBuildLayerFingerprint> Layers { get; set; } = [];
+    public List<WorkspaceBuildSourceFingerprint> Sources { get; set; } = [];
+}
+
+internal sealed class WorkspaceBuildLayerFingerprint
+{
+    public string Kind { get; set; } = string.Empty;
+    public string Id { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string RootPath { get; set; } = string.Empty;
+    public int Order { get; set; }
+}
+
+internal sealed class WorkspaceBuildSourceFingerprint
+{
+    public string LayerId { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string RootPath { get; set; } = string.Empty;
+    public List<string> ExcludedFiles { get; set; } = [];
+    public List<WorkspaceBuildFileFingerprint> Files { get; set; } = [];
+}
+
+internal sealed class WorkspaceBuildFileFingerprint
+{
+    public string RelativePath { get; set; } = string.Empty;
+    public long Length { get; set; }
+    public long LastWriteTimeUtcTicks { get; set; }
+}

@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Media;
 using StalkerModLauncher.Services;
 
 namespace StalkerModLauncher.Views;
@@ -8,8 +9,8 @@ namespace StalkerModLauncher.Views;
 public partial class AboutWindow : Window
 {
     private readonly LauncherUpdateService _launcherUpdateService;
-    private readonly DialogService _dialogService;
     private readonly Action? _openPdaInterface;
+    private string? _releaseUrl;
 
     public static readonly DependencyProperty DontShowAgainProperty =
         DependencyProperty.Register(nameof(DontShowAgain), typeof(bool), typeof(AboutWindow), new PropertyMetadata(false));
@@ -22,12 +23,10 @@ public partial class AboutWindow : Window
 
     public AboutWindow(
         LauncherUpdateService launcherUpdateService,
-        DialogService dialogService,
         Action? openPdaInterface = null)
     {
         InitializeComponent();
         _launcherUpdateService = launcherUpdateService;
-        _dialogService = dialogService;
         _openPdaInterface = openPdaInterface;
         VersionTextBlock.Text = GetVersionText();
     }
@@ -57,47 +56,43 @@ public partial class AboutWindow : Window
     {
         CheckUpdatesButton.IsEnabled = false;
         CheckUpdatesButton.Content = "Проверяем...";
+        _releaseUrl = null;
+        OpenReleaseButton.Visibility = Visibility.Collapsed;
+        ShowUpdateStatus("Проверяем GitHub...", "MutedTextBrush");
 
         try
         {
             var result = await _launcherUpdateService.CheckAsync();
-            if (!result.IsUpdateAvailable)
+            if (result.IsUpdateAvailable)
             {
-                DialogService.ShowInfo(
-                    "Проверка обновлений",
-                    $"Установлена актуальная версия лаунчера: {result.CurrentVersion}.");
-                return;
+                _releaseUrl = result.ReleaseUrl;
+                OpenReleaseButton.Visibility = Visibility.Visible;
+                ShowUpdateStatus(
+                    $"Доступна версия {result.LatestVersion}. Установлена {result.CurrentVersion}.",
+                    "AccentBrush");
             }
-
-            var updateWindow = new UpdateAvailableWindow(
-                result.CurrentVersion,
-                result.LatestVersion)
+            else
             {
-                Owner = this
-            };
-
-            if (updateWindow.ShowDialog() == true)
-            {
-                DialogService.OpenUrl(result.ReleaseUrl);
+                ShowUpdateStatus(
+                    $"Установлена актуальная версия лаунчера: {result.CurrentVersion}.",
+                    "MutedTextBrush");
             }
         }
         catch (TaskCanceledException)
         {
-            _dialogService.ShowError(
-                "Проверка обновлений",
-                "GitHub не ответил вовремя. Проверьте подключение к интернету и повторите попытку.");
+            ShowUpdateStatus(
+                "GitHub не ответил вовремя. Проверьте подключение к интернету и повторите попытку.",
+                "DangerBrush");
         }
         catch (HttpRequestException)
         {
-            _dialogService.ShowError(
-                "Проверка обновлений",
-                "Не удалось получить информацию о последнем релизе с GitHub. Проверьте подключение к интернету и повторите попытку.");
+            ShowUpdateStatus(
+                "Не удалось получить информацию о последнем релизе с GitHub. Проверьте подключение к интернету и повторите попытку.",
+                "DangerBrush");
         }
         catch (Exception ex)
         {
-            _dialogService.ShowError(
-                "Проверка обновлений",
-                $"Не удалось проверить обновления: {ex.Message}");
+            ShowUpdateStatus($"Не удалось проверить обновления: {ex.Message}", "DangerBrush");
         }
         finally
         {
@@ -106,4 +101,18 @@ public partial class AboutWindow : Window
         }
     }
 
+    private void OpenReleaseButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(_releaseUrl))
+        {
+            DialogService.OpenUrl(_releaseUrl);
+        }
+    }
+
+    private void ShowUpdateStatus(string message, string brushResourceKey)
+    {
+        UpdateStatusText.Text = message;
+        UpdateStatusText.Foreground = (Brush)FindResource(brushResourceKey);
+        UpdateStatusPanel.Visibility = Visibility.Visible;
+    }
 }

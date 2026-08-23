@@ -95,6 +95,65 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
     }
 
     [Fact]
+    public async Task PrepareAsyncSeedsAndMigratesKnownWritableGameFiles()
+    {
+        var game = CreateDirectory("writable-game");
+        var workspace = CreateDirectory("writable-workspace");
+        File.WriteAllText(
+            Path.Combine(game, "fsgame.ltx"),
+            "$app_data_root$ = true | false | $fs_root$ | _appdata_\\");
+        Directory.CreateDirectory(Path.Combine(game, "bin_x64"));
+        CopyExecutable(Path.Combine(game, "bin_x64", "xrEngine.exe"), WindowsExecutableArchitecture.X64);
+        CreateUsvfsRuntimeFiles(game);
+        var configs = Path.Combine(game, "gamedata", "configs");
+        Directory.CreateDirectory(configs);
+        File.WriteAllText(Path.Combine(configs, "localization.ltx"), "language = rus");
+        File.WriteAllText(Path.Combine(configs, "axr_options.ltx"), "base options");
+        var overwriteOptions = Path.Combine(
+            workspace,
+            "userdata",
+            "overwrite",
+            "gamedata",
+            "configs",
+            "axr_options.ltx");
+        Directory.CreateDirectory(Path.GetDirectoryName(overwriteOptions)!);
+        File.WriteAllText(overwriteOptions, "profile options");
+        var profile = new ModProfile
+        {
+            Id = "profile-writable",
+            Name = "Anomaly",
+            GameInstallPath = game,
+            ExecutableRelativePath = @"bin_x64\xrEngine.exe",
+            LaunchBackendKind = LaunchBackendKind.VirtualFileSystem
+        };
+        var layerPlan = FileLayerPlan.CreateLinkedWorkspace(game, profile, workspace);
+        var manifest = OverlayManifestBuilder.BuildVirtualFileSystem(profile, layerPlan, workspace);
+        var runtime = new RecordingUsvfsRuntime();
+        var backend = new UsvfsLaunchBackend(runtime, game);
+
+        await backend.PrepareAsync(
+            new ProfileLaunchBackendContext(game, profile, layerPlan, manifest),
+            new Progress<string>());
+
+        var writableRoot = Path.Combine(workspace, "userdata", "writable-game-files", "gamedata", "configs");
+        var storedLocalization = Path.Combine(writableRoot, "localization.ltx");
+        var storedOptions = Path.Combine(writableRoot, "axr_options.ltx");
+        Assert.Equal("language = rus", File.ReadAllText(storedLocalization));
+        Assert.Equal("profile options", File.ReadAllText(storedOptions));
+        Assert.False(File.Exists(overwriteOptions));
+        Assert.Equal("base options", File.ReadAllText(Path.Combine(configs, "axr_options.ltx")));
+        Assert.NotNull(runtime.MappingPlan);
+        Assert.Contains(
+            runtime.MappingPlan.Operations,
+            operation => operation.Kind == UsvfsMappingKind.File &&
+                         operation.SourcePath == Path.GetFullPath(storedLocalization));
+        Assert.Contains(
+            runtime.MappingPlan.Operations,
+            operation => operation.Kind == UsvfsMappingKind.File &&
+                         operation.SourcePath == Path.GetFullPath(storedOptions));
+    }
+
+    [Fact]
     public async Task PrepareAsyncBlocksLaunchWhenFsgameCannotIsolateProfileData()
     {
         var game = CreateDirectory("missing-app-data-root-game");

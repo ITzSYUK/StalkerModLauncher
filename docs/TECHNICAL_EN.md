@@ -2,7 +2,7 @@
 
 [English version](TECHNICAL_EN.md) | [Русская версия](TECHNICAL_RU.md) | [Russian user guide](USER_GUIDE_RU.md)
 
-This document describes the current architecture of S.T.A.L.K.E.R. Mod Launcher `v1.2.7`: how profiles are stored, how the winning file is selected, how Workspace differs from USVFS, where profile data is kept, and which checks protect original game and mod folders.
+This document describes the current architecture of S.T.A.L.K.E.R. Mod Launcher `v1.3.0`: how profiles are stored, how the winning file is selected, how Workspace differs from USVFS, where profile data is kept, and which checks protect original game and mod folders.
 
 The detailed USVFS research history and experimental prototypes are available in [USVFS_RESEARCH_EN.md](USVFS_RESEARCH_EN.md).
 
@@ -150,7 +150,7 @@ Workspace layout:
 
 ### Building current
 
-Before building, the launcher snapshots the base game and mods. It then creates a signature from source paths, file state, mod order, selected EXE, and relevant profile options.
+Before building, the launcher snapshots the base game and mods. It then creates a signature from source paths, file state, mod order, selected EXE, and relevant profile options. `build-manifest.json` also stores the detailed inputs of that signature, so a mismatch can name the exact changed file, EXE, EXE source, layer set, or layer order in the log.
 
 When the signature matches `build-manifest.json` and the selected EXE still exists, `current` is reused. Profile writable files are still restored and validated.
 
@@ -276,9 +276,9 @@ Prepared shader caches from layer appdata folders are merged according to priori
 
 ### Writable files inside the game tree
 
-Some engines write configuration inside the game tree. Known paths such as `gamedata\configs\localization.ltx` receive a separate profile copy under `userdata\writable-game-files`.
+Some engines write configuration inside the game tree. Known paths including `gamedata\configs\localization.ltx` and Anomaly `gamedata\configs\axr_options.ltx` receive a separate profile copy under `userdata\writable-game-files`. Workspace materializes these as independent local copies from the first build instead of hard-linking them to a source.
 
-Workspace places that copy into `current` and collects changes after use. USVFS maps the same profile file to the expected virtual path.
+Workspace places that copy into `current` and collects changes before the next preparation or profile cleanup. When switching between Workspace and USVFS, the newer of the two copies wins, so a stale `current` cannot overwrite settings changed through USVFS. On its first launch, USVFS seeds the profile copy from the highest-priority layer and maps it to the expected virtual path. Legacy copies of these files under `userdata\overwrite` are migrated into the profile store.
 
 ### Standalone profiles
 

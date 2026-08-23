@@ -13,14 +13,10 @@
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Border Background="#131C27" BorderBrush="#3B4755" BorderThickness="1" Padding="10" Margin="0,0,0,8">
-            <TextBlock Text="{Binding Summary}" FontWeight="SemiBold" Foreground="#E4DFC9" TextWrapping="Wrap"/>
-        </Border>
-        <Border Grid.Row="1" Background="#0D141E" BorderBrush="#3B4755" BorderThickness="1" Padding="9" Margin="0,0,0,8"
+        <Border Grid.Row="0" Background="#0D141E" BorderBrush="#3B4755" BorderThickness="1" Padding="9" Margin="0,0,0,8"
                 Visibility="{Binding ShowStoragePanel, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -44,10 +40,10 @@
                 </WrapPanel>
             </Grid>
         </Border>
-        <Border Grid.Row="2" Background="#090F18" BorderBrush="#3B4755" BorderThickness="1" Padding="9">
+        <Border Grid.Row="1" Background="#090F18" BorderBrush="#3B4755" BorderThickness="1" Padding="9">
             <Grid>
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                <TextBlock Text="ГОТОВНОСТЬ" FontFamily="Bahnschrift SemiCondensed" FontSize="15" Foreground="#E4DFC9"/>
+                <TextBlock Text="{Binding Summary}" FontFamily="Bahnschrift SemiCondensed" FontSize="15" Foreground="#E4DFC9"/>
                 <ListBox Grid.Row="1" ItemsSource="{Binding Checks}" BorderThickness="0" Background="Transparent" Margin="0,5,0,0"
                          infrastructure:SmoothScrollBehavior.IsEnabled="True" ScrollViewer.CanContentScroll="False">
                     <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/></Style></ListBox.ItemContainerStyle>
@@ -55,7 +51,21 @@
                         <DataTemplate>
                             <Grid Margin="2,3">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="12"/><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                <Ellipse Width="7" Height="7" Fill="#8FAE55" VerticalAlignment="Top" Margin="0,6,0,0"/>
+                                <Ellipse Width="7" Height="7" VerticalAlignment="Top" Margin="0,6,0,0">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Setter Property="Fill" Value="#8FAE55"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Status}" Value="Warning">
+                                                    <Setter Property="Fill" Value="#CF962C"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="Error">
+                                                    <Setter Property="Fill" Value="#AD5848"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
                                 <TextBlock Grid.Column="1" Text="{Binding Title}" FontWeight="SemiBold" Margin="6,0,10,0" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="2" Text="{Binding Details}" Foreground="#9AA18F" TextWrapping="Wrap"/>
                             </Grid>
@@ -64,13 +74,13 @@
                 </ListBox>
             </Grid>
         </Border>
-        <WrapPanel Grid.Row="3" HorizontalAlignment="Right" Margin="0,8,0,0">
-            <Button Content="Обновить" Command="{Binding RefreshCommand}" Margin="0,0,5,0"/>
-            <Button Content="Профиль" Command="{Binding OpenProfileCommand}" Margin="0,0,5,0"/>
-            <Button Content="Сохранения" Command="{Binding OpenSavesCommand}" Margin="0,0,5,0"/>
-            <Button Content="Последний лог" Command="{Binding OpenLatestLogCommand}" Margin="0,0,5,0"/>
-            <Button Content="Crash dump" Command="{Binding OpenCrashDumpCommand}" Margin="0,0,5,0"/>
-            <Button Content="Копировать отчет" Command="{Binding CopyReportCommand}"/>
+        <WrapPanel Grid.Row="2" HorizontalAlignment="Right" Margin="0,8,0,0">
+                <Button Content="Обновить" Command="{Binding RefreshCommand}" Margin="0,0,5,0"/>
+                <Button Content="Профиль" Command="{Binding OpenProfileCommand}" Margin="0,0,5,0"/>
+                <Button Content="Сохранения" Command="{Binding OpenSavesCommand}" Margin="0,0,5,0"/>
+                <Button Content="Последний лог" Command="{Binding OpenLatestLogCommand}" Margin="0,0,5,0"/>
+                <Button Content="Crash dump" Command="{Binding OpenCrashDumpCommand}" Margin="0,0,5,0"/>
+                <Button Content="Копировать отчет" Command="{Binding CopyReportCommand}"/>
         </WrapPanel>
     </Grid>
 </UserControl>

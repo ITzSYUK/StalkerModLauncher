@@ -100,6 +100,35 @@ public sealed class ProfileHealthServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AnalyzeAsyncReportsUnavailablePinnedExecutableAsError()
+    {
+        var game = CreateGame();
+        var disabledMod = Path.Combine(_root, "engine-mod");
+        CreateFileAtPath(Path.Combine(disabledMod, "bin", "AnomalyDX11.exe"));
+        var profile = new ModProfile
+        {
+            GameInstallPath = game,
+            ExecutableRelativePath = @"bin\AnomalyDX11.exe",
+            ExecutableSourcePath = disabledMod
+        };
+        profile.Mods.Add(new ModEntry
+        {
+            Name = "Engine mod",
+            SourcePath = disabledMod,
+            IsEnabled = false,
+            Order = 1
+        });
+
+        var report = await _service.AnalyzeAsync(profile);
+
+        Assert.Contains(
+            report.Checks,
+            check => check.Title == "Бинарник запуска" &&
+                     check.Status == ProfileHealthStatus.Error &&
+                     check.Details.Contains("недоступна или мод выключен", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task AnalyzeAsyncTreatsMissingDisabledModAsWarning()
     {
         var profile = new ModProfile { GameInstallPath = CreateGame() };
