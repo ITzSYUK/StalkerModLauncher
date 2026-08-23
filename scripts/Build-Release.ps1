@@ -86,6 +86,10 @@ function Publish-Package {
     $packageDirectory = Join-Path $releaseRoot $PackageName
     New-Item -ItemType Directory -Path $publishDirectory, $packageDirectory | Out-Null
 
+    $projectLockFile = Join-Path (Split-Path -Parent $project) "packages.lock.json"
+    $publishLockFile = Join-Path $publishDirectory "packages.lock.json"
+    Copy-Item -LiteralPath $projectLockFile -Destination $publishLockFile
+
     dotnet publish $project `
         -c Release `
         -r win-x64 `
@@ -94,6 +98,7 @@ function Publish-Package {
         -p:IncludeNativeLibrariesForSelfExtract=true `
         -p:EnableCompressionInSingleFile=$SelfContained `
         -p:PublishTrimmed=false `
+        "-p:NuGetLockFilePath=$publishLockFile" `
         -p:DebugType=None `
         -p:DebugSymbols=false `
         -o $publishDirectory
