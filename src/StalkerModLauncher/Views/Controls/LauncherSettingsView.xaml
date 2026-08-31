@@ -167,7 +167,7 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel>
-                        <TextBlock Text="Интерфейс" FontSize="16" FontWeight="SemiBold"
+                        <TextBlock Text="ИНТЕРФЕЙС" FontSize="16" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextBrush}" Margin="0,0,0,10"/>
                         <WrapPanel Margin="0,0,0,15">
                             <RadioButton Content="Classic UI" Style="{StaticResource SettingsRadioButtonStyle}"
@@ -204,7 +204,7 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Text="ЖУРНАЛИРОВАНИЕ" FontSize="17" FontWeight="SemiBold"
+                                <TextBlock Text="ЖУРНАЛИРОВАНИЕ" FontSize="16" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
                                 <TextBlock Text="Уровень записи launcher.log" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,6"/>
                                 <ComboBox Style="{StaticResource SettingsComboBoxStyle}"
@@ -254,7 +254,7 @@
                     <Border Grid.Row="3" Height="1" Background="{DynamicResource StrokeBrush}" Margin="0,18"/>
 
                     <StackPanel Grid.Row="4">
-                        <TextBlock Text="ОБНОВЛЕНИЕ" FontSize="17" FontWeight="SemiBold"
+                        <TextBlock Text="ОБНОВЛЕНИЕ" FontSize="16" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
                         <Button Content="Проверить обновления"
                                 Command="{Binding CheckForUpdatesCommand}"

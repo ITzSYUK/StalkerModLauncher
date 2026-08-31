@@ -67,100 +67,12 @@
                     </Style>
                 </Border.Style>
             </Border>
-            <Grid Grid.Column="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <Grid Grid.Row="0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid Width="19"
-                          Height="19"
-                          VerticalAlignment="Top"
-                          Margin="0,5,8,0">
-                        <Grid.Style>
-                            <Style TargetType="Grid">
-                                <Setter Property="ToolTip" Value="Базовая игра + моды"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedProfile.IsStandalone}" Value="True">
-                                        <Setter Property="ToolTip" Value="Автономная сборка"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Grid.Style>
-                        <Canvas Width="16"
-                                Height="16"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                RenderTransformOrigin="0.5,0.5">
-                            <Canvas.RenderTransform>
-                                <ScaleTransform ScaleX="1.08"
-                                                ScaleY="1.08"/>
-                            </Canvas.RenderTransform>
-                            <Canvas.Style>
-                                <Style TargetType="Canvas">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedProfile.IsStandalone}" Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Canvas.Style>
-                            <Path Data="M8,2 L14,5.5 L8,9 L2,5.5 Z"
-                                  Fill="#282D1F"
-                                  Stroke="{StaticResource AccentBrush}"
-                                  StrokeThickness="1.2"
-                                  StrokeLineJoin="Round"/>
-                            <Path Data="M2.6,8 L8,11.2 L13.4,8"
-                                  Stroke="{StaticResource AccentBrush}"
-                                  StrokeThickness="1.2"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round"/>
-                            <Path Data="M2.6,10.8 L8,14 L13.4,10.8"
-                                  Stroke="{StaticResource AccentBrush}"
-                                  StrokeThickness="1.2"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round"/>
-                        </Canvas>
-                        <Canvas Width="16"
-                                Height="16"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                RenderTransformOrigin="0.5,0.5">
-                            <Canvas.RenderTransform>
-                                <ScaleTransform ScaleX="1.08"
-                                                ScaleY="1.08"/>
-                            </Canvas.RenderTransform>
-                            <Canvas.Style>
-                                <Style TargetType="Canvas">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedProfile.IsStandalone}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Canvas.Style>
-                            <Path Data="M3,5 L8,2.5 L13,5 L8,7.5 Z"
-                                  Fill="#2E301F"
-                                  Stroke="{StaticResource AccentBrush}"
-                                  StrokeThickness="1.2"
-                                  StrokeLineJoin="Round"/>
-                            <Path Data="M3,5 V11 L8,14 L13,11 V5 M8,7.5 V14"
-                                  Stroke="{StaticResource AccentBrush}"
-                                  StrokeThickness="1.2"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round"/>
-                        </Canvas>
-                    </Grid>
-                    <TextBlock Grid.Column="1"
+                    <Grid Grid.Column="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock
                                Text="{Binding SelectedProfile.Name, FallbackValue=Профиль}"
                                FontSize="22"
                                FontWeight="SemiBold"
@@ -168,16 +80,15 @@
                                TextTrimming="CharacterEllipsis"
                                LineHeight="28"
                                MaxHeight="56"/>
-                </Grid>
-                <TextBlock Grid.Row="1"
-                           Text="{Binding ValidationSummary}"
-                           Foreground="{StaticResource MutedTextBrush}"
-                           Margin="0,1,0,0"
-                           TextWrapping="Wrap"
-                           LineHeight="18"
-                           MaxHeight="54"/>
+                        <TextBlock Grid.Row="1"
+                                   Text="{Binding ValidationSummary}"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   Margin="0,1,0,0"
+                                   TextWrapping="Wrap"
+                                   LineHeight="18"
+                                   MaxHeight="54"/>
+                    </Grid>
             </Grid>
-        </Grid>
 
         <Grid Grid.Column="0"
               Grid.ColumnSpan="2"

@@ -38,7 +38,11 @@
           MaxHeight="510"
           Margin="8"
           CacheMode="BitmapCache"
-          SnapsToDevicePixels="True">
+          SnapsToDevicePixels="True"
+          RenderTransformOrigin="0.5,1">
+        <Grid.RenderTransform>
+            <TranslateTransform x:Name="PanelTranslate" Y="10"/>
+        </Grid.RenderTransform>
         <Grid.Effect>
             <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
         </Grid.Effect>

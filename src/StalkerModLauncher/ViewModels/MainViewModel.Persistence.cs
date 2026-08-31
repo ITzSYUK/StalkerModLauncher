@@ -243,6 +243,11 @@ public sealed partial class MainViewModel
             return;
         }
 
+        if (e.PropertyName is nameof(ModProfile.HasLaunchError) or nameof(ModProfile.LaunchErrorSummary))
+        {
+            return;
+        }
+
         if (e.PropertyName == nameof(ModProfile.Mods))
         {
             SynchronizeModSubscriptions(profile);

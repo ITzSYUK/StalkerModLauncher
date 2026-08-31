@@ -51,6 +51,50 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task CanLaunchProfileExposesValidationErrorForTrayIndicator()
+    {
+        await RunWithViewModelAsync(async (viewModel, _) =>
+        {
+            var profile = new ModProfile { Name = "Broken profile" };
+            viewModel.AddCreatedProfile(profile);
+
+            Assert.False(viewModel.CanLaunchProfile(profile));
+            Assert.True(profile.HasLaunchError);
+            Assert.False(string.IsNullOrWhiteSpace(profile.LaunchErrorSummary));
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public async Task RefreshProfileLaunchReadinessRefreshesFixedProfileWithoutRestart()
+    {
+        await RunWithViewModelAsync(async (viewModel, root) =>
+        {
+            var gameRoot = CreateValidGameRoot(root);
+            var executablePath = Path.Combine(gameRoot, "bin", "xr_3da.exe");
+            var profile = new ModProfile
+            {
+                Name = "Fixed profile",
+                GameInstallPath = gameRoot,
+                ExecutableRelativePath = @"bin\xr_3da.exe"
+            };
+            viewModel.AddCreatedProfile(profile);
+
+            File.Delete(executablePath);
+            viewModel.RefreshProfileLaunchReadiness(forceRefresh: true);
+            Assert.True(profile.HasLaunchError);
+            Assert.False(viewModel.CanLaunchProfile(profile));
+
+            File.WriteAllText(executablePath, "game");
+            viewModel.RefreshProfileLaunchReadiness(forceRefresh: true);
+
+            Assert.False(profile.HasLaunchError);
+            Assert.True(viewModel.CanLaunchProfile(profile));
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
     public async Task SavingLauncherSettingsUpdatesWindowsStartupRegistration()
     {
         var startup = new CapturingStartupRegistrationService();

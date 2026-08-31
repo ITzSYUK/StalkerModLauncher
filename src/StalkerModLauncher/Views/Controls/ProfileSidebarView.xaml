@@ -26,6 +26,15 @@
                                 <Border x:Name="ActionShade"
                                         Opacity="0"
                                         IsHitTestVisible="False">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasLaunchError}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
                                             <GradientStop Color="#00000000" Offset="0"/>
@@ -41,9 +50,18 @@
                                             Orientation="Horizontal"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center"
-                                            Margin="0,0,7,0"
-                                            Opacity="0"
-                                            IsHitTestVisible="False">
+                                             Margin="0,0,7,0"
+                                             Opacity="0"
+                                             IsHitTestVisible="False">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasLaunchError}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
                                     <StackPanel.RenderTransform>
                                         <TranslateTransform X="18"/>
                                     </StackPanel.RenderTransform>
@@ -73,24 +91,24 @@
                                     <Storyboard>
                                         <DoubleAnimation Storyboard.TargetName="ActionShade"
                                                          Storyboard.TargetProperty="Opacity"
-                                                         To="1" Duration="0:0:0.38">
+                                                         To="1" Duration="0:0:0.22">
                                             <DoubleAnimation.EasingFunction>
                                                 <CubicEase EasingMode="EaseOut"/>
                                             </DoubleAnimation.EasingFunction>
                                         </DoubleAnimation>
                                         <DoubleAnimation Storyboard.TargetName="ProfileActions"
                                                          Storyboard.TargetProperty="Opacity"
-                                                         To="1" Duration="0:0:0.32"/>
+                                                         To="1" Duration="0:0:0.18"/>
                                         <DoubleAnimation Storyboard.TargetName="ProfileActions"
                                                          Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
-                                                         To="0" Duration="0:0:0.38">
+                                                         To="0" Duration="0:0:0.22">
                                             <DoubleAnimation.EasingFunction>
                                                 <CubicEase EasingMode="EaseOut"/>
                                             </DoubleAnimation.EasingFunction>
                                         </DoubleAnimation>
                                         <BooleanAnimationUsingKeyFrames Storyboard.TargetName="ProfileActions"
                                                                         Storyboard.TargetProperty="IsHitTestVisible">
-                                            <DiscreteBooleanKeyFrame KeyTime="0:0:0.12" Value="True"/>
+                                            <DiscreteBooleanKeyFrame KeyTime="0:0:0.08" Value="True"/>
                                         </BooleanAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </BeginStoryboard>
@@ -100,24 +118,24 @@
                                     <Storyboard>
                                         <DoubleAnimation Storyboard.TargetName="ActionShade"
                                                          Storyboard.TargetProperty="Opacity"
-                                                         To="0" Duration="0:0:0.36">
+                                                         To="0" Duration="0:0:0.20">
                                             <DoubleAnimation.EasingFunction>
                                                 <CubicEase EasingMode="EaseInOut"/>
                                             </DoubleAnimation.EasingFunction>
                                         </DoubleAnimation>
                                         <DoubleAnimation Storyboard.TargetName="ProfileActions"
                                                          Storyboard.TargetProperty="Opacity"
-                                                         To="0" Duration="0:0:0.28"/>
+                                                         To="0" Duration="0:0:0.16"/>
                                         <DoubleAnimation Storyboard.TargetName="ProfileActions"
                                                          Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
-                                                         To="18" Duration="0:0:0.34">
+                                                         To="18" Duration="0:0:0.20">
                                             <DoubleAnimation.EasingFunction>
                                                 <CubicEase EasingMode="EaseIn"/>
                                             </DoubleAnimation.EasingFunction>
                                         </DoubleAnimation>
                                         <BooleanAnimationUsingKeyFrames Storyboard.TargetName="ProfileActions"
                                                                         Storyboard.TargetProperty="IsHitTestVisible">
-                                            <DiscreteBooleanKeyFrame KeyTime="0:0:0.28" Value="False"/>
+                                            <DiscreteBooleanKeyFrame KeyTime="0:0:0.16" Value="False"/>
                                         </BooleanAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </BeginStoryboard>
@@ -344,21 +362,55 @@
                                     </Canvas>
                                 </Grid>
                                 <StackPanel Grid.Column="1">
-                                    <TextBlock Text="{Binding Name}"
-                                               TextWrapping="Wrap"
-                                               TextTrimming="CharacterEllipsis"
-                                               LineHeight="17">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="MaxHeight" Value="51"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsTrayMode, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
-                                                        <Setter Property="MaxHeight" Value="34"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Name}"
+                                                   TextWrapping="Wrap"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   LineHeight="17">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="MaxHeight" Value="51"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsTrayMode, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
+                                                            <Setter Property="MaxHeight" Value="34"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <Border Grid.Column="1"
+                                                Width="16"
+                                                Height="16"
+                                                Margin="6,0,0,0"
+                                                Background="{DynamicResource DangerBrush}"
+                                                CornerRadius="8"
+                                                ToolTip="{Binding LaunchErrorSummary}">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding HasLaunchError}" Value="True"/>
+                                                                <Condition Binding="{Binding IsTrayMode, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True"/>
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="!"
+                                                       FontSize="12"
+                                                       FontWeight="Bold"
+                                                       Foreground="{DynamicResource PanelBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
                                     <TextBlock Text="Запущен"
                                                FontSize="10"
                                                Foreground="{DynamicResource AccentBrush}"

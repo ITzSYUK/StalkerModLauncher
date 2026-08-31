@@ -455,16 +455,30 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private ValidationResult GetProfileValidation(ModProfile profile, bool forceRefresh = false)
     {
+        ValidationResult result;
         if (!forceRefresh &&
             _validationCache.TryGetValue(profile, out var cached) &&
             DateTime.UtcNow - cached.CreatedAtUtc < ProfileFileStateCacheLifetime)
         {
-            return cached.Result;
+            result = cached.Result;
+        }
+        else
+        {
+            result = ProfileReadinessService.Validate(profile);
+            _validationCache[profile] = (result, DateTime.UtcNow);
         }
 
-        var result = ProfileReadinessService.Validate(profile);
-        _validationCache[profile] = (result, DateTime.UtcNow);
+        profile.HasLaunchError = !result.IsValid;
+        profile.LaunchErrorSummary = result.IsValid ? string.Empty : result.Summary;
         return result;
+    }
+
+    public void RefreshProfileLaunchReadiness(bool forceRefresh = false)
+    {
+        foreach (var profile in Profiles)
+        {
+            _ = GetProfileValidation(profile, forceRefresh);
+        }
     }
 
     private void RaiseCommandStates()

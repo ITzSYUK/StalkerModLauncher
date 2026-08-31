@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -145,12 +146,18 @@ public sealed class LauncherShellUiTests
             trayStyle.Descendants(presentation + "DoubleAnimation"),
             animation => (string?)animation.Attribute("Storyboard.TargetName") == "ProfileActions" &&
                          (string?)animation.Attribute("To") == "1" &&
-                         (string?)animation.Attribute("Duration") == "0:0:0.32");
-        Assert.Contains(
-            trayStyle.Descendants(presentation + "DoubleAnimation"),
-            animation => (string?)animation.Attribute("Storyboard.TargetName") == "ProfileActions" &&
-                         (string?)animation.Attribute("To") == "0" &&
-                         (string?)animation.Attribute("Duration") == "0:0:0.38");
+                         (string?)animation.Attribute("Duration") == "0:0:0.18");
+        var profileActionsExit = trayStyle.Descendants(presentation + "DoubleAnimation")
+            .Single(animation =>
+                (string?)animation.Attribute("Storyboard.TargetName") == "ProfileActions" &&
+                (string?)animation.Attribute("Storyboard.TargetProperty") ==
+                "(UIElement.RenderTransform).(TranslateTransform.X)" &&
+                (string?)animation.Attribute("To") == "18");
+        var exitDuration = (string?)profileActionsExit.Attribute("Duration");
+        Assert.NotNull(exitDuration);
+        Assert.Equal(
+            TimeSpan.FromMilliseconds(200),
+            TimeSpan.Parse(exitDuration!, CultureInfo.InvariantCulture));
         Assert.Equal("BitmapCache", (string?)trayDocument.Descendants(presentation + "Grid")
             .Single(element => (string?)element.Attribute(xaml + "Name") == "PanelRoot")
             .Attribute("CacheMode"));
@@ -158,6 +165,13 @@ public sealed class LauncherShellUiTests
         Assert.Equal("None", (string?)trayDocument.Root?.Attribute("WindowStyle"));
         Assert.Equal("False", (string?)trayDocument.Root?.Attribute("ShowInTaskbar"));
         Assert.Equal("Window_OnDeactivated", (string?)trayDocument.Root?.Attribute("Deactivated"));
+        Assert.Contains("HasLaunchError", sidebarDocument.ToString());
+        Assert.Contains("LaunchErrorSummary", sidebarDocument.ToString());
+        Assert.Contains("Text=\"!\"", sidebarDocument.ToString());
+        Assert.Contains(
+            trayStyle.Descendants(presentation + "DataTrigger"),
+            trigger => (string?)trigger.Attribute("Binding") == "{Binding HasLaunchError}" &&
+                       (string?)trigger.Attribute("Value") == "True");
     }
 
     [Fact]

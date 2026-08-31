@@ -26,6 +26,8 @@ public sealed class ModProfile : ObservableObject
     private string _mo2OverwritePath = string.Empty;
     private string _modInstallPath = string.Empty;
     private bool _isRunning;
+    private bool _hasLaunchError;
+    private string _launchErrorSummary = string.Empty;
     private ObservableCollection<ModEntry> _mods = new();
 
     public string Id
@@ -181,6 +183,20 @@ public sealed class ModProfile : ObservableObject
     {
         get => _isRunning;
         set => SetProperty(ref _isRunning, value);
+    }
+
+    [JsonIgnore]
+    public bool HasLaunchError
+    {
+        get => _hasLaunchError;
+        set => SetProperty(ref _hasLaunchError, value);
+    }
+
+    [JsonIgnore]
+    public string LaunchErrorSummary
+    {
+        get => _launchErrorSummary;
+        set => SetProperty(ref _launchErrorSummary, value);
     }
 
     public ObservableCollection<ModEntry> Mods
