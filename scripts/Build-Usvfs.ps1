@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repositoryRoot "src\StalkerModLauncher\StalkerModLauncher.csproj"
 $publishRoot = Join-Path $repositoryRoot "publish"
-$outputDirectory = Join-Path $publishRoot "vfs-experimental"
+$outputDirectory = Join-Path $publishRoot "usvfs"
 $usvfsRoot = Join-Path $repositoryRoot ".external\usvfs"
 $x86Host = Join-Path $repositoryRoot "native\StalkerModLauncher.UsvfsX86Host\build32\StalkerModLauncher.UsvfsX86Host.exe"
 $integrityScript = Join-Path $PSScriptRoot "ReleaseIntegrity.ps1"
@@ -89,5 +89,5 @@ if ($unexpected) {
     throw "Unexpected files in VFS build: $($unexpected.Name -join ', ')"
 }
 
-Write-Host "Experimental USVFS build created in $outputDirectory"
+Write-Host "USVFS build created in $outputDirectory"
 Get-ChildItem -LiteralPath $outputDirectory -File | Sort-Object Name | Format-Table Name, Length

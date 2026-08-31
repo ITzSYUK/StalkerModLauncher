@@ -278,4 +278,4 @@ if (-not $SkipSmokeTest) {
     & $smokeScript -RuntimeRoot $usvfsRoot
 }
 
-Write-Host "USVFS dependencies are ready for Build-VfsExperimental.ps1."
+Write-Host "USVFS dependencies are ready for Build-Usvfs.ps1."
