@@ -2,9 +2,9 @@
 
 [English version](TECHNICAL_EN.md) | [Русская версия](TECHNICAL_RU.md) | [Russian user guide](USER_GUIDE_RU.md)
 
-This document describes the current architecture of S.T.A.L.K.E.R. Mod Launcher `v1.3.0`: how profiles are stored, how the winning file is selected, how Workspace differs from USVFS, where profile data is kept, and which checks protect original game and mod folders.
+This document describes the current architecture of S.T.A.L.K.E.R. Mod Launcher `v1.4.0`: how profiles are stored, how the winning file is selected, how Workspace differs from USVFS, where profile data is kept, and which checks protect original game and mod folders.
 
-The detailed USVFS research history and experimental prototypes are available in [USVFS_RESEARCH_EN.md](USVFS_RESEARCH_EN.md).
+The detailed USVFS research history and early prototypes are available in [USVFS_RESEARCH_EN.md](USVFS_RESEARCH_EN.md).
 
 ## 1. Scope and compatibility
 
@@ -179,7 +179,7 @@ A hard link shares physical data with its source, so writing through it would al
 
 Explorer counts hard-linked files toward the visible logical size. Actual additional disk usage is calculated from local files and shown separately.
 
-## 7. USVFS: experimental mode
+## 7. USVFS: stable virtual mode
 
 USVFS mode uses the official [ModOrganizer2/usvfs](https://github.com/ModOrganizer2/usvfs) runtime. Instead of creating `current`, it presents one merged virtual tree to the launched game.
 
@@ -315,7 +315,7 @@ Settings files are stored at:
 %APPDATA%\StalkerModLauncher\settings.backup.json
 ```
 
-The JSON file contains a settings-structure version number. Its current value is `4`. While loading the file, the launcher:
+The JSON file contains a settings-structure version number. Its current value is `8`. While loading the file, the launcher:
 
 - upgrades the schema version;
 - creates missing collections;
@@ -439,7 +439,7 @@ research/
 tests/StalkerModLauncher.Tests/
 ```
 
-At application startup, one shared module creates the required components. Workspace is always available. USVFS is enabled only when its runtime files are present or the research feature flag is active.
+At application startup, one shared module creates the required components. Workspace is always available. USVFS is enabled when its runtime files are present; a development override is retained for isolated tests.
 
 The UI follows MVVM without an external dependency-injection container. Main-screen logic is divided by user scenario, and major areas of the window are separate controls.
 
@@ -476,24 +476,24 @@ Both packages contain the official x64/x86 USVFS runtime, x86 host, `LICENSE.txt
 
 Before packaging, the USVFS source is checked against its pinned revision and tracked patch; `scripts\Prepare-UsvfsSource.ps1` prepares that state. The names, paths, and version of the four upstream components are checked against `scripts\UsvfsRuntimeManifest.psd1`. Source builds and CI do not compare binary hashes: output bytes may differ between Windows SDK and vcpkg versions. Every package contains a `checksums.txt`, and the release directory contains another checksum file for the ZIP archives. After packaging, both ZIP files are extracted to a temporary directory and compared completely with their prepared packages, including EXE version, source commit, and absence of unexpected files.
 
-Experimental VFS publish:
+USVFS publish:
 
 ```powershell
 .\scripts\Build-UsvfsDependencies.ps1
-.\scripts\Build-VfsExperimental.ps1
+.\scripts\Build-Usvfs.ps1
 ```
 
 `Build-UsvfsDependencies.ps1` reproducibly prepares the pinned USVFS source, builds the x64/x86 runtime, x86 host, and both x86 smoke-process executables. For a clean clone, pass `-BootstrapUsvfs`; Visual Studio 2022 Build Tools with MSVC v143 for x64/x86 C++, CMake, Git, and `VCPKG_ROOT` are required. The script forces vcpkg to use VS 2022 and temporarily maps the repository root to a free drive letter so MSVC does not depend on non-ASCII characters in the original path. This is a local test build. After publishing, the script automatically runs the same x64/x86 USVFS smoke tests.
 
 After changing Visual Studio or vcpkg, use `-CleanUsvfsBuild`: it removes only `.external\usvfs\vsbuild64` and `vsbuild32` before configuring again.
 
-Without `-CleanPublishRoot`, the script recreates only `publish\vfs-experimental`; the switch deletes all of `publish`. Compiled third-party binaries are not stored in Git.
+Without `-CleanPublishRoot`, the script recreates only `publish\usvfs`; the switch deletes all of `publish`. Compiled third-party binaries are not stored in Git.
 
 The `.github\workflows\usvfs.yml` workflow repeats the complete build and smoke test on Windows 2022 when USVFS, the native helper, or related scripts change.
 
 ## 17. Known limitations
 
-- USVFS remains experimental. Workspace is available for builds that are not compatible with it.
+- USVFS and Workspace are both considered stable. Use the other backend for builds that are incompatible with one of them.
 - USVFS requires the Microsoft Visual C++ 2015-2022 Redistributable matching the target game's architecture.
 - Cross-drive symbolic links depend on Windows configuration.
 - Absolute game and mod paths are not repaired automatically after folders are moved.

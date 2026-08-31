@@ -72,11 +72,11 @@ nested=mod-system
 Managed USVFS PoC passed.
 ```
 
-The branch now contains an experimental `UsvfsLaunchBackend`. The backend is
+The branch now contains `UsvfsLaunchBackend`. The backend is
 available when the complete validated x64/x86 USVFS bundle and x86 host are
 placed next to the launcher executable. The environment variable
 `STALKER_MOD_LAUNCHER_ENABLE_OFFICIAL_USVFS=1` remains available for isolated
-research runs, but is no longer required by the prepared experimental build.
+test runs, but is not required by the prepared USVFS build.
 Each non-standalone profile can select `LinkedWorkspace` or `VirtualFileSystem`
 in the profile settings UI.
 
@@ -140,7 +140,7 @@ The new direction is narrower:
 1. Keep `LinkedWorkspace` as the stable launch backend.
 2. Keep `FileLayerPlan` and `OverlayManifest` as shared logic.
 3. Keep the official USVFS adapter isolated behind `IProfileLaunchBackend`.
-4. Expose it as an explicit per-profile experimental setting without changing
+4. Expose it as an explicit per-profile setting without changing
    the default backend.
 
 ## Manual test workflow
@@ -148,7 +148,7 @@ The new direction is narrower:
 1. Put the USVFS runtime files next to the launcher: `usvfs_x64.dll`,
    `usvfs_proxy_x64.exe`, `usvfs_x86.dll`, `usvfs_proxy_x86.exe` and
    `StalkerModLauncher.UsvfsX86Host.exe`.
-2. Open profile settings and select `USVFS - experimental`.
+2. Open profile settings and select `USVFS - stable`.
 3. For Anomaly, leave `Auto` selected or choose the required renderer.
 4. Start the profile and verify mod files, saves, settings and the application log.
 5. Switch the profile back to `Workspace - stable` if the game build is not
@@ -156,7 +156,7 @@ The new direction is narrower:
 
 ## Important constraints
 
-- Do not replace `LinkedWorkspace` while USVFS is experimental.
+- Do not replace `LinkedWorkspace` automatically; select the backend per profile.
 - Do not reintroduce custom hook DLLs.
 - Do not let USVFS write into game or mod folders.
 - All new/changed files must still target profile-controlled writable storage.

@@ -7,7 +7,7 @@ S.T.A.L.K.E.R. Mod Launcher includes or uses the following third-party component
 - Project: [ModOrganizer2/usvfs](https://github.com/ModOrganizer2/usvfs)
 - Copyright: Sebastian Herbord and the Mod Organizer 2 Team
 - License: GNU General Public License v3.0 or later
-- Use: experimental virtual filesystem backend for x64 and x86 game processes
+- Use: stable virtual filesystem backend for x64 and x86 game processes
 - Runtime version: 0.5.7.2
 - Source revision: `57f1ea5e6ad13f7435a7af184748e6c1312c5637`
 - Build compatibility patch: `scripts/patches/usvfs-msvc-pch.patch`

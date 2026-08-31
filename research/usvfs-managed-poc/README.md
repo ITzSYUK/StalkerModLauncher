@@ -13,5 +13,5 @@ Example:
 dotnet run --project .\research\usvfs-managed-poc\StalkerUsvfsManagedPoc.csproj -- "$env:TEMP\stalker-usvfs-src\usvfs"
 ```
 
-This project is not part of normal launcher runtime and should stay disabled
-for real game profiles until the adapter gets a dedicated experimental backend.
+This project is not part of the normal launcher runtime. It remains an isolated
+smoke-test harness for the stable production USVFS backend.
