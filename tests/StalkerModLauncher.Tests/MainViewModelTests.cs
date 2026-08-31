@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using StalkerModLauncher.Models;
 using StalkerModLauncher.Services;
@@ -9,6 +10,105 @@ namespace StalkerModLauncher.Tests;
 public sealed class MainViewModelTests
 {
     private static readonly string[] BoundaryTestModNames = ["First", "Second", "Third", "Fourth"];
+
+    [Fact]
+    public async Task LaunchProfileDoesNotChangeSelectedProfile()
+    {
+        await RunWithViewModelAsync(async (viewModel, _) =>
+        {
+            var selected = new ModProfile { Name = "Selected" };
+            var trayProfile = new ModProfile { Name = "Tray profile" };
+            viewModel.AddCreatedProfile(selected);
+            viewModel.AddCreatedProfile(trayProfile);
+            viewModel.SelectedProfile = selected;
+
+            await viewModel.LaunchProfileAsync(trayProfile);
+
+            Assert.Same(selected, viewModel.SelectedProfile);
+        });
+    }
+
+    [Fact]
+    public async Task LaunchProfileRefreshesCachedReadinessBeforeStarting()
+    {
+        await RunWithViewModelAsync(async (viewModel, root) =>
+        {
+            var gameRoot = CreateValidGameRoot(root);
+            var profile = new ModProfile
+            {
+                Name = "Readiness refresh",
+                GameInstallPath = gameRoot,
+                ExecutableRelativePath = @"bin\xr_3da.exe"
+            };
+            viewModel.AddCreatedProfile(profile);
+            Assert.True(viewModel.CanLaunchProfile(profile));
+
+            File.Delete(Path.Combine(gameRoot, "bin", "xr_3da.exe"));
+            await viewModel.LaunchProfileAsync(profile);
+
+            Assert.False(profile.IsRunning);
+        });
+    }
+
+    [Fact]
+    public async Task SavingLauncherSettingsUpdatesWindowsStartupRegistration()
+    {
+        var startup = new CapturingStartupRegistrationService();
+        await RunWithViewModelAsync(async (viewModel, _) =>
+        {
+            var settings = viewModel.CreateLauncherSettingsViewModel();
+            settings.StartWithWindows = true;
+
+            Assert.True(await settings.TrySaveAsync());
+            Assert.Equal([(true, true)], startup.Values);
+
+            startup.Values.Clear();
+            settings = viewModel.CreateLauncherSettingsViewModel();
+            settings.StartMinimizedToTrayOnWindowsStartup = false;
+
+            Assert.True(await settings.TrySaveAsync());
+            Assert.Equal([(true, false)], startup.Values);
+        }, startupRegistrationService: startup);
+    }
+
+    [Fact]
+    public async Task SavingLauncherSettingsCanHideTrayIconSafely()
+    {
+        await RunWithViewModelAsync(async (viewModel, _) =>
+        {
+            var settings = viewModel.CreateLauncherSettingsViewModel();
+            settings.ShowTrayIcon = false;
+
+            Assert.True(await settings.TrySaveAsync());
+            Assert.False(viewModel.ShowTrayIcon);
+            Assert.False(viewModel.StartMinimizedToTrayOnWindowsStartup);
+            Assert.False(viewModel.MinimizeToTrayOnClose);
+        });
+    }
+
+    [Fact]
+    public async Task ResettingLauncherSettingsPreservesProfilesAndMods()
+    {
+        await RunWithViewModelAsync(async (viewModel, root) =>
+        {
+            var profile = new ModProfile { Name = "Preserved profile" };
+            profile.Mods.Add(new ModEntry { Name = "Preserved mod", Order = 1 });
+            viewModel.AddCreatedProfile(profile);
+            var settings = viewModel.CreateLauncherSettingsViewModel(confirmReset: () => true);
+
+            settings.ResetCommand.Execute(null);
+            Assert.True(await settings.TrySaveAsync());
+
+            using var store = new SettingsStore(new AppPaths(
+                Path.Combine(root, "config"),
+                Path.Combine(root, "workspaces"),
+                preferGameDriveWorkspace: false));
+            var persisted = await store.LoadAsync();
+            var persistedProfile = Assert.Single(persisted.Profiles);
+            Assert.Equal("Preserved profile", persistedProfile.Name);
+            Assert.Equal("Preserved mod", Assert.Single(persistedProfile.Mods).Name);
+        });
+    }
 
     [Fact]
     public async Task NewProfileCommandRaisesProfileCreationRequest()
@@ -367,13 +467,14 @@ public sealed class MainViewModelTests
 
     private static async Task RunWithViewModelAsync(
         Func<MainViewModel, string, Task> test,
-        DialogService? dialogService = null)
+        DialogService? dialogService = null,
+        IStartupRegistrationService? startupRegistrationService = null)
     {
         var root = Path.Combine(Path.GetTempPath(), "StalkerModLauncherTests", Guid.NewGuid().ToString("N"));
         MainViewModel? viewModel = null;
         try
         {
-            viewModel = CreateViewModel(root, dialogService);
+            viewModel = CreateViewModel(root, dialogService, startupRegistrationService);
             await WaitForSettingsLoadedAsync(viewModel);
             await test(viewModel, root);
         }
@@ -391,14 +492,16 @@ public sealed class MainViewModelTests
         }
     }
 
-    private static MainViewModel CreateViewModel(string root, DialogService? dialogService = null)
+    private static MainViewModel CreateViewModel(
+        string root,
+        DialogService? dialogService = null,
+        IStartupRegistrationService? startupRegistrationService = null)
     {
         var paths = new AppPaths(
             Path.Combine(root, "config"),
             Path.Combine(root, "workspaces"),
             preferGameDriveWorkspace: false);
         var settingsStore = new SettingsStore(paths);
-        var workspaceBuilder = new WorkspaceBuilder(paths);
         var profileManager = new ProfileManager(paths, new FakeProfileWorkspaceManager());
         return new MainViewModel(
             paths,
@@ -406,10 +509,52 @@ public sealed class MainViewModelTests
             new LaunchCoordinator(new ThrowingProfileLauncher(), new FakeGameSessionTracker()),
             dialogService ?? new DialogService(),
             new ModConflictAnalyzer(),
-            new ModArchiveInstaller(),
             profileManager,
             new LaunchPreflightService(profileManager),
-            new ApplicationLogService(paths));
+            new ApplicationLogService(paths),
+            startupRegistrationService);
+    }
+
+    [Fact]
+    public async Task ReplacingModCollectionKeepsAutomaticExecutableSelectionSubscribed()
+    {
+        await RunWithViewModelAsync((viewModel, root) =>
+        {
+            var gameRoot = CreateValidGameRoot(root);
+            var engineModRoot = Directory.CreateDirectory(Path.Combine(root, "mods", "replacement-engine")).FullName;
+            Directory.CreateDirectory(Path.Combine(engineModRoot, "bin_x64"));
+            File.WriteAllText(Path.Combine(engineModRoot, "bin_x64", "xrEngine.exe"), string.Empty);
+            var profile = new ModProfile
+            {
+                Name = "Replaced mod collection",
+                GameInstallPath = gameRoot,
+                ExecutableRelativePath = @"bin\xr_3da.exe"
+            };
+            viewModel.AddCreatedProfile(profile);
+
+            profile.Mods = new ObservableCollection<ModEntry>
+            {
+                new()
+                {
+                    Name = "Replacement engine",
+                    SourcePath = engineModRoot,
+                    Order = 1,
+                    IsEnabled = true
+                }
+            };
+
+            Assert.Equal(@"bin_x64\xrEngine.exe", profile.ExecutableRelativePath);
+            Assert.Same(profile.Mods, viewModel.FilteredMods?.SourceCollection);
+            return Task.CompletedTask;
+        });
+    }
+
+    private sealed class CapturingStartupRegistrationService : IStartupRegistrationService
+    {
+        public List<(bool Enabled, bool Minimized)> Values { get; } = [];
+
+        public void Configure(bool enabled, bool startMinimizedToTray) =>
+            Values.Add((enabled, startMinimizedToTray));
     }
 
     private sealed class CapturingDialogService : DialogService

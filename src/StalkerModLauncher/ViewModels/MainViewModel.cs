@@ -10,16 +10,32 @@ namespace StalkerModLauncher.ViewModels;
 
 public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
+    private static readonly TimeSpan ProfileFileStateCacheLifetime = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan ConflictAnalysisDelay = TimeSpan.FromMilliseconds(100);
     private readonly AppPaths _paths;
     private readonly SettingsStore _settingsStore;
     private readonly LaunchCoordinator _launchCoordinator;
     private readonly DialogService _dialogService;
     private readonly ModConflictAnalyzer _modConflictAnalyzer;
-    private readonly ModArchiveInstaller _modArchiveInstaller;
     private readonly ProfileManager _profileManager;
     private readonly LaunchPreflightService _launchPreflightService;
     private readonly ApplicationLogService _applicationLogService;
+    private readonly IStartupRegistrationService _startupRegistrationService;
     private readonly DebouncedAsyncAction _autoSave;
+    private readonly DebouncedAsyncAction _conflictAnalysisDebounce;
+    private readonly Dictionary<ModProfile, ListCollectionView> _filteredModViews =
+        new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<ModProfile, (ValidationResult Result, DateTime CreatedAtUtc)> _validationCache =
+        new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<ModProfile> _trackedProfiles = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<ModProfile> _profilesRenumberingMods = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<ModProfile, ObservableCollection<ModEntry>> _trackedModCollections =
+        new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<ObservableCollection<ModEntry>, ModProfile> _modCollectionOwners =
+        new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<ModEntry, ModProfile> _modOwners = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<ModProfile, DateTime> _automaticExecutableRefreshTimes =
+        new(ReferenceEqualityComparer.Instance);
     private CancellationTokenSource? _conflictAnalysisCancellation;
     private string _lastBrowsedGamePath = string.Empty;
     private ModProfile? _selectedProfile;
@@ -52,21 +68,24 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         LaunchCoordinator launchCoordinator,
         DialogService dialogService,
         ModConflictAnalyzer modConflictAnalyzer,
-        ModArchiveInstaller modArchiveInstaller,
         ProfileManager profileManager,
         LaunchPreflightService launchPreflightService,
-        ApplicationLogService applicationLogService)
+        ApplicationLogService applicationLogService,
+        IStartupRegistrationService? startupRegistrationService = null)
     {
         _paths = paths;
         _settingsStore = settingsStore;
         _launchCoordinator = launchCoordinator;
         _dialogService = dialogService;
         _modConflictAnalyzer = modConflictAnalyzer;
-        _modArchiveInstaller = modArchiveInstaller;
         _profileManager = profileManager;
         _launchPreflightService = launchPreflightService;
         _applicationLogService = applicationLogService;
+        _startupRegistrationService = startupRegistrationService ?? new StartupRegistrationService();
         _autoSave = new DebouncedAsyncAction(SaveAsync, TimeSpan.FromMilliseconds(500));
+        _conflictAnalysisDebounce = new DebouncedAsyncAction(
+            () => InvokeOnUiAsync(CalculateModOverlayInfo),
+            ConflictAnalysisDelay);
         ActivityLog = new ActivityLogViewModel(_applicationLogService, _autoSave.Schedule);
 
         Profiles.CollectionChanged += ProfilesOnCollectionChanged;
@@ -122,7 +141,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ScanForModsCommand = new AsyncRelayCommand(
             ScanForModsAsync,
             () => CanEditSelectedProfile && SelectedProfile is { IsStandalone: false });
-        ToggleInterfaceCommand = new RelayCommand(() => IsPdaInterfaceEnabled = !IsPdaInterfaceEnabled);
         Initialization = LoadAsync();
     }
 
@@ -206,10 +224,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             if (_selectedProfile is not null)
             {
                 _selectedProfile.PropertyChanged += OnSelectedProfilePropertyChanged;
-                RefreshAutomaticExecutableSelection(
-                    _selectedProfile,
-                    "выбора профиля",
-                    preferExistingRelativePath: true);
+                if (!_automaticExecutableRefreshTimes.TryGetValue(_selectedProfile, out var refreshedAtUtc) ||
+                    DateTime.UtcNow - refreshedAtUtc >= ProfileFileStateCacheLifetime)
+                {
+                    _automaticExecutableRefreshTimes[_selectedProfile] = DateTime.UtcNow;
+                    RefreshAutomaticExecutableSelection(
+                        _selectedProfile,
+                        "выбора профиля",
+                        preferExistingRelativePath: true);
+                }
             }
         }
     }
@@ -410,16 +433,38 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public RelayCommand ShowSelectedModConflictsCommand { get; }
     public RelayCommand ShowFileTreeCommand { get; }
     public AsyncRelayCommand ScanForModsCommand { get; }
-    public RelayCommand ToggleInterfaceCommand { get; }
-
-    public void AppendLog(string message) => Log(message);
+    public void AppendLog(string message, LauncherLogLevel level = LauncherLogLevel.Standard) => Log(message, level);
 
     private void RefreshValidation()
     {
-        var result = ProfileReadinessService.Validate(SelectedProfile);
+        var profile = SelectedProfile;
+        ValidationResult result;
+        if (profile is null)
+        {
+            result = ProfileReadinessService.Validate(null);
+        }
+        else
+        {
+            result = GetProfileValidation(profile);
+        }
+
         IsGameValid = result.IsValid;
         ValidationSummary = result.Summary;
         RaiseCommandStates();
+    }
+
+    private ValidationResult GetProfileValidation(ModProfile profile, bool forceRefresh = false)
+    {
+        if (!forceRefresh &&
+            _validationCache.TryGetValue(profile, out var cached) &&
+            DateTime.UtcNow - cached.CreatedAtUtc < ProfileFileStateCacheLifetime)
+        {
+            return cached.Result;
+        }
+
+        var result = ProfileReadinessService.Validate(profile);
+        _validationCache[profile] = (result, DateTime.UtcNow);
+        return result;
     }
 
     private void RaiseCommandStates()
@@ -450,16 +495,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ScanForModsCommand.RaiseCanExecuteChanged();
     }
 
-    private void Log(string message)
+    private void Log(string message, LauncherLogLevel level = LauncherLogLevel.Standard)
     {
         var app = App.Current;
         if (app is null)
         {
-            ActivityLog.Append(message);
+            ActivityLog.Append(message, level);
             return;
         }
 
-        app.Dispatcher.Invoke(() => ActivityLog.Append(message));
+        app.Dispatcher.Invoke(() => ActivityLog.Append(message, level));
     }
 
     public ConflictExplorerViewModel CreateConflictExplorerViewModel(ModEntry? selectedMod)
@@ -486,17 +531,24 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private void CreateFilteredModsView()
     {
-        if (SelectedProfile is null)
+        var profile = SelectedProfile;
+        if (profile is null)
         {
             FilteredMods = null;
             return;
         }
 
-        var view = new ListCollectionView((IList)SelectedProfile.Mods)
+        if (!_filteredModViews.TryGetValue(profile, out var view))
         {
-            Filter = item => item is ModEntry mod && MatchesModFilter(mod)
-        };
+            view = new ListCollectionView((IList)profile.Mods)
+            {
+                Filter = item => item is ModEntry mod && MatchesModFilter(mod)
+            };
+            _filteredModViews.Add(profile, view);
+        }
+
         FilteredMods = view;
+        view.Refresh();
     }
 
     private bool MatchesModFilter(ModEntry mod)

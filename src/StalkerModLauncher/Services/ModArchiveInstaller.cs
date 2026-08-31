@@ -29,7 +29,7 @@ public sealed record ModArchiveInstallProgress(
     long ExtractedBytes,
     long? TotalBytes);
 
-public sealed class ModArchiveInstaller
+public static class ModArchiveInstaller
 {
     private const int MaximumEntryCount = 250_000;
     private const long FreeSpaceReserve = 256L * 1024 * 1024;

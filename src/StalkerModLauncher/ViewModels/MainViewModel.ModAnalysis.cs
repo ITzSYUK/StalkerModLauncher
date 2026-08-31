@@ -10,6 +10,15 @@ public sealed partial class MainViewModel
         _conflictAnalysisCancellation?.Cancel();
         _conflictAnalysisCancellation?.Dispose();
         _conflictAnalysisCancellation = null;
+        _conflictAnalysisDebounce.Schedule();
+    }
+
+    private void CalculateModOverlayInfo()
+    {
+        if (_disposed)
+        {
+            return;
+        }
 
         var profile = SelectedProfile;
         if (profile is null)

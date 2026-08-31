@@ -22,7 +22,7 @@ public sealed class ProfileManager
             Description = "S.T.A.L.K.E.R. mod profile"
         };
 
-        profile.ModInstallPath = _paths.GetDefaultModInstallPath(profile.Id, profile.GameInstallPath);
+        profile.ModInstallPath = _paths.GetDefaultModInstallPath(profile.GameInstallPath);
         return profile;
     }
 
@@ -63,7 +63,7 @@ public sealed class ProfileManager
             duplicate.WorkspacePath = CreateWorkspacePath(duplicate, duplicate.GameInstallPath);
         }
 
-        duplicate.ModInstallPath = _paths.GetDefaultModInstallPath(duplicate.Id, duplicate.GameInstallPath);
+        duplicate.ModInstallPath = _paths.GetDefaultModInstallPath(duplicate.GameInstallPath);
 
         return duplicate;
     }
@@ -96,7 +96,7 @@ public sealed class ProfileManager
             profile.ExecutableRelativePath = @"bin\xr_3da.exe";
         }
 
-        var defaultModInstallPath = _paths.GetDefaultModInstallPath(profile.Id, profile.GameInstallPath);
+        var defaultModInstallPath = _paths.GetDefaultModInstallPath(profile.GameInstallPath);
         var legacyModInstallPath = _paths.GetLegacyProfileModInstallPath(profile.Id, profile.GameInstallPath);
         if (string.IsNullOrWhiteSpace(profile.ModInstallPath) ||
             FileSystemSafety.IsSameDirectory(profile.ModInstallPath, legacyModInstallPath))

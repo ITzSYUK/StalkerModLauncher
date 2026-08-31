@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using StalkerModLauncher.Infrastructure;
+using StalkerModLauncher.Models;
 using StalkerModLauncher.Services;
 
 namespace StalkerModLauncher.ViewModels;
@@ -60,9 +61,9 @@ public sealed class ActivityLogViewModel : ObservableObject
         OnPropertyChanged(nameof(RowHeight));
     }
 
-    public void Append(string message)
+    public void Append(string message, LauncherLogLevel level = LauncherLogLevel.Standard)
     {
-        var entry = _applicationLogService.Write(message);
+        var entry = _applicationLogService.Write(message, messageLevel: level);
         Entries.Insert(0, entry);
         while (Entries.Count > 200)
         {

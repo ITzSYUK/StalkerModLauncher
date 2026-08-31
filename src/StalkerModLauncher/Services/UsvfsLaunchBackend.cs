@@ -29,7 +29,7 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
             throw new InvalidOperationException(
                 "Official USVFS backend is unavailable. Put the complete x64/x86 USVFS runtime " +
                 "and StalkerModLauncher.UsvfsX86Host.exe next to the launcher or set " +
-                $"{UsvfsFeatureGate.EnableEnvironmentVariable}=1 for a research build.");
+                $"{UsvfsFeatureGate.EnableEnvironmentVariable}=1 for a development build.");
         }
 
         if (context.Profile.IsStandalone)

@@ -54,4 +54,31 @@ public sealed class AppSettingsNormalizerTests
 
         Assert.True(normalized.IsPdaInterfaceEnabled);
     }
+
+    [Fact]
+    public void NormalizeRepairsUnknownLauncherLogLevel()
+    {
+        var settings = new AppSettings { LogLevel = (LauncherLogLevel)999 };
+
+        var normalized = AppSettingsNormalizer.Normalize(settings);
+
+        Assert.Equal(LauncherLogLevel.Standard, normalized.LogLevel);
+    }
+
+    [Fact]
+    public void NormalizeDisablesTrayOnlyBehaviorWhenTrayIconIsHidden()
+    {
+        var settings = new AppSettings
+        {
+            ShowTrayIcon = false,
+            StartMinimizedToTrayOnWindowsStartup = true,
+            MinimizeToTrayOnClose = true
+        };
+
+        var normalized = AppSettingsNormalizer.Normalize(settings);
+
+        Assert.False(normalized.StartMinimizedToTrayOnWindowsStartup);
+        Assert.False(normalized.MinimizeToTrayOnClose);
+    }
+
 }

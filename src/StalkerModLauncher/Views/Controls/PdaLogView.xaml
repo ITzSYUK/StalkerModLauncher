@@ -10,9 +10,7 @@
         </ResourceDictionary>
     </UserControl.Resources>
     <Grid Margin="10">
-        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-        <TextBlock Text="ЖУРНАЛ ЛАУНЧЕРА" FontFamily="Bahnschrift SemiCondensed" FontSize="16" Foreground="#E2DDC9" Margin="0,0,0,7"/>
-        <TextBox Grid.Row="1"
+        <TextBox
                  Text="{Binding ActivityLog.Text, Mode=OneWay}"
                  IsReadOnly="True"
                  AcceptsReturn="True"

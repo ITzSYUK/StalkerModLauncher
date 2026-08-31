@@ -16,6 +16,17 @@ public static class AppSettingsNormalizer
 
         settings.LegacyGameInstallPath = null;
         settings.SchemaVersion = AppSettings.CurrentSchemaVersion;
+        if (!Enum.IsDefined(settings.LogLevel))
+        {
+            settings.LogLevel = LauncherLogLevel.Standard;
+        }
+
+        if (!settings.ShowTrayIcon)
+        {
+            settings.StartMinimizedToTrayOnWindowsStartup = false;
+            settings.MinimizeToTrayOnClose = false;
+        }
+
         settings.Profiles ??= [];
         settings.Profiles = settings.Profiles.Where(profile => profile is not null).ToList();
 

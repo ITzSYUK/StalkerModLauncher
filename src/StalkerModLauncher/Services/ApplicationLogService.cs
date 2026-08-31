@@ -1,3 +1,5 @@
+using StalkerModLauncher.Models;
+
 namespace StalkerModLauncher.Services;
 
 public sealed class ApplicationLogService
@@ -13,9 +15,20 @@ public sealed class ApplicationLogService
         _paths = paths;
     }
 
-    public string Write(string message, DateTime? timestamp = null)
+    public LauncherLogLevel Level { get; set; } = LauncherLogLevel.Standard;
+
+    public string Write(
+        string message,
+        DateTime? timestamp = null,
+        LauncherLogLevel messageLevel = LauncherLogLevel.Standard)
     {
         var time = timestamp ?? DateTime.Now;
+        var displayEntry = $"[{time:HH:mm:ss}] {message}";
+        if (messageLevel > Level)
+        {
+            return displayEntry;
+        }
+
         try
         {
             lock (_sync)
@@ -33,7 +46,7 @@ public sealed class ApplicationLogService
             // File logging is best-effort.
         }
 
-        return $"[{time:HH:mm:ss}] {message}";
+        return displayEntry;
     }
 
     private void RotateIfNeeded(string logPath)

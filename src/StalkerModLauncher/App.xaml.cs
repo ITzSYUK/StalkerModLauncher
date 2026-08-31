@@ -14,6 +14,11 @@ public sealed partial class App : Application, IDisposable
     private readonly AppServices _services = new();
     private readonly SingleInstanceGuard _singleInstance = new("StalkerModLauncher");
     private readonly UiSoundService _uiSoundService = new();
+    private TrayIconService? _trayIconService;
+    private ViewModels.MainViewModel? _mainViewModel;
+    private Views.MainWindow? _launcherWindow;
+    private bool _startMinimized;
+    private bool _isExiting;
     private bool _disposed;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -33,7 +38,15 @@ public sealed partial class App : Application, IDisposable
             return;
         }
 
+        _startMinimized = e.Args.Any(argument =>
+            argument.Equals("--minimized", StringComparison.OrdinalIgnoreCase));
         _uiSoundService.Initialize();
+
+        if (_startMinimized)
+        {
+            _ = ShowLauncherSafelyAsync();
+            return;
+        }
 
         BitmapImage? bitmap = null;
         try
@@ -57,7 +70,9 @@ public sealed partial class App : Application, IDisposable
         }
         catch (Exception ex)
         {
-            _services.ApplicationLogService.Write($"Splash screen loading failed: {ex}");
+            _services.ApplicationLogService.Write(
+                $"Splash screen loading failed: {ex}",
+                messageLevel: Models.LauncherLogLevel.ErrorsOnly);
         }
 
         if (bitmap is null)
@@ -127,6 +142,7 @@ public sealed partial class App : Application, IDisposable
         }
 
         _disposed = true;
+        _trayIconService?.Dispose();
         _uiSoundService.Dispose();
         _singleInstance.Dispose();
         _services.Dispose();
@@ -165,20 +181,39 @@ public sealed partial class App : Application, IDisposable
 
     private Views.MainWindow CreateMainWindow()
     {
-        return new Views.MainWindow(
-            _services.CreateMainViewModel(),
+        _mainViewModel = _services.CreateMainViewModel();
+        _launcherWindow = new Views.MainWindow(
+            _mainViewModel,
             _services.WindowNavigationService);
+        return _launcherWindow;
     }
 
     private async Task ShowLauncherAsync(Action? launcherShown = null)
     {
         var main = CreateMainWindow();
         MainWindow = main;
-        var pdaIsActive = await main.ShowInitialInterfaceAsync();
+        var pdaIsActive = await main.ShowInitialInterfaceAsync(_startMinimized);
+        _trayIconService = new TrayIconService(
+            _mainViewModel!,
+            main.ShowFromTray,
+            () => _ = ExitLauncherAsync(),
+            _services.ApplicationLogService);
+
+        var remainsHidden = _startMinimized && _mainViewModel!.ShowTrayIcon;
+        if (_startMinimized && !remainsHidden)
+        {
+            main.ShowFromTray();
+        }
+
         launcherShown?.Invoke();
-        if (!pdaIsActive)
+        if (!pdaIsActive && !remainsHidden)
         {
             await ShowAboutIfNeededAsync(main);
+        }
+
+        if (_mainViewModel!.AutoCheckForUpdates)
+        {
+            _ = CheckForUpdatesAtStartupAsync();
         }
     }
 
@@ -190,7 +225,9 @@ public sealed partial class App : Application, IDisposable
         }
         catch (Exception ex)
         {
-            _services.ApplicationLogService.Write($"Launcher UI startup failed: {ex}");
+            _services.ApplicationLogService.Write(
+                $"Launcher UI startup failed: {ex}",
+                messageLevel: Models.LauncherLogLevel.ErrorsOnly);
             MessageBox.Show(
                 $"Не удалось открыть окно лаунчера. Подробности записаны в журнал.\n\n{ex.Message}",
                 "Ошибка запуска лаунчера",
@@ -203,5 +240,48 @@ public sealed partial class App : Application, IDisposable
     private async Task ShowAboutIfNeededAsync(Window? owner = null)
     {
         await _services.WindowNavigationService.ShowAboutAsync(owner, onlyIfNeeded: true);
+    }
+
+    private async Task CheckForUpdatesAtStartupAsync()
+    {
+        try
+        {
+            var result = await _services.LauncherUpdateService.CheckAsync();
+            if (result.IsUpdateAvailable)
+            {
+                if (_mainViewModel?.ShowUpdateNotifications == true)
+                {
+                    _trayIconService?.ShowUpdateAvailable(result);
+                }
+                _mainViewModel?.AppendLog(
+                    $"Launcher update available: {result.LatestVersion}.",
+                    Models.LauncherLogLevel.Standard);
+            }
+        }
+        catch (Exception ex)
+        {
+            _mainViewModel?.AppendLog(
+                $"Automatic update check failed: {ex.Message}",
+                Models.LauncherLogLevel.ErrorsOnly);
+        }
+    }
+
+    private async Task ExitLauncherAsync()
+    {
+        if (_isExiting)
+        {
+            return;
+        }
+
+        _isExiting = true;
+        if (_mainViewModel is not null)
+        {
+            await _mainViewModel.CleanupAsync();
+        }
+
+        _trayIconService?.Dispose();
+        _trayIconService = null;
+        _launcherWindow?.CloseAfterCleanup();
+        Shutdown();
     }
 }

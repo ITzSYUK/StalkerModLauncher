@@ -203,7 +203,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            Log($"Scan failed: {ex.Message}");
+            Log($"Scan failed: {ex.Message}", LauncherLogLevel.ErrorsOnly);
             _dialogService.ShowError("Ошибка сканирования", ex.Message);
         }
         finally
@@ -261,7 +261,7 @@ public sealed partial class MainViewModel
             RaiseCommandStates();
 
             var installRoot = string.IsNullOrWhiteSpace(profile.ModInstallPath)
-                ? _paths.GetDefaultModInstallPath(profile.Id, profile.GameInstallPath)
+                ? _paths.GetDefaultModInstallPath(profile.GameInstallPath)
                 : profile.ModInstallPath;
             profile.ModInstallPath = ValidateModInstallPath(profile, installRoot);
 
@@ -312,7 +312,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            Log($"Mod archive installation failed: {ex.Message}");
+            Log($"Mod archive installation failed: {ex.Message}", LauncherLogLevel.ErrorsOnly);
             _dialogService.ShowError("Не удалось установить архив мода", ex.Message);
         }
         finally
@@ -619,7 +619,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            Log($"Could not open mod folder: {ex.Message}");
+            Log($"Could not open mod folder: {ex.Message}", LauncherLogLevel.ErrorsOnly);
         }
     }
 
@@ -646,7 +646,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            Log($"Could not open mod folder: {ex.Message}");
+            Log($"Could not open mod folder: {ex.Message}", LauncherLogLevel.ErrorsOnly);
         }
     }
 }

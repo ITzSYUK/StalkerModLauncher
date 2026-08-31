@@ -91,7 +91,10 @@ public sealed class WindowNavigationService
     public ModCatalogViewModel CreateModCatalogViewModel() =>
         new(_apProCatalogService);
 
-    public void ShowProfileHealth(Window owner, ModProfile profile, Action<string>? log = null)
+    public void ShowProfileHealth(
+        Window owner,
+        ModProfile profile,
+        Action<string, LauncherLogLevel>? log = null)
     {
         var viewModel = new ProfileHealthViewModel(
             profile,
@@ -102,13 +105,13 @@ public sealed class WindowNavigationService
         new ProfileHealthWindow(viewModel) { Owner = owner }.ShowDialog();
     }
 
-    public ProfileHealthViewModel CreateProfileHealthViewModel(ModProfile profile, Action<string>? log = null) =>
+    public ProfileHealthViewModel CreateProfileHealthViewModel(
+        ModProfile profile,
+        Action<string, LauncherLogLevel>? log = null) =>
         new(profile, _profileHealthService, _dialogService, _workspaceManagementService, log);
 
     public Task<LauncherUpdateResult> CheckForUpdatesAsync(CancellationToken cancellationToken = default) =>
         _launcherUpdateService.CheckAsync(cancellationToken);
-
-    public static void OpenUrl(string url) => DialogService.OpenUrl(url);
 
     public async Task ShowAboutAsync(Window? owner = null, bool onlyIfNeeded = false)
     {
@@ -118,11 +121,7 @@ public sealed class WindowNavigationService
             return;
         }
 
-        var aboutWindow = new AboutWindow(
-            _launcherUpdateService,
-            owner?.DataContext is MainViewModel mainViewModel
-                ? () => mainViewModel.ToggleInterfaceCommand.Execute(null)
-                : null)
+        var aboutWindow = new AboutWindow()
         {
             DontShowAgain = settings.DontShowAboutOnStartup,
             Owner = owner

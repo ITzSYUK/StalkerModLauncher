@@ -12,6 +12,7 @@ namespace StalkerModLauncher.Views;
 public partial class MainWindow : Window
 {
     private bool _isClosingAfterCleanup;
+    private bool _isClosing;
     private bool _initialInterfaceReady;
     private bool _isSwitchingToClassic;
     private PdaWindow? _pdaWindow;
@@ -75,11 +76,15 @@ public partial class MainWindow : Window
         WindowSystemIntegrationService.Initialize(this);
     }
 
-    public async Task<bool> ShowInitialInterfaceAsync()
+    public async Task<bool> ShowInitialInterfaceAsync(bool startHidden = false)
     {
         if (ViewModel is null)
         {
-            Show();
+            if (!startHidden)
+            {
+                Show();
+            }
+
             return false;
         }
 
@@ -87,11 +92,19 @@ public partial class MainWindow : Window
         _initialInterfaceReady = true;
         if (ViewModel.IsPdaInterfaceEnabled)
         {
-            ShowPdaWindow();
+            if (!startHidden)
+            {
+                ShowPdaWindow();
+            }
+
             return true;
         }
 
-        Show();
+        if (!startHidden)
+        {
+            Show();
+        }
+
         return false;
     }
 
@@ -120,6 +133,18 @@ public partial class MainWindow : Window
     private void ModCatalogButton_OnClick(object sender, RoutedEventArgs e)
     {
         _navigation.ShowModCatalog(this);
+    }
+
+    private void LauncherSettingsButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not null)
+        {
+            new LauncherSettingsWindow(ViewModel.CreateLauncherSettingsViewModel(
+                () => _navigation.CheckForUpdatesAsync()))
+            {
+                Owner = this
+            }.ShowDialog();
+        }
     }
 
     private void ProfileHealthButton_OnClick(object sender, RoutedEventArgs e)
@@ -197,6 +222,46 @@ public partial class MainWindow : Window
         Hide();
     }
 
+    public void ShowFromTray()
+    {
+        if (ViewModel?.IsPdaInterfaceEnabled == true)
+        {
+            if (_pdaWindow is null)
+            {
+                ShowPdaWindow();
+            }
+            else
+            {
+                _pdaWindow.Show();
+                _pdaWindow.Activate();
+            }
+
+            Hide();
+            return;
+        }
+
+        Show();
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        Activate();
+    }
+
+    public void HideToTray()
+    {
+        _pdaWindow?.Hide();
+        Hide();
+    }
+
+    public void CloseAfterCleanup()
+    {
+        _isClosingAfterCleanup = true;
+        _pdaWindow?.Close();
+        Close();
+    }
+
     private async void Window_OnClosing(object? sender, CancelEventArgs e)
     {
         if (_isClosingAfterCleanup)
@@ -205,6 +270,18 @@ public partial class MainWindow : Window
         }
 
         e.Cancel = true;
+        if (_isClosing)
+        {
+            return;
+        }
+
+        if (ViewModel?.MinimizeToTrayOnClose == true)
+        {
+            HideToTray();
+            return;
+        }
+
+        _isClosing = true;
         if (ViewModel is not null)
         {
             await ViewModel.CleanupAsync();
@@ -213,6 +290,7 @@ public partial class MainWindow : Window
         _isClosingAfterCleanup = true;
         _pdaWindow?.Close();
         Close();
+        Application.Current.Shutdown();
     }
 
 }

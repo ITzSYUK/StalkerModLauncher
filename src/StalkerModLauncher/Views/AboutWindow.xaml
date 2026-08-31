@@ -14,17 +14,12 @@
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0" Margin="0,0,0,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0">
+            <StackPanel>
                 <TextBlock Text="S.T.A.L.K.E.R. Mod Launcher"
                            FontSize="22"
                            FontWeight="Bold"
@@ -33,63 +28,18 @@
                            Margin="0,3,0,0"
                            Foreground="{StaticResource MutedTextBrush}"/>
             </StackPanel>
-            <Button Grid.Column="1"
-                    x:Name="CheckUpdatesButton"
-                    Content="Проверить обновления"
-                    MinWidth="160"
-                    VerticalAlignment="Center"
-                    Click="CheckUpdatesButton_OnClick"/>
         </Grid>
 
-        <Border x:Name="UpdateStatusPanel"
-                Grid.Row="1"
-                Background="{StaticResource PanelBrush}"
-                BorderBrush="{StaticResource StrokeBrush}"
-                BorderThickness="1"
-                CornerRadius="6"
-                Padding="10,8"
-                Margin="0,0,0,16"
-                Visibility="Collapsed">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock x:Name="UpdateStatusText"
-                           VerticalAlignment="Center"
-                           Foreground="{StaticResource MutedTextBrush}"
-                           TextWrapping="Wrap"/>
-                <Button x:Name="OpenReleaseButton"
-                        Grid.Column="1"
-                        Content="Открыть релиз"
-                        Style="{StaticResource PrimaryButtonStyle}"
-                        Visibility="Collapsed"
-                        Margin="12,0,0,0"
-                        Click="OpenReleaseButton_OnClick"/>
-            </Grid>
-        </Border>
-
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <controls:AboutContentView Margin="0,0,10,0"/>
         </ScrollViewer>
 
-        <Grid Grid.Row="3" Margin="0,16,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <CheckBox Grid.Column="0"
-                      IsChecked="{Binding DontShowAgain, RelativeSource={RelativeSource AncestorType=Window}}"
-                      Content="Не показывать при запуске"
-                      FontSize="12"
-                      Foreground="{StaticResource MutedTextBrush}"
-                      VerticalAlignment="Center"/>
-            <Button Grid.Column="1"
-                    Content="Интерфейс КПК"
-                    Style="{StaticResource PrimaryButtonStyle}"
-                    Click="PdaInterfaceButton_OnClick"
-                    ToolTip="Открыть альтернативный интерфейс в стиле КПК"
-                    MinWidth="130"/>
-        </Grid>
+        <CheckBox Grid.Row="2"
+                  Margin="0,16,0,0"
+                  IsChecked="{Binding DontShowAgain, RelativeSource={RelativeSource AncestorType=Window}}"
+                  Content="Не показывать при запуске"
+                  FontSize="12"
+                  Foreground="{StaticResource MutedTextBrush}"
+                  VerticalAlignment="Center"/>
     </Grid>
 </Window>

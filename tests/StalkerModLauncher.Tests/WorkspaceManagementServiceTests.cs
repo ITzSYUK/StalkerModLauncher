@@ -11,8 +11,6 @@ public sealed class WorkspaceManagementServiceTests : IDisposable
     [Fact]
     public async Task InspectAsyncReadsStatisticsFromManifestWithoutScanningWorkspace()
     {
-        var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
-        var service = new WorkspaceManagementService(new WorkspaceBuilder(paths));
         var workspace = Path.Combine(_root, "workspaces", "profile");
         Directory.CreateDirectory(Path.Combine(workspace, "current"));
         File.WriteAllText(Path.Combine(workspace, "current", "fsgame.ltx"), "12345");
@@ -45,8 +43,6 @@ public sealed class WorkspaceManagementServiceTests : IDisposable
     [Fact]
     public async Task InspectAsyncReturnsImmediatelyWithoutDetailedStatisticsForOldManifest()
     {
-        var paths = new AppPaths(_root, Path.Combine(_root, "workspaces"), false);
-        var service = new WorkspaceManagementService(new WorkspaceBuilder(paths));
         var workspace = Path.Combine(_root, "workspaces", "old-profile");
         Directory.CreateDirectory(Path.Combine(workspace, "current"));
         for (var index = 0; index < 5000; index++)

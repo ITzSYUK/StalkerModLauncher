@@ -56,7 +56,7 @@ public sealed class ProfileSettingsViewModel : ObservableObject
         _launchArguments = profile.LaunchArguments;
         _workspacePath = profile.WorkspacePath;
         _mo2OverwritePath = profile.Mo2OverwritePath;
-        _defaultModInstallPath = paths?.GetDefaultModInstallPath(profile.Id, profile.GameInstallPath)
+        _defaultModInstallPath = paths?.GetDefaultModInstallPath(profile.GameInstallPath)
             ?? profile.ModInstallPath;
         _modInstallPath = string.IsNullOrWhiteSpace(profile.ModInstallPath)
             ? _defaultModInstallPath
@@ -212,8 +212,8 @@ public sealed class ProfileSettingsViewModel : ObservableObject
     public bool CanUseUsvfs => IsUsvfsAvailable && !IsStandalone;
 
     public string UsvfsAvailabilityText => IsUsvfsAvailable
-        ? "USVFS подключает моды без сборки полного workspace. Режим пока считается экспериментальным."
-        : "Компоненты USVFS не найдены рядом с лаунчером. Доступен только стабильный Workspace.";
+        ? "USVFS подключает моды без сборки полного workspace. Совместимость зависит от конкретной игры и модификаций."
+        : "Компоненты USVFS не найдены рядом с лаунчером. Доступен только Workspace.";
 
     public bool UseLinkedWorkspace
     {

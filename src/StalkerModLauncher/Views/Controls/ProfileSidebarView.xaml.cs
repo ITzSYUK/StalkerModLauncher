@@ -9,6 +9,17 @@ namespace StalkerModLauncher.Views.Controls;
 
 public partial class ProfileSidebarView : UserControl
 {
+    public static readonly DependencyProperty IsTrayModeProperty = DependencyProperty.Register(
+        nameof(IsTrayMode),
+        typeof(bool),
+        typeof(ProfileSidebarView),
+        new PropertyMetadata(false, OnIsTrayModeChanged));
+
+    public static readonly DependencyProperty PrimaryProfileActionCommandProperty = DependencyProperty.Register(
+        nameof(PrimaryProfileActionCommand),
+        typeof(ICommand),
+        typeof(ProfileSidebarView));
+
     private Point _dragStartPoint;
     private ModProfile? _draggedProfile;
     private ListBoxItem? _dropTargetItem;
@@ -20,6 +31,20 @@ public partial class ProfileSidebarView : UserControl
     }
 
     public event RoutedEventHandler? ModCatalogRequested;
+    public event RoutedEventHandler? LauncherSettingsRequested;
+    public event RoutedEventHandler? OpenLauncherRequested;
+
+    public bool IsTrayMode
+    {
+        get => (bool)GetValue(IsTrayModeProperty);
+        set => SetValue(IsTrayModeProperty, value);
+    }
+
+    public ICommand? PrimaryProfileActionCommand
+    {
+        get => (ICommand?)GetValue(PrimaryProfileActionCommandProperty);
+        set => SetValue(PrimaryProfileActionCommandProperty, value);
+    }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
 
@@ -28,8 +53,30 @@ public partial class ProfileSidebarView : UserControl
         ModCatalogRequested?.Invoke(this, e);
     }
 
+    private void LauncherSettingsButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        LauncherSettingsRequested?.Invoke(this, e);
+    }
+
+    private void OpenLauncherButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        OpenLauncherRequested?.Invoke(this, e);
+    }
+
     private void ProfilesList_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (IsTrayMode)
+        {
+            if (e.OriginalSource is DependencyObject traySource &&
+                FindAncestor<ListBoxItem>(traySource) is not null &&
+                FindAncestor<System.Windows.Controls.Primitives.ButtonBase>(traySource) is null)
+            {
+                e.Handled = true;
+            }
+
+            return;
+        }
+
         _draggedProfile = null;
         if (e.OriginalSource is not DependencyObject source || IsInteractiveDragSource(source))
         {
@@ -42,6 +89,11 @@ public partial class ProfileSidebarView : UserControl
 
     private void ProfilesList_OnMouseMove(object sender, MouseEventArgs e)
     {
+        if (IsTrayMode)
+        {
+            return;
+        }
+
         var currentPosition = e.GetPosition(ProfilesList);
         if (e.LeftButton != MouseButtonState.Pressed ||
             _draggedProfile is null ||
@@ -61,6 +113,14 @@ public partial class ProfileSidebarView : UserControl
         {
             _draggedProfile = null;
             ClearDropHighlight();
+        }
+    }
+
+    private static void OnIsTrayModeChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (sender is ProfileSidebarView view)
+        {
+            view.ProfilesList.AllowDrop = e.NewValue is not true;
         }
     }
 

@@ -45,7 +45,8 @@
                                         MouseDown="Title_MouseDown"/>
 
                 <controls:ProfileSidebarView Grid.Row="1"
-                                             ModCatalogRequested="ModCatalogButton_OnClick"/>
+                                             ModCatalogRequested="ModCatalogButton_OnClick"
+                                             LauncherSettingsRequested="LauncherSettingsButton_OnClick"/>
             </Grid>
 
             <Border Grid.Column="2"

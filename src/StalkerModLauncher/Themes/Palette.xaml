@@ -23,4 +23,5 @@
     <SolidColorBrush x:Key="AccentPressedBrush" Color="#A86D23"/>
     <SolidColorBrush x:Key="AccentGreenBrush" Color="#87A15A"/>
     <SolidColorBrush x:Key="DangerBrush" Color="#AD5848"/>
+    <CornerRadius x:Key="LauncherSettingsPanelCornerRadius">5</CornerRadius>
 </ResourceDictionary>

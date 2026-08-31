@@ -124,7 +124,7 @@ public sealed class ProfileLauncher : IProfileLauncher
         }
 
         throw new InvalidOperationException(kind == LaunchBackendKind.VirtualFileSystem
-            ? "Для профиля выбран USVFS, но его компоненты недоступны. Запустите экспериментальную сборку с файлами usvfs_x64.dll и usvfs_proxy_x64.exe либо выберите Workspace в настройках профиля."
+            ? "Для профиля выбран USVFS, но его компоненты недоступны. Установите сборку лаунчера с файлами usvfs_x64.dll и usvfs_proxy_x64.exe либо выберите Workspace в настройках профиля."
             : $"Система запуска профиля недоступна: {kind}.");
     }
 

@@ -78,6 +78,31 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveAndLoadPreservesLauncherPreferences()
+    {
+        await _store.SaveAsync(new AppSettings
+        {
+            ShowTrayIcon = true,
+            StartWithWindows = true,
+            StartMinimizedToTrayOnWindowsStartup = false,
+            MinimizeToTrayOnClose = true,
+            AutoCheckForUpdates = false,
+            ShowUpdateNotifications = false,
+            LogLevel = LauncherLogLevel.Detailed
+        });
+
+        var loaded = await _store.LoadAsync();
+
+        Assert.True(loaded.ShowTrayIcon);
+        Assert.True(loaded.StartWithWindows);
+        Assert.False(loaded.StartMinimizedToTrayOnWindowsStartup);
+        Assert.True(loaded.MinimizeToTrayOnClose);
+        Assert.False(loaded.AutoCheckForUpdates);
+        Assert.False(loaded.ShowUpdateNotifications);
+        Assert.Equal(LauncherLogLevel.Detailed, loaded.LogLevel);
+    }
+
+    [Fact]
     public async Task SaveAsyncCapturesSnapshotBeforeWaitingForWrite()
     {
         var settings = new AppSettings { LastBrowsedGamePath = "snapshot" };

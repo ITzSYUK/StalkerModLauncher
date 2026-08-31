@@ -242,39 +242,11 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Chrome" Background="{TemplateBinding Background}"/>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{StaticResource PdaPowerHoverBrush}"/></Trigger>
-                            <Trigger Property="IsPressed" Value="True"><Setter Property="Opacity" Value="0.7"/></Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style x:Key="PdaHeaderIconButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="30"/>
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="Padding" Value="4"/>
-            <Setter Property="Foreground" Value="#9CA7AD"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome" Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="1" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Foreground" Value="#EEEBDD"/>
-                                <Setter TargetName="Chrome" Property="Background" Value="#22303D"/>
-                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#667582"/>
+                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource PdaPowerHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="#0A111A"/>
+                                <Setter Property="Opacity" Value="0.7"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -359,17 +331,10 @@
                     <Button Content="Журнал" Style="{StaticResource PdaTopTabStyle}" Click="LogButton_OnClick"/>
                     <Button Content="О программе" Style="{StaticResource PdaTopTabStyle}" Click="AboutButton_OnClick"/>
                     <Button Style="{StaticResource PdaCompactTopTabStyle}"
-                            Command="{Binding ToggleInterfaceCommand}"
-                            ToolTip="Вернуться к обычному интерфейсу">
-                        <Viewbox Width="17" Height="17">
-                            <Canvas Width="24" Height="24">
-                                <Rectangle Canvas.Left="4" Canvas.Top="4" Width="16" Height="12"
-                                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.6"/>
-                                <Path Data="M9,20 H15 M12,16 V20 M10,7 L7,10 L10,13 M7,10 H15"
-                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                      StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
-                            </Canvas>
-                        </Viewbox>
+                            Click="LauncherSettingsButton_OnClick">
+                        <TextBlock FontFamily="Segoe MDL2 Assets"
+                                   FontSize="16"
+                                   Text="&#xE713;"/>
                     </Button>
                 </StackPanel>
                 <TextBlock x:Name="ClockText" Grid.Column="2" Text="00:00" HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -378,8 +343,18 @@
                         <TranslateTransform Y="2"/>
                     </TextBlock.RenderTransform>
                 </TextBlock>
-                <Button Grid.Column="3" Style="{StaticResource PdaPowerButtonStyle}" Click="PowerButton_OnClick"
-                        ToolTip="Выключить лаунчер"/>
+                <Button Grid.Column="3" Click="PowerButton_OnClick">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PdaPowerButtonStyle}">
+                            <Setter Property="ToolTip" Value="Выключить лаунчер"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding MinimizeToTrayOnClose}" Value="True">
+                                    <Setter Property="ToolTip" Value="Свернуть лаунчер в трей"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
             </Grid>
 
             <Border Grid.Row="1" Background="#E00D141E" BorderBrush="#3B4755" BorderThickness="0,1,0,1">

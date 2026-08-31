@@ -10,19 +10,24 @@ public sealed partial class MainViewModel
         return !IsBuilding && IsGameValid && SelectedProfile is { IsEnabled: true, IsRunning: false };
     }
 
-    private async Task LaunchAsync()
-    {
-        if (SelectedProfile is null)
-        {
-            return;
-        }
+    public bool CanLaunchProfile(ModProfile profile) =>
+        !IsBuilding &&
+        profile is { IsEnabled: true, IsRunning: false } &&
+        GetProfileValidation(profile).IsValid;
 
+    private Task LaunchAsync() => SelectedProfile is { } profile
+        ? LaunchProfileAsync(profile)
+        : Task.CompletedTask;
+
+    public async Task LaunchProfileAsync(ModProfile profile)
+    {
         try
         {
-            RefreshValidation();
-            if (!CanLaunch())
+            if (IsBuilding ||
+                profile is not { IsEnabled: true, IsRunning: false } ||
+                !GetProfileValidation(profile, forceRefresh: true).IsValid)
             {
-                Log("Launch blocked: profile is not ready.");
+                Log($"Launch blocked: profile '{profile.Name}' is not ready.", LauncherLogLevel.ErrorsOnly);
                 return;
             }
 
@@ -30,10 +35,10 @@ public sealed partial class MainViewModel
             BuildProgressText = "Проверка профиля перед запуском...";
             RaiseCommandStates();
 
-            var preflight = await _launchPreflightService.AnalyzeAsync(SelectedProfile);
+            var preflight = await _launchPreflightService.AnalyzeAsync(profile);
             foreach (var warning in preflight.Checks.Where(check => check.Status == ProfileHealthStatus.Warning))
             {
-                Log($"Preflight warning: {warning.Title}: {warning.Details}");
+                Log($"Preflight warning: {warning.Title}: {warning.Details}", LauncherLogLevel.Standard);
             }
 
             if (!preflight.CanLaunch)
@@ -44,21 +49,21 @@ public sealed partial class MainViewModel
             BuildProgressText = "Building workspace...";
             var progress = new Progress<string>(message =>
             {
-                Log(message);
+                Log(message, LauncherLogLevel.Detailed);
                 BuildProgressText = message;
             });
 
-            var session = await _launchCoordinator.StartAsync(SelectedProfile.GameInstallPath, SelectedProfile, progress);
+            var session = await _launchCoordinator.StartAsync(profile.GameInstallPath, profile, progress);
             await SaveAsync();
-            Log($"Game process created. PID: {session.ProcessId}");
-            SelectedProfile.IsRunning = true;
+            Log($"Game process created. PID: {session.ProcessId}", LauncherLogLevel.Detailed);
+            profile.IsRunning = true;
             RaiseCommandStates();
-            _ = ObserveLaunchReadinessAsync(session, SelectedProfile);
-            _ = CompleteGameSessionAsync(session.Completion, SelectedProfile);
+            _ = ObserveLaunchReadinessAsync(session, profile);
+            _ = CompleteGameSessionAsync(session.Completion, profile);
         }
         catch (Exception ex)
         {
-            Log($"Launch failed: {ex.Message}");
+            Log($"Launch failed: {ex.Message}", LauncherLogLevel.ErrorsOnly);
             _dialogService.ShowError("Не удалось запустить профиль", ex.Message);
         }
         finally
@@ -76,17 +81,17 @@ public sealed partial class MainViewModel
             var readiness = await session.Readiness;
             if (readiness.Status == GameLaunchReadinessStatus.Ready)
             {
-                Log($"Game launch ready: {readiness.Details}.");
+                Log($"Game launch ready: {readiness.Details}.", LauncherLogLevel.Detailed);
                 return;
             }
 
             if (readiness.Status == GameLaunchReadinessStatus.ExitedBeforeReady)
             {
-                Log($"Game exited before readiness: {readiness.Details}");
+                Log($"Game exited before readiness: {readiness.Details}", LauncherLogLevel.ErrorsOnly);
                 return;
             }
 
-            Log($"Possible game launch hang: {readiness.Details}");
+            Log($"Possible game launch hang: {readiness.Details}", LauncherLogLevel.ErrorsOnly);
             var terminate = false;
             await InvokeOnUiAsync(() =>
             {
@@ -105,7 +110,8 @@ public sealed partial class MainViewModel
             {
                 Log(session.TryTerminate()
                     ? "Hung launch processes were terminated by the user."
-                    : "No active launch processes were found to terminate.");
+                    : "No active launch processes were found to terminate.",
+                    LauncherLogLevel.ErrorsOnly);
             }
         }
         catch (OperationCanceledException)
@@ -113,7 +119,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            Log($"Launch readiness check failed: {ex.Message}");
+            Log($"Launch readiness check failed: {ex.Message}", LauncherLogLevel.ErrorsOnly);
         }
     }
 
@@ -144,7 +150,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            Log($"Playtime tracking failed: {ex.Message}");
+            Log($"Playtime tracking failed: {ex.Message}", LauncherLogLevel.ErrorsOnly);
             await InvokeOnUiAsync(() =>
             {
                 profile.IsRunning = false;
@@ -159,21 +165,21 @@ public sealed partial class MainViewModel
         if (diagnostics.IsQuickExit)
         {
             var exitCode = diagnostics.ExitCode.HasValue ? $" Exit code: {diagnostics.ExitCode}." : string.Empty;
-            Log($"Game exited shortly after launch ({result.Duration:g}).{exitCode}");
+            Log($"Game exited shortly after launch ({result.Duration:g}).{exitCode}", LauncherLogLevel.ErrorsOnly);
         }
         else if (diagnostics.ExitCode is not null and not 0)
         {
-            Log($"Game process exited with code {diagnostics.ExitCode}.");
+            Log($"Game process exited with code {diagnostics.ExitCode}.", LauncherLogLevel.ErrorsOnly);
         }
 
         if (diagnostics.IsSuspiciousExit && diagnostics.LatestLogPath is not null)
         {
-            Log($"Latest game log: {diagnostics.LatestLogPath}");
+            Log($"Latest game log: {diagnostics.LatestLogPath}", LauncherLogLevel.Detailed);
         }
 
         if (diagnostics.LatestCrashDumpPath is not null)
         {
-            Log($"Crash dump detected: {diagnostics.LatestCrashDumpPath}");
+            Log($"Crash dump detected: {diagnostics.LatestCrashDumpPath}", LauncherLogLevel.ErrorsOnly);
         }
     }
 }

@@ -1,4 +1,5 @@
 using StalkerModLauncher.Services;
+using StalkerModLauncher.Models;
 using Xunit;
 
 namespace StalkerModLauncher.Tests;
@@ -35,6 +36,53 @@ public sealed class ApplicationLogServiceTests : IDisposable
         Assert.True(File.Exists(Path.Combine(_root, "launcher.old.log")));
         Assert.Contains("After rotation", File.ReadAllText(logPath));
         Assert.True(new FileInfo(logPath).Length < 1024 * 1024);
+    }
+
+    [Fact]
+    public void ErrorsOnlyLevelSkipsOrdinaryFileEntriesButKeepsErrors()
+    {
+        var service = new ApplicationLogService(new AppPaths(_root, Path.Combine(_root, "workspaces"), false))
+        {
+            Level = LauncherLogLevel.ErrorsOnly
+        };
+
+        service.Write("Ordinary message", messageLevel: LauncherLogLevel.Standard);
+        service.Write("Failure message", messageLevel: LauncherLogLevel.ErrorsOnly);
+
+        var log = File.ReadAllText(Path.Combine(_root, "launcher.log"));
+        Assert.DoesNotContain("Ordinary message", log);
+        Assert.Contains("Failure message", log);
+    }
+
+    [Fact]
+    public void ErrorsOnlyLevelDoesNotInferSeverityFromMessageText()
+    {
+        var service = new ApplicationLogService(new AppPaths(_root, Path.Combine(_root, "workspaces"), false))
+        {
+            Level = LauncherLogLevel.ErrorsOnly
+        };
+
+        service.Write("Launcher UI startup failed: test");
+
+        Assert.False(File.Exists(Path.Combine(_root, "launcher.log")));
+    }
+
+    [Fact]
+    public void DetailedLevelWritesEveryExplicitSeverity()
+    {
+        var service = new ApplicationLogService(new AppPaths(_root, Path.Combine(_root, "workspaces"), false))
+        {
+            Level = LauncherLogLevel.Detailed
+        };
+
+        service.Write("Error", messageLevel: LauncherLogLevel.ErrorsOnly);
+        service.Write("Standard", messageLevel: LauncherLogLevel.Standard);
+        service.Write("Detailed", messageLevel: LauncherLogLevel.Detailed);
+
+        var log = File.ReadAllText(Path.Combine(_root, "launcher.log"));
+        Assert.Contains("Error", log);
+        Assert.Contains("Standard", log);
+        Assert.Contains("Detailed", log);
     }
 
     public void Dispose()

@@ -52,7 +52,7 @@
 
         <TextBlock Text="Режимы запуска" Style="{DynamicResource AboutSectionHeadingStyle}"/>
         <TextBlock Style="{DynamicResource AboutParagraphStyle}">
-            «Workspace — стабильный» заранее собирает рабочую среду ссылками и подходит для большинства игр и модов. «USVFS — экспериментальный» накладывает те же слои виртуально через технологию Mod Organizer 2 и почти не использует место для файлов игры, но отдельные сборки могут быть с ним несовместимы. При проблемах выберите стабильный режим в настройках профиля.
+            Workspace заранее собирает рабочую среду ссылками. USVFS накладывает те же слои виртуально через технологию Mod Organizer 2 и почти не использует место для файлов игры. Оба режима считаются стабильными; совместимость конкретной игры или модификации может отличаться, поэтому при проблемах попробуйте другой режим в настройках профиля.
         </TextBlock>
 
         <TextBlock Text="Браузер модификаций" Style="{DynamicResource AboutSectionHeadingStyle}"/>
@@ -89,6 +89,11 @@
         <TextBlock Text="Можно ли убрать мод без удаления его файлов" Style="{DynamicResource AboutQuestionHeadingStyle}"/>
         <TextBlock Style="{DynamicResource AboutFinalAnswerStyle}">
             Да. «Убрать» исключает мод только из этого профиля. Исходная папка мода на диске остаётся нетронутой.
+        </TextBlock>
+
+        <TextBlock Text="Неофициальный проект" Style="{DynamicResource AboutSectionHeadingStyle}" Margin="0,12,0,6"/>
+        <TextBlock Style="{DynamicResource AboutFinalAnswerStyle}">
+            Это неофициальный фанатский инструмент, не связанный с GSC Game World и не одобренный компанией. S.T.A.L.K.E.R. и связанные товарные знаки принадлежат их правообладателям.
         </TextBlock>
     </StackPanel>
 </UserControl>

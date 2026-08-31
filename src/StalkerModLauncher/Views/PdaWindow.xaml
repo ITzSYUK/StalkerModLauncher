@@ -22,5 +22,6 @@
                           ScreenshotsRequested="ScreenshotsButton_OnClick"
                           ModCatalogRequested="ModCatalogButton_OnClick"
                           AboutRequested="AboutButton_OnClick"
-                          LogRequested="LogButton_OnClick"/>
+                          LogRequested="LogButton_OnClick"
+                          LauncherSettingsRequested="LauncherSettingsButton_OnClick"/>
 </Window>

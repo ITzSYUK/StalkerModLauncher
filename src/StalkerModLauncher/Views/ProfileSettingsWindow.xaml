@@ -173,12 +173,12 @@
                                    FontSize="12"
                                    Margin="0,0,0,6"/>
                         <WrapPanel>
-                            <RadioButton Content="Workspace — стабильный"
+                            <RadioButton Content="Workspace"
                                          Style="{StaticResource ProfileLaunchRadioButtonStyle}"
                                          GroupName="LaunchBackend"
                                          IsChecked="{Binding UseLinkedWorkspace, Mode=TwoWay}"
                                          Margin="0,0,18,0"/>
-                            <RadioButton Content="USVFS — экспериментальный"
+                            <RadioButton Content="USVFS"
                                          Style="{StaticResource ProfileLaunchRadioButtonStyle}"
                                          GroupName="LaunchBackend"
                                          IsChecked="{Binding UseVirtualFileSystem, Mode=TwoWay}"
@@ -197,7 +197,7 @@
                                        FontSize="12"
                                        Margin="0,0,0,5"/>
                             <WrapPanel>
-                                <RadioButton Content="Авто"
+                                <RadioButton Content="Лаунчер"
                                              Style="{StaticResource ProfileLaunchRadioButtonStyle}"
                                              GroupName="AnomalyRenderer"
                                              IsChecked="{Binding UseAutomaticAnomalyRenderer, Mode=TwoWay}"
@@ -232,7 +232,7 @@
                                           IsEnabled="{Binding HasManualAnomalyRenderer}"
                                           VerticalAlignment="Center"/>
                             </WrapPanel>
-                            <TextBlock Text="Авто запускает AnomalyLauncher.exe. Ручной выбор запускает выбранный движок напрямую и сохраняет приоритет модов."
+                            <TextBlock Text="Лаунчер запускает AnomalyLauncher.exe. Ручной выбор запускает выбранный движок напрямую и сохраняет приоритет модов."
                                        Foreground="{StaticResource DisabledTextBrush}"
                                        FontSize="11"
                                        TextWrapping="Wrap"

@@ -48,7 +48,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            Log($"Export failed: {ex.Message}");
+            Log($"Export failed: {ex.Message}", LauncherLogLevel.ErrorsOnly);
             _dialogService.ShowError("Ошибка экспорта", ex.Message);
         }
     }
@@ -79,7 +79,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            Log($"Import failed: {ex.Message}");
+            Log($"Import failed: {ex.Message}", LauncherLogLevel.ErrorsOnly);
             _dialogService.ShowError("Ошибка импорта", ex.Message);
         }
     }
@@ -135,7 +135,7 @@ public sealed partial class MainViewModel
             SelectedProfile = previousSelection is not null && Profiles.Contains(previousSelection)
                 ? previousSelection
                 : Profiles.FirstOrDefault();
-            Log($"MO2 import rolled back: {ex.Message}");
+            Log($"MO2 import rolled back: {ex.Message}", LauncherLogLevel.ErrorsOnly);
             _dialogService.ShowError(
                 "Не удалось перенести сборку MO2",
                 $"Профиль не создан, изменения отменены.{Environment.NewLine}{Environment.NewLine}{ex.Message}");
@@ -190,7 +190,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            Log($"Profile delete failed: {ex.Message}");
+            Log($"Profile delete failed: {ex.Message}", LauncherLogLevel.ErrorsOnly);
             _dialogService.ShowError("Не удалось удалить профиль", ex.Message);
         }
     }
@@ -212,7 +212,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            Log($"Could not open profile folder: {ex.Message}");
+            Log($"Could not open profile folder: {ex.Message}", LauncherLogLevel.ErrorsOnly);
         }
     }
 

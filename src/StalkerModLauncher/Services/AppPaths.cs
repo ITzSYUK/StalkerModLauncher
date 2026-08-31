@@ -58,11 +58,6 @@ public sealed class AppPaths
             .ToArray();
     }
 
-    public string GetDefaultModInstallPath(string profileId, string? gameInstallPath)
-    {
-        return GetDefaultModInstallPath(gameInstallPath);
-    }
-
     public string GetDefaultModInstallPath(string? gameInstallPath)
     {
         var workspaceRoot = GetPreferredWorkspaceRoot(gameInstallPath);

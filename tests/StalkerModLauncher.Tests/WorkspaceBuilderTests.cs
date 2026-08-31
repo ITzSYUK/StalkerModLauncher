@@ -105,7 +105,7 @@ public sealed class WorkspaceBuilderTests : IDisposable
             var rebuilt = await _builder.BuildAsync(_gamePath, profile, progress);
 
             Assert.Equal("mod source", File.ReadAllText(sourceFile));
-            Assert.True((File.GetAttributes(sourceFile) & FileAttributes.ReadOnly) != 0);
+            Assert.NotEqual(0, (int)(File.GetAttributes(sourceFile) & FileAttributes.ReadOnly));
             Assert.Equal("mod source", File.ReadAllText(Path.Combine(rebuilt.WorkspaceRoot, "gamedata", "config", "shared.ltx")));
             Assert.True(File.Exists(Path.Combine(rebuilt.WorkspaceRoot, "gamedata", "config", "rebuild-marker.ltx")));
             Assert.Contains(progress.Messages, message => message.Contains("Файлы «только чтение»", StringComparison.Ordinal));
@@ -132,14 +132,14 @@ public sealed class WorkspaceBuilderTests : IDisposable
 
         try
         {
-            Assert.True((File.GetAttributes(workspaceFile) & FileAttributes.ReadOnly) != 0);
+            Assert.NotEqual(0, (int)(File.GetAttributes(workspaceFile) & FileAttributes.ReadOnly));
             CreateFile(modPath, "gamedata/config/rebuild-marker.ltx", "changed");
 
             var progress = new ProgressLog();
             var rebuilt = await _builder.BuildAsync(_gamePath, profile, progress);
 
             Assert.Equal("mod source", File.ReadAllText(sourceFile));
-            Assert.True((File.GetAttributes(sourceFile) & FileAttributes.ReadOnly) != 0);
+            Assert.NotEqual(0, (int)(File.GetAttributes(sourceFile) & FileAttributes.ReadOnly));
             Assert.Equal("mod source", File.ReadAllText(Path.Combine(rebuilt.WorkspaceRoot, "gamedata", "config", "shared.ltx")));
             Assert.Contains(progress.Messages, message => message.Contains("Освобождено защищённых ссылок", StringComparison.Ordinal));
         }

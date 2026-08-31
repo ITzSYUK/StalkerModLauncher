@@ -43,6 +43,7 @@ public sealed class Mo2ImportServiceTests : IDisposable
         var profile = Mo2ImportService.CreateProfile(preview, "Imported", includeOverwrite: true);
 
         Assert.Equal("Imported", profile.Name);
+        Assert.Equal($"Импортировано из Mod Organizer 2: {preview.Profile.Name}", profile.Description);
         Assert.Equal(source.GamePath, profile.GameInstallPath);
         Assert.Equal(["Low", "High"], profile.Mods.Select(mod => mod.Name));
         Assert.Equal(source.OverwritePath, profile.Mo2OverwritePath);

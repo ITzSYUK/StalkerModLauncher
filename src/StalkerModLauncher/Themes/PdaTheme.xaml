@@ -20,6 +20,7 @@
     <SolidColorBrush x:Key="ModArchiveProgressPanelBrush" Color="#101923"/>
     <SolidColorBrush x:Key="ModArchiveProgressTrackBrush" Color="#090E16"/>
     <SolidColorBrush x:Key="ModArchiveProgressFillBrush" Color="#CF962C"/>
+    <CornerRadius x:Key="LauncherSettingsPanelCornerRadius">0</CornerRadius>
 
     <Style x:Key="PdaBaseButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="#151D28"/>

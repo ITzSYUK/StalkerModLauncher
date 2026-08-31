@@ -35,8 +35,8 @@ public sealed class AppServices : IDisposable
             new GameLaunchReadinessMonitor());
         LaunchPreflightService = new LaunchPreflightService(ProfileManager);
         ApplicationLogService = new ApplicationLogService(Paths);
+        StartupRegistrationService = new StartupRegistrationService();
         ModConflictAnalyzer = new ModConflictAnalyzer();
-        ModArchiveInstaller = new ModArchiveInstaller();
         ScreenshotClipboardService = new ScreenshotClipboardService();
         ApProCatalogService = new ApProCatalogService();
         ProfileHealthService = new ProfileHealthService(ProfileManager);
@@ -59,8 +59,8 @@ public sealed class AppServices : IDisposable
     public LaunchPreflightService LaunchPreflightService { get; }
     public WorkspaceManagementService WorkspaceManagementService { get; }
     public ApplicationLogService ApplicationLogService { get; }
+    public IStartupRegistrationService StartupRegistrationService { get; }
     public ModConflictAnalyzer ModConflictAnalyzer { get; }
-    public ModArchiveInstaller ModArchiveInstaller { get; }
     public ProfileHealthService ProfileHealthService { get; }
     public ScreenshotClipboardService ScreenshotClipboardService { get; }
     public ApProCatalogService ApProCatalogService { get; }
@@ -75,10 +75,10 @@ public sealed class AppServices : IDisposable
             LaunchCoordinator,
             DialogService,
             ModConflictAnalyzer,
-            ModArchiveInstaller,
             ProfileManager,
             LaunchPreflightService,
-            ApplicationLogService);
+            ApplicationLogService,
+            StartupRegistrationService);
     }
 
     public void Dispose()

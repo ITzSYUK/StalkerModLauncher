@@ -1,0 +1,16 @@
+<Window x:Class="StalkerModLauncher.Views.LauncherSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:StalkerModLauncher.Views.Controls"
+        Title="Настройки лаунчера"
+        Width="760"
+        Height="460"
+        MinWidth="700"
+        MinHeight="430"
+        Background="{StaticResource WindowBackgroundBrush}"
+        Foreground="{StaticResource TextBrush}"
+        SourceInitialized="Window_OnSourceInitialized"
+        WindowStartupLocation="CenterOwner">
+    <controls:LauncherSettingsView Saved="SettingsView_OnCompleted"
+                                   Cancelled="SettingsView_OnCompleted"/>
+</Window>

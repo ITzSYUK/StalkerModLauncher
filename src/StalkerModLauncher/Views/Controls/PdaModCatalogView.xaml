@@ -157,7 +157,7 @@
                             <Button Click="ListingButton_OnClick" Margin="0,0,6,7" Padding="0" HorizontalContentAlignment="Stretch">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
-                                        <Border x:Name="Chrome" Background="#0D141E" BorderBrush="#3B4755" BorderThickness="1" CornerRadius="4" Padding="8">
+                                        <Border x:Name="Chrome" Background="#0D141E" BorderBrush="#3B4755" BorderThickness="1" CornerRadius="0" Padding="8">
                                             <Grid>
                                                 <Grid.ColumnDefinitions><ColumnDefinition Width="165"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                                 <Border Width="155" Height="88" Background="#060A10" ClipToBounds="True" HorizontalAlignment="Left" CornerRadius="2">

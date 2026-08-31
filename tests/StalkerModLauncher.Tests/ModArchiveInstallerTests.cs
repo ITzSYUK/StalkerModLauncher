@@ -75,8 +75,6 @@ public sealed class ModArchiveInstallerTests : IDisposable
     public async Task InstallAsyncCreatesUniqueFolderForRepeatedInstall()
     {
         var archive = CreateZip("repeat.zip", ("gamedata/test.txt", "value"));
-        var installer = new ModArchiveInstaller();
-
         var first = await ModArchiveInstaller.InstallAsync(archive, InstallRoot);
         var second = await ModArchiveInstaller.InstallAsync(archive, InstallRoot);
 

@@ -152,12 +152,29 @@ public partial class PdaWindow : Window
 
     private void AboutButton_OnClick(object sender, RoutedEventArgs e)
     {
-        PdaView.ShowPage(new PdaAboutView(_navigation), "О программе");
+        PdaView.ShowPage(new PdaAboutView(), "О программе");
     }
 
     private void LogButton_OnClick(object sender, RoutedEventArgs e)
     {
         PdaView.ShowPage(new PdaLogView { DataContext = ViewModel }, "Журнал лаунчера");
+    }
+
+    private void LauncherSettingsButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is null)
+        {
+            return;
+        }
+
+        var page = new LauncherSettingsView
+        {
+            DataContext = ViewModel.CreateLauncherSettingsViewModel(
+                () => _navigation.CheckForUpdatesAsync())
+        };
+        page.Saved += (_, _) => PdaView.ShowProfilePage();
+        page.Cancelled += (_, _) => PdaView.ShowProfilePage();
+        PdaView.ShowPage(page, "Настройки лаунчера");
     }
 
     private void Window_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)

@@ -26,6 +26,7 @@ public partial class PdaMainView : UserControl
     public event RoutedEventHandler? ModCatalogRequested;
     public event RoutedEventHandler? AboutRequested;
     public event RoutedEventHandler? LogRequested;
+    public event RoutedEventHandler? LauncherSettingsRequested;
 
     public void ShowPage(
         FrameworkElement page,
@@ -99,6 +100,7 @@ public partial class PdaMainView : UserControl
     private void ScreenshotsButton_OnClick(object sender, RoutedEventArgs e) => ScreenshotsRequested?.Invoke(this, e);
     private void AboutButton_OnClick(object sender, RoutedEventArgs e) => AboutRequested?.Invoke(this, e);
     private void LogButton_OnClick(object sender, RoutedEventArgs e) => LogRequested?.Invoke(this, e);
+    private void LauncherSettingsButton_OnClick(object sender, RoutedEventArgs e) => LauncherSettingsRequested?.Invoke(this, e);
     private void PowerButton_OnClick(object sender, RoutedEventArgs e) => Window.GetWindow(this)?.Close();
 
     private void ProfilesButton_OnClick(object sender, RoutedEventArgs e)

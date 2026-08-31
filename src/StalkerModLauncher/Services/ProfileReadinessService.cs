@@ -46,12 +46,14 @@ public static class ProfileReadinessService
     {
         var gameValidation = GameInstallationValidator.Validate(profile.GameInstallPath);
         var messages = new List<string>(gameValidation.Messages);
+        var enabledMods = profile.Mods.Where(mod => mod.IsEnabled).ToArray();
+        var missingMods = enabledMods.Where(mod => !Directory.Exists(mod.SourcePath)).ToArray();
         if (!profile.IsEnabled)
         {
             messages.Add("Выбранный профиль отключён.");
         }
 
-        foreach (var mod in profile.Mods.Where(mod => mod.IsEnabled && !Directory.Exists(mod.SourcePath)))
+        foreach (var mod in missingMods)
         {
             messages.Add($"Папка мода не найдена: {mod.Name}");
         }
@@ -64,21 +66,24 @@ public static class ProfileReadinessService
         }
 
         var executableIsSafe = ValidateExecutablePath(profile, messages);
-        var exclusionsAreValid = ValidateExcludedFiles(profile, messages);
+        var exclusionsAreValid = ValidateExcludedFiles(profile, enabledMods, messages);
         var ready = gameValidation.IsValid &&
                     profile.IsEnabled &&
-                    profile.Mods.Where(mod => mod.IsEnabled).All(mod => Directory.Exists(mod.SourcePath)) &&
+                    missingMods.Length == 0 &&
                     overwriteExists &&
                     exclusionsAreValid &&
                     executableIsSafe;
         return CreateResult(ready, ready ? "Готов к запуску." : string.Join(Environment.NewLine, messages.Distinct()), messages);
     }
 
-    private static bool ValidateExcludedFiles(ModProfile profile, List<string> messages)
+    private static bool ValidateExcludedFiles(
+        ModProfile profile,
+        IReadOnlyList<ModEntry> enabledMods,
+        List<string> messages)
     {
         var valid = true;
-        var enabledMods = profile.Mods.Where(mod => mod.IsEnabled).OrderBy(mod => mod.Order).ToArray();
-        foreach (var mod in enabledMods)
+        var orderedMods = enabledMods.OrderBy(mod => mod.Order).ToArray();
+        foreach (var mod in orderedMods)
         {
             foreach (var excluded in mod.ExcludedFiles.Distinct(StringComparer.OrdinalIgnoreCase))
             {
@@ -86,7 +91,7 @@ public static class ProfileReadinessService
                 {
                     FileSystemSafety.EnsureRelativePath(excluded, "Excluded mod file");
                     var hasOtherProvider = File.Exists(Path.Combine(profile.GameInstallPath, excluded)) ||
-                                           enabledMods.Any(other =>
+                                           orderedMods.Any(other =>
                                                !ReferenceEquals(other, mod) &&
                                                File.Exists(Path.Combine(other.SourcePath, excluded)) &&
                                                !other.ExcludedFiles.Contains(excluded, StringComparer.OrdinalIgnoreCase));

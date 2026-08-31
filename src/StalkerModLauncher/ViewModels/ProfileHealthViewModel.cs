@@ -12,7 +12,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
     private readonly ProfileHealthService _healthService;
     private readonly DialogService _dialogService;
     private readonly WorkspaceManagementService _workspaceManagementService;
-    private readonly Action<string>? _log;
+    private readonly Action<string, LauncherLogLevel>? _log;
     private ProfileHealthReport? _report;
     private string _summary = "Проверка состояния профиля...";
     private bool _isChecking;
@@ -24,7 +24,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         ProfileHealthService healthService,
         DialogService dialogService,
         WorkspaceManagementService workspaceManagementService,
-        Action<string>? log = null)
+        Action<string, LauncherLogLevel>? log = null)
     {
         _profile = profile;
         _healthService = healthService;
@@ -162,6 +162,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             Summary = $"Проверка не выполнена: {ex.Message}";
+            Log(Summary, LauncherLogLevel.ErrorsOnly);
         }
         finally
         {
@@ -217,7 +218,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            Log($"Очистка кэша workspace не выполнена: {ex.Message}");
+            Log($"Очистка кэша workspace не выполнена: {ex.Message}", LauncherLogLevel.ErrorsOnly);
             _dialogService.ShowError("Не удалось очистить кэш workspace", ex.Message);
             return;
         }
@@ -239,7 +240,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            Log($"Пересборка workspace не выполнена: {ex.Message}");
+            Log($"Пересборка workspace не выполнена: {ex.Message}", LauncherLogLevel.ErrorsOnly);
             _dialogService.ShowError("Не удалось пересобрать workspace", ex.Message);
         }
         finally
@@ -288,7 +289,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            Log($"Перенос workspace не выполнен:{Environment.NewLine}{ex}");
+            Log($"Перенос workspace не выполнен:{Environment.NewLine}{ex}", LauncherLogLevel.ErrorsOnly);
             _dialogService.ShowError("Не удалось перенести workspace", ex.Message);
         }
         finally
@@ -304,7 +305,8 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         var oldWorkspace = result.PreviousWorkspacePath!;
         Log(
             $"Workspace перенесён в {result.DestinationPath}, но старая папка не удалена: {oldWorkspace}" +
-            $"{Environment.NewLine}{result.CleanupFailure}");
+            $"{Environment.NewLine}{result.CleanupFailure}",
+            LauncherLogLevel.ErrorsOnly);
 
         if (!DialogService.Confirm(
                 "Workspace перенесён",
@@ -331,7 +333,8 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
 
         Log(
             $"Повторная очистка старого workspace не выполнена: {oldWorkspace}" +
-            $"{Environment.NewLine}{retryFailure}");
+            $"{Environment.NewLine}{retryFailure}",
+            LauncherLogLevel.ErrorsOnly);
         _dialogService.ShowError(
             "Workspace перенесён, старая папка осталась",
             $"Профиль уже использует новую папку:{Environment.NewLine}{result.DestinationPath}" +
@@ -348,6 +351,7 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
+            Log($"Действие из окна «Состояние» не выполнено: {ex.Message}", LauncherLogLevel.ErrorsOnly);
             _dialogService.ShowError("Состояние профиля", ex.Message);
         }
     }
@@ -355,10 +359,10 @@ public sealed class ProfileHealthViewModel : ObservableObject, IDisposable
     private void ReportWorkspaceProgress(string message)
     {
         Summary = message;
-        Log(message);
+        Log(message, LauncherLogLevel.Detailed);
     }
 
-    private void Log(string message) => _log?.Invoke(message);
+    private void Log(string message, LauncherLogLevel level = LauncherLogLevel.Standard) => _log?.Invoke(message, level);
 
     private void RaiseCommandStates()
     {
