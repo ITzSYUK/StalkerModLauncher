@@ -3,8 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>Несколько сборок S.T.A.L.K.E.R. из одной игры — с отдельными модами, сохранениями и настройками.</strong><br>
-  Исходные папки игры и модификаций остаются без изменений.
+  <strong>Все ваши сборки S.T.A.L.K.E.R. в одном лаунчере.</strong>
 </p>
 
 <p align="center">
@@ -24,7 +23,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/screenshots/launcher_main_screen.png" alt="Главное окно S.T.A.L.K.E.R. Mod Launcher" width="900">
+  <img src="docs/assets/screenshots/PDAUI_main_window.png" alt="Главное окно S.T.A.L.K.E.R. Mod Launcher" width="900">
 </p>
 
 ---
@@ -35,9 +34,9 @@
 
 S.T.A.L.K.E.R. Mod Launcher помогает держать несколько модификаций и наборов аддонов рядом, не переустанавливая игру и не смешивая их файлы.
 
-| Несколько сборок | Раздельные данные | Без полной копии игры |
-| --- | --- | --- |
-| Создавайте профили с разными модами, патчами и движками. | У каждого профиля свои сохранения, настройки, логи и скриншоты. | Стабильный режим Workspace подключает неизменяемые файлы NTFS-ссылками. |
+- Множество сборок: создавайте профили с разными модами, патчами и движками.
+- Раздельные данные: у каждого профиля свои сохранения, настройки, логи и скриншоты.
+- Без полной копии игры: Workspace подключает неизменяемые файлы NTFS-ссылками.
 
 Подходит для классической трилогии, Anomaly, OGSR, iX-Ray и других проектов с типичной структурой X-Ray, а также для готовых автономных сборок.
 
@@ -46,13 +45,13 @@ S.T.A.L.K.E.R. Mod Launcher помогает держать несколько �
 - Обычные профили: базовая игра и упорядоченный список папок модов.
 - Автономные профили для готовых сборок с собственным исполняемым файлом.
 - Изменение приоритета модов, групповое перетаскивание и анализ конфликтов.
-- Импорт порядка и состояния модов из `modlist.txt` Mod Organizer 2.
+- Импорт готовых игровых профилей из Mod Organizer 2.
 - Автоматический поиск EXE с возможностью выбрать его вручную.
 - Проверка готовности профиля, состояние Workspace, последний лог и crash dump.
 - Импорт, экспорт и копирование профилей.
 - Классический интерфейс и альтернативный интерфейс в стиле КПК S.T.A.L.K.E.R.
 - Встроенные браузер модификаций AP-PRO и просмотрщик скриншотов.
-- Быстрый запуск профилей из системного трея и необязательный Discord Rich Presence.
+- Быстрый запуск профилей из системного трея и Discord Rich Presence.
 
 ## Режимы запуска
 
@@ -61,8 +60,6 @@ S.T.A.L.K.E.R. Mod Launcher помогает держать несколько �
 | **Workspace** | Стабильный | Рекомендуемый режим. Собирает изолированный профиль с помощью NTFS-ссылок, не копируя игру целиком. |
 | **USVFS** | Стабильный | Виртуально объединяет файлы через компоненты Mod Organizer 2. Поддерживает x64 и x86; совместимость зависит от движка и способа запуска. |
 | **Автономный профиль** | Стабильный | Запускает уже готовую самостоятельную сборку из её собственной папки. |
-
-Оба backend'а поддерживаются как стабильные. Выбирайте Workspace для заранее подготовленной файловой среды, а USVFS — для виртуального наложения без полной сборки workspace.
 
 ## Быстрый старт
 
@@ -90,10 +87,6 @@ S.T.A.L.K.E.R. Mod Launcher помогает держать несколько �
 - Исходный код открыт и распространяется по лицензии GPLv3.
 - Исходные папки игры и модов используются только для чтения.
 - Записываемые данные профилей хранятся отдельно в Workspace.
-- Для релизных архивов формируется файл `checksums.txt` с SHA-256.
-- Перед упаковкой релиза выполняются форматирование, Release-сборка, автоматические тесты и проверка содержимого архивов.
-
-Техническое устройство, ограничения и модель безопасности описаны в [документации](docs/TECHNICAL_RU.md).
 
 <a id="screenshots"></a>
 
@@ -101,8 +94,9 @@ S.T.A.L.K.E.R. Mod Launcher помогает держать несколько �
 
 | Classic UI | PDA UI |
 | --- | --- |
-| [![Главное окно](docs/assets/screenshots/launcher_main_screen.png)](docs/assets/screenshots/launcher_main_screen.png) | [![Профиль в интерфейсе КПК](docs/assets/screenshots/pda_profile_window.png)](docs/assets/screenshots/pda_profile_window.png) |
-| [![Браузер модификаций](docs/assets/screenshots/launcher_mods_browser.png)](docs/assets/screenshots/launcher_mods_browser.png) | [![Скриншоты в интерфейсе КПК](docs/assets/screenshots/pda_screens_window.png)](docs/assets/screenshots/pda_screens_window.png) |
+| [![Главное окно](docs/assets/screenshots/ClassicUI_main_window.png)](docs/assets/screenshots/ClassicUI_main_window.png) | [![Профиль](docs/assets/screenshots/PDAUI_profile_window.png)](docs/assets/screenshots/PDAUI_profile_window.png) |
+| [![Браузер модификаций](docs/assets/screenshots/ClassicUI_APPRO_browser.png)](docs/assets/screenshots/ClassicUI_APPRO_browser.png) | [![Браузер модификаций](docs/assets/screenshots/PDAUI_APPRO_browser.png)](docs/assets/screenshots/PDAUI_APPRO_browser.png) |
+| [![Статус профиля](docs/assets/screenshots/ClassicUI_profile_status.png)](docs/assets/screenshots/ClassicUI_profile_status.png) | [![Скриншоты](docs/assets/screenshots/PDAUI_screens_window.png)](docs/assets/screenshots/PDAUI_screens_window.png) |
 
 ## Для разработчиков
 
