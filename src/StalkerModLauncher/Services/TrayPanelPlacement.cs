@@ -4,6 +4,21 @@ namespace StalkerModLauncher.Services;
 
 public static class TrayPanelPlacement
 {
+    public static Rect PixelsToDeviceIndependentUnits(
+        Rect pixelBounds,
+        double dpiScaleX,
+        double dpiScaleY)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(dpiScaleX, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(dpiScaleY, 0);
+
+        return new Rect(
+            pixelBounds.Left / dpiScaleX,
+            pixelBounds.Top / dpiScaleY,
+            pixelBounds.Width / dpiScaleX,
+            pixelBounds.Height / dpiScaleY);
+    }
+
     public static Point Calculate(
         Rect workArea,
         Rect screenBounds,

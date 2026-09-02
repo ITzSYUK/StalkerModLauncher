@@ -75,16 +75,25 @@ public partial class TrayProfilePanel : Window
         }
 
         var screen = Forms.Screen.FromPoint(Forms.Cursor.Position);
-        var workArea = new Rect(
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var workAreaInPixels = new Rect(
             screen.WorkingArea.Left,
             screen.WorkingArea.Top,
             screen.WorkingArea.Width,
             screen.WorkingArea.Height);
-        var screenBounds = new Rect(
+        var screenBoundsInPixels = new Rect(
             screen.Bounds.Left,
             screen.Bounds.Top,
             screen.Bounds.Width,
             screen.Bounds.Height);
+        var workArea = TrayPanelPlacement.PixelsToDeviceIndependentUnits(
+            workAreaInPixels,
+            dpi.DpiScaleX,
+            dpi.DpiScaleY);
+        var screenBounds = TrayPanelPlacement.PixelsToDeviceIndependentUnits(
+            screenBoundsInPixels,
+            dpi.DpiScaleX,
+            dpi.DpiScaleY);
         var position = TrayPanelPlacement.Calculate(
             workArea,
             screenBounds,
