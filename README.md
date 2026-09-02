@@ -3,7 +3,7 @@
 <p align="center"><strong>S.T.A.L.K.E.R. Mod Launcher</strong></p>
 
 <p align="center">
-  <img src="assets/logo/ml_logo.png" alt="CORDON" width="900">
+  <img src="docs/assets/screenshots/PDAUI_main_window.png" alt="Главное окно CORDON" width="900">
 </p>
 
 <p align="center">
@@ -24,10 +24,6 @@
   <a href="https://github.com/ITzSYUK/StalkerModLauncher/releases/latest"><img src="https://img.shields.io/github/v/release/ITzSYUK/StalkerModLauncher?display_name=tag&label=release" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-1773cf" alt="Windows 10 and 11">
   <a href="LICENSE.md"><img src="https://img.shields.io/github/license/ITzSYUK/StalkerModLauncher" alt="GPLv3 license"></a>
-</p>
-
-<p align="center">
-  <img src="docs/assets/screenshots/PDAUI_main_window.png" alt="Главное окно CORDON" width="900">
 </p>
 
 ---
