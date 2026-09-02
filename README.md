@@ -3,7 +3,7 @@
 <p align="center"><strong>S.T.A.L.K.E.R. Mod Launcher</strong></p>
 
 <p align="center">
-  <img src="src/StalkerModLauncher/Resources/ModLauncherLoadingLogo.png" alt="CORDON" width="900">
+  <img src="assets/logo/ml_logo.png" alt="CORDON" width="900">
 </p>
 
 <p align="center">
