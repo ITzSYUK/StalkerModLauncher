@@ -139,12 +139,12 @@ function Publish-Package {
 }
 
 Publish-Package `
-    -PackageName "StalkerModLauncher-v$Version-win-x64" `
+    -PackageName "CORDON-v$Version-win-x64" `
     -SelfContained $false `
     -ExecutableName "CORDON.exe"
 
 Publish-Package `
-    -PackageName "StalkerModLauncher-v$Version-win-x64-standalone" `
+    -PackageName "CORDON-v$Version-win-x64-standalone" `
     -SelfContained $true `
     -ExecutableName "CORDON-Standalone.exe"
 

@@ -81,8 +81,8 @@ CORDON помогает держать несколько модификаций
 
 | Архив | Для кого |
 | --- | --- |
-| `StalkerModLauncher-...-win-x64-standalone.zip` | Рекомендуется большинству пользователей. Уже содержит .NET Runtime. |
-| `StalkerModLauncher-...-win-x64.zip` | Компактная версия для системы с установленным .NET 8 Desktop Runtime x64. |
+| `CORDON-...-win-x64-standalone.zip` | Рекомендуется большинству пользователей. Уже содержит .NET Runtime. |
+| `CORDON-...-win-x64.zip` | Компактная версия для системы с установленным .NET 8 Desktop Runtime x64. |
 
 Требуется Windows 10/11 x64. Для USVFS может потребоваться Microsoft Visual C++ 2015–2022 Redistributable x64 и x86.
 
@@ -98,9 +98,11 @@ CORDON помогает держать несколько модификаций
 
 | Classic UI | PDA UI |
 | --- | --- |
-| [![Главное окно](docs/assets/screenshots/ClassicUI_main_window.png)](docs/assets/screenshots/ClassicUI_main_window.png) | [![Профиль](docs/assets/screenshots/PDAUI_profile_window.png)](docs/assets/screenshots/PDAUI_profile_window.png) |
+| [![Главное окно](docs/assets/screenshots/ClassicUI_main_window.png)](docs/assets/screenshots/ClassicUI_main_window.png) | [![Главное окно](docs/assets/screenshots/PDAUI_main_window.png)](docs/assets/screenshots/PDAUI_main_window.png) |
 | [![Браузер модификаций](docs/assets/screenshots/ClassicUI_APPRO_browser.png)](docs/assets/screenshots/ClassicUI_APPRO_browser.png) | [![Браузер модификаций](docs/assets/screenshots/PDAUI_APPRO_browser.png)](docs/assets/screenshots/PDAUI_APPRO_browser.png) |
-| [![Статус профиля](docs/assets/screenshots/ClassicUI_profile_status.png)](docs/assets/screenshots/ClassicUI_profile_status.png) | [![Скриншоты](docs/assets/screenshots/PDAUI_screens_window.png)](docs/assets/screenshots/PDAUI_screens_window.png) |
+| [![Скриншоты](docs/assets/screenshots/ClassicUI_screens_window.png)](docs/assets/screenshots/ClassicUI_screens_window.png) | [![Скриншоты](docs/assets/screenshots/PDAUI_screens_window.png)](docs/assets/screenshots/PDAUI_screens_window.png) |
+| [![Полный экран](docs/assets/screenshots/ClassicUI_full_screen_window.png)](docs/assets/screenshots/ClassicUI_full_screen_window.png) | [![Профиль](docs/assets/screenshots/PDAUI_profile_window.png)](docs/assets/screenshots/PDAUI_profile_window.png) |
+| [![Сканирование модов](docs/assets/screenshots/ClassicUI_mods_scan.png)](docs/assets/screenshots/ClassicUI_mods_scan.png) | [![Настройки](docs/assets/screenshots/PDAUI_settings_window.png)](docs/assets/screenshots/PDAUI_settings_window.png) |
 
 ## Для разработчиков
 
@@ -149,8 +151,8 @@ CORDON is an open-source Windows profile launcher for the original trilogy, Anom
 
 | Package | Description |
 | --- | --- |
-| `StalkerModLauncher-...-win-x64-standalone.zip` | Recommended for most users. Includes the .NET Runtime. |
-| `StalkerModLauncher-...-win-x64.zip` | Smaller package. Requires .NET 8 Desktop Runtime x64. |
+| `CORDON-...-win-x64-standalone.zip` | Recommended for most users. Includes the .NET Runtime. |
+| `CORDON-...-win-x64.zip` | Smaller package. Requires .NET 8 Desktop Runtime x64. |
 
 Windows 10/11 x64 is required. USVFS may also require the Microsoft Visual C++ 2015–2022 Redistributable for both x64 and x86.
 
