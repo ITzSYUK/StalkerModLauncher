@@ -317,7 +317,7 @@ public sealed class ApProCatalogService : IDisposable
             : new HttpClient(httpMessageHandler, disposeHandler: false);
         client.Timeout = TimeSpan.FromSeconds(20);
         client.DefaultRequestHeaders.UserAgent.ParseAdd(
-            $"StalkerModLauncher/{GetApplicationVersion()} (+https://github.com/ITzSYUK/StalkerModLauncher)");
+            $"CORDON/{GetApplicationVersion()} (+https://github.com/ITzSYUK/CORDON)");
         client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("ru-RU,ru;q=0.9,en;q=0.6");
         return client;
     }

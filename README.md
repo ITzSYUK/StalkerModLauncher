@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ITzSYUK/StalkerModLauncher/releases/latest"><strong>Скачать последнюю версию</strong></a>
+  <a href="https://github.com/ITzSYUK/CORDON/releases/latest"><strong>Скачать последнюю версию</strong></a>
   ·
   <a href="docs/USER_GUIDE_RU.md">Руководство пользователя</a>
   ·
@@ -21,9 +21,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ITzSYUK/StalkerModLauncher/releases/latest"><img src="https://img.shields.io/github/v/release/ITzSYUK/StalkerModLauncher?display_name=tag&label=release" alt="Latest release"></a>
+  <a href="https://github.com/ITzSYUK/CORDON/releases/latest"><img src="https://img.shields.io/github/v/release/ITzSYUK/CORDON?display_name=tag&label=release" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-1773cf" alt="Windows 10 and 11">
-  <a href="LICENSE.md"><img src="https://img.shields.io/github/license/ITzSYUK/StalkerModLauncher" alt="GPLv3 license"></a>
+  <a href="LICENSE.md"><img src="https://img.shields.io/github/license/ITzSYUK/CORDON" alt="GPLv3 license"></a>
 </p>
 
 ---
@@ -73,7 +73,7 @@ CORDON помогает держать несколько модификаций
 
 ## Скачать
 
-Загрузки находятся на странице [последнего релиза](https://github.com/ITzSYUK/StalkerModLauncher/releases/latest).
+Загрузки находятся на странице [последнего релиза](https://github.com/ITzSYUK/CORDON/releases/latest).
 
 | Архив | Для кого |
 | --- | --- |
@@ -137,7 +137,7 @@ CORDON is an open-source Windows profile launcher for the original trilogy, Anom
 
 ### Quick start
 
-1. Download and extract the [latest release](https://github.com/ITzSYUK/StalkerModLauncher/releases/latest).
+1. Download and extract the [latest release](https://github.com/ITzSYUK/CORDON/releases/latest).
 2. Click **Create** and choose a regular or standalone profile.
 3. Select the base game and mod folders, or one ready-to-play standalone folder.
 4. Check the detected executable and mod order.

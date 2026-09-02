@@ -56,7 +56,7 @@ public sealed class LauncherSettingsViewModelTests
             () => Task.FromResult(new LauncherUpdateResult(
                 "1.0.0",
                 "v1.1.0",
-                "https://github.com/ITzSYUK/StalkerModLauncher/releases/tag/v1.1.0",
+                "https://github.com/ITzSYUK/CORDON/releases/tag/v1.1.0",
                 IsUpdateAvailable: true)));
 
         await viewModel.CheckForUpdatesAsync();

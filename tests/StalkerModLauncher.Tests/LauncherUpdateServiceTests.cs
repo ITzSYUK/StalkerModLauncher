@@ -12,7 +12,7 @@ public sealed class LauncherUpdateServiceTests
     public async Task CheckAsyncReturnsUpdateWhenLatestReleaseIsNewer()
     {
         var handler = new StubHttpMessageHandler((_, _) => JsonResponse(
-            """{"tag_name":"v1.2.3","html_url":"https://github.com/ITzSYUK/StalkerModLauncher/releases/tag/v1.2.3"}"""));
+            """{"tag_name":"v1.2.3","html_url":"https://github.com/ITzSYUK/CORDON/releases/tag/v1.2.3"}"""));
         var service = new LauncherUpdateService(handler, "1.2.2");
 
         var result = await service.CheckAsync();
@@ -28,7 +28,7 @@ public sealed class LauncherUpdateServiceTests
     public async Task CheckAsyncReturnsNoUpdateWhenReleaseIsNotNewer(string tagName)
     {
         var handler = new StubHttpMessageHandler((_, _) => JsonResponse(
-            $$"""{"tag_name":"{{tagName}}","html_url":"https://github.com/ITzSYUK/StalkerModLauncher/releases/tag/{{tagName}}"}"""));
+            $$"""{"tag_name":"{{tagName}}","html_url":"https://github.com/ITzSYUK/CORDON/releases/tag/{{tagName}}"}"""));
         var service = new LauncherUpdateService(handler, "1.2.2");
 
         var result = await service.CheckAsync();
@@ -43,15 +43,18 @@ public sealed class LauncherUpdateServiceTests
         var handler = new StubHttpMessageHandler((request, _) =>
         {
             userAgent = request.Headers.UserAgent.ToString();
+            Assert.Equal(
+                "https://api.github.com/repos/ITzSYUK/CORDON/releases/latest",
+                request.RequestUri?.ToString());
             return JsonResponse(
-                """{"tag_name":"v1.2.2","html_url":"https://github.com/ITzSYUK/StalkerModLauncher/releases/tag/v1.2.2"}""");
+                """{"tag_name":"v1.2.2","html_url":"https://github.com/ITzSYUK/CORDON/releases/tag/v1.2.2"}""");
         });
         var service = new LauncherUpdateService(handler, "1.2.2");
 
         await service.CheckAsync();
 
-        Assert.Contains("StalkerModLauncher/1.2.2", userAgent);
-        Assert.Contains("github.com/ITzSYUK/StalkerModLauncher", userAgent);
+        Assert.Contains("CORDON/1.2.2", userAgent);
+        Assert.Contains("github.com/ITzSYUK/CORDON", userAgent);
     }
 
     [Fact]
@@ -59,6 +62,16 @@ public sealed class LauncherUpdateServiceTests
     {
         var handler = new StubHttpMessageHandler((_, _) => JsonResponse(
             """{"tag_name":"v1.2.3","html_url":"https://example.com/download"}"""));
+        var service = new LauncherUpdateService(handler, "1.2.2");
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => service.CheckAsync());
+    }
+
+    [Fact]
+    public async Task CheckAsyncRejectsReleaseUrlFromFormerRepository()
+    {
+        var handler = new StubHttpMessageHandler((_, _) => JsonResponse(
+            """{"tag_name":"v1.2.3","html_url":"https://github.com/ITzSYUK/StalkerModLauncher/releases/tag/v1.2.3"}"""));
         var service = new LauncherUpdateService(handler, "1.2.2");
 
         await Assert.ThrowsAsync<InvalidDataException>(() => service.CheckAsync());

@@ -92,8 +92,8 @@ public sealed class ApProCatalogParserTests
         await service.LoadPageAsync(ApProCatalogCategory.ShadowOfChernobyl, 1);
 
         var assemblyVersion = typeof(ApProCatalogService).Assembly.GetName().Version?.ToString(3);
-        Assert.StartsWith($"StalkerModLauncher/{assemblyVersion}", userAgent);
-        Assert.Contains("github.com/ITzSYUK/StalkerModLauncher", userAgent);
+        Assert.StartsWith($"CORDON/{assemblyVersion}", userAgent);
+        Assert.Contains("github.com/ITzSYUK/CORDON", userAgent);
         Assert.DoesNotContain("Mozilla", userAgent);
     }
 

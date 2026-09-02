@@ -13,11 +13,13 @@ public sealed record LauncherUpdateResult(
 
 public sealed class LauncherUpdateService
 {
+    private const string GitHubRepository = "ITzSYUK/CORDON";
+
     public const string LatestReleasePageUrl =
-        "https://github.com/ITzSYUK/StalkerModLauncher/releases/latest";
+        $"https://github.com/{GitHubRepository}/releases/latest";
 
     private const string LatestReleaseApiUrl =
-        "https://api.github.com/repos/ITzSYUK/StalkerModLauncher/releases/latest";
+        $"https://api.github.com/repos/{GitHubRepository}/releases/latest";
 
     private readonly HttpClient _httpClient;
     private readonly string _currentVersion;
@@ -32,7 +34,7 @@ public sealed class LauncherUpdateService
             : new HttpClient(httpMessageHandler, disposeHandler: false);
         _httpClient.Timeout = TimeSpan.FromSeconds(10);
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(
-            $"StalkerModLauncher/{_currentVersion} (+https://github.com/ITzSYUK/StalkerModLauncher)");
+            $"CORDON/{_currentVersion} (+https://github.com/{GitHubRepository})");
         _httpClient.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
     }
@@ -76,7 +78,7 @@ public sealed class LauncherUpdateService
             uri.Scheme != Uri.UriSchemeHttps ||
             !uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) ||
             !uri.AbsolutePath.StartsWith(
-                "/ITzSYUK/StalkerModLauncher/releases/",
+                $"/{GitHubRepository}/releases/",
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException("GitHub returned an unexpected release URL.");
