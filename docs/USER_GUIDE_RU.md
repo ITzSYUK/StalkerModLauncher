@@ -34,7 +34,7 @@
 1. Скачайте подходящий архив со страницы последнего релиза.
 2. Распакуйте архив в отдельную постоянную папку.
 3. Не удаляйте DLL и EXE USVFS, расположенные рядом с лаунчером.
-4. Запустите `StalkerModLauncher.exe` или `StalkerModLauncher-Standalone.exe`.
+4. Запустите `CORDON.exe` или `CORDON-Standalone.exe`.
 
 Компактной версии нужен установленный .NET 8 Desktop Runtime x64. Standalone-версия уже содержит .NET. Для USVFS также могут понадобиться Microsoft Visual C++ 2015-2022 Redistributable x64 и x86.
 

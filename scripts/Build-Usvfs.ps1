@@ -40,7 +40,7 @@ if (-not $resolvedPublishRoot.StartsWith($resolvedRepositoryRoot, [System.String
     throw "Refusing to clean publish directory outside the repository: $resolvedPublishRoot"
 }
 
-$runningLauncher = Get-Process -Name "StalkerModLauncher" -ErrorAction SilentlyContinue | Where-Object {
+$runningLauncher = Get-Process -Name "CORDON" -ErrorAction SilentlyContinue | Where-Object {
     try {
         $_.Path -and [System.IO.Path]::GetFullPath($_.Path).StartsWith($resolvedPublishRoot, [System.StringComparison]::OrdinalIgnoreCase)
     } catch {

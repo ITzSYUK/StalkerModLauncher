@@ -15,8 +15,8 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/StalkerModLauncher;component/Themes/Palette.xaml"/>
-                <ResourceDictionary Source="/StalkerModLauncher;component/Themes/SharedStyles.xaml"/>
+                <ResourceDictionary Source="/CORDON;component/Themes/Palette.xaml"/>
+                <ResourceDictionary Source="/CORDON;component/Themes/SharedStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             <Style TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}"/>
             <Style x:Key="InlineProfileActionButtonStyle"

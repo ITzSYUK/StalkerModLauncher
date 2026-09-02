@@ -5,7 +5,7 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/StalkerModLauncher;component/Themes/PdaTheme.xaml"/>
+                <ResourceDictionary Source="/CORDON;component/Themes/PdaTheme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
             <Style x:Key="PdaProfileTextBoxStyle"

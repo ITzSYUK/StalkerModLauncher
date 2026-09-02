@@ -1,6 +1,6 @@
 # Assets
 
-This folder contains non-code assets used by S.T.A.L.K.E.R. Mod Launcher.
+This folder contains non-code assets used by CORDON.
 
 ## Layout
 

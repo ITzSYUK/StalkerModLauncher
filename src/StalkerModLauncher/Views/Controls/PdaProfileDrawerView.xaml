@@ -6,10 +6,10 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/StalkerModLauncher;component/Themes/PdaTheme.xaml"/>
+                <ResourceDictionary Source="/CORDON;component/Themes/PdaTheme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         <BitmapImage x:Key="PdaDialogAtlasSource"
-                     UriSource="/StalkerModLauncher;component/Resources/PdaDialogAtlas.png"/>
+                     UriSource="/CORDON;component/Resources/PdaDialogAtlas.png"/>
         <CroppedBitmap x:Key="PdaDialogTopLeft" Source="{StaticResource PdaDialogAtlasSource}" SourceRect="0,0,32,32"/>
         <CroppedBitmap x:Key="PdaDialogTop" Source="{StaticResource PdaDialogAtlasSource}" SourceRect="32,0,32,32"/>
         <CroppedBitmap x:Key="PdaDialogTopRight" Source="{StaticResource PdaDialogAtlasSource}" SourceRect="64,0,32,32"/>

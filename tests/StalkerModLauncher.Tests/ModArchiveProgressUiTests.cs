@@ -83,18 +83,18 @@ public sealed class ModArchiveProgressUiTests
         };
         view.Resources.MergedDictionaries.Add(new ResourceDictionary
         {
-            Source = new Uri("/StalkerModLauncher;component/Themes/Palette.xaml", UriKind.RelativeOrAbsolute)
+            Source = new Uri("/CORDON;component/Themes/Palette.xaml", UriKind.RelativeOrAbsolute)
         });
         if (usePdaTheme)
         {
             view.Resources.MergedDictionaries.Add(new ResourceDictionary
             {
-                Source = new Uri("/StalkerModLauncher;component/Themes/PdaTheme.xaml", UriKind.RelativeOrAbsolute)
+                Source = new Uri("/CORDON;component/Themes/PdaTheme.xaml", UriKind.RelativeOrAbsolute)
             });
         }
         view.Resources.MergedDictionaries.Add(new ResourceDictionary
         {
-            Source = new Uri("/StalkerModLauncher;component/Themes/SharedStyles.xaml", UriKind.RelativeOrAbsolute)
+            Source = new Uri("/CORDON;component/Themes/SharedStyles.xaml", UriKind.RelativeOrAbsolute)
         });
 
         var progressBar = new ProgressBar

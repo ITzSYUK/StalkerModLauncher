@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:controls="clr-namespace:StalkerModLauncher.Views.Controls"
         mc:Ignorable="d"
-        Title="S.T.A.L.K.E.R. Mod Launcher"
+        Title="CORDON"
         MinWidth="1280"
         MinHeight="560"
         Width="1280"

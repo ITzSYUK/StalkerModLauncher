@@ -527,7 +527,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
         var rootMarker = Path.Combine(workspaceRoot, RootMarkerFileName);
         if (!File.Exists(rootMarker))
         {
-            File.WriteAllText(rootMarker, "Managed workspace root created by Stalker Mod Launcher.");
+            File.WriteAllText(rootMarker, "Managed workspace root created by CORDON.");
             return true;
         }
 
@@ -536,7 +536,7 @@ public sealed class WorkspaceBuilder : IProfileWorkspaceManager
 
     private static void WriteWorkspaceMarker(string markerPath)
     {
-        File.WriteAllText(markerPath, "Managed by Stalker Mod Launcher. It is safe for the launcher to recreate the 'current' subfolder.");
+        File.WriteAllText(markerPath, "Managed by CORDON. It is safe for the launcher to recreate the 'current' subfolder.");
     }
 
     private static string FormatElapsed(TimeSpan elapsed)

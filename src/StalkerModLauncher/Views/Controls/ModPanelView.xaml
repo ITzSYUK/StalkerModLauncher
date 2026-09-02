@@ -6,7 +6,7 @@
     <UserControl.Resources>
         <ResourceDictionary>
         <ResourceDictionary.MergedDictionaries>
-            <ResourceDictionary Source="/StalkerModLauncher;component/Themes/Mo2ImportStyles.xaml"/>
+            <ResourceDictionary Source="/CORDON;component/Themes/Mo2ImportStyles.xaml"/>
         </ResourceDictionary.MergedDictionaries>
         <Style x:Key="ConflictRadiationCheckBoxStyle" TargetType="CheckBox">
             <Setter Property="Cursor" Value="Hand"/>

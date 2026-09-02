@@ -8,28 +8,28 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/StalkerModLauncher;component/Themes/PdaTheme.xaml"/>
+                <ResourceDictionary Source="/CORDON;component/Themes/PdaTheme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         <ImageBrush x:Key="PdaTopButtonNormalBrush"
-                    ImageSource="/StalkerModLauncher;component/Resources/PdaUiAtlas.png"
+                    ImageSource="/CORDON;component/Resources/PdaUiAtlas.png"
                     ViewboxUnits="Absolute" Viewbox="282,215,172,27" Stretch="Fill"/>
         <ImageBrush x:Key="PdaTopButtonHoverBrush"
-                    ImageSource="/StalkerModLauncher;component/Resources/PdaUiAtlas.png"
+                    ImageSource="/CORDON;component/Resources/PdaUiAtlas.png"
                     ViewboxUnits="Absolute" Viewbox="455,215,172,27" Stretch="Fill"/>
         <ImageBrush x:Key="PdaTopButtonPressedBrush"
-                    ImageSource="/StalkerModLauncher;component/Resources/PdaUiAtlas.png"
+                    ImageSource="/CORDON;component/Resources/PdaUiAtlas.png"
                     ViewboxUnits="Absolute" Viewbox="628,215,172,27" Stretch="Fill"/>
         <ImageBrush x:Key="PdaSmallButtonNormalBrush"
-                    ImageSource="/StalkerModLauncher;component/Resources/PdaUiAtlas.png"
+                    ImageSource="/CORDON;component/Resources/PdaUiAtlas.png"
                     ViewboxUnits="Absolute" Viewbox="0,115,179,19" Stretch="Fill"/>
         <ImageBrush x:Key="PdaSmallButtonPressedBrush"
-                    ImageSource="/StalkerModLauncher;component/Resources/PdaUiAtlas.png"
+                    ImageSource="/CORDON;component/Resources/PdaUiAtlas.png"
                     ViewboxUnits="Absolute" Viewbox="0,134,179,19" Stretch="Fill"/>
         <ImageBrush x:Key="PdaPowerNormalBrush"
-                    ImageSource="/StalkerModLauncher;component/Resources/PdaUiAtlas.png"
+                    ImageSource="/CORDON;component/Resources/PdaUiAtlas.png"
                     ViewboxUnits="Absolute" Viewbox="97,29,34,34" Stretch="Uniform"/>
         <ImageBrush x:Key="PdaPowerHoverBrush"
-                    ImageSource="/StalkerModLauncher;component/Resources/PdaUiAtlas.png"
+                    ImageSource="/CORDON;component/Resources/PdaUiAtlas.png"
                     ViewboxUnits="Absolute" Viewbox="131,29,34,34" Stretch="Uniform"/>
         <Style x:Key="PdaTopTabStyle" TargetType="Button">
             <Setter Property="Height" Value="31"/>
@@ -306,7 +306,7 @@
     </UserControl.Resources>
 
     <Grid Width="1200" Height="823" Background="Transparent">
-        <Image Source="/StalkerModLauncher;component/Resources/PdaShell.HD.png"
+        <Image Source="/CORDON;component/Resources/PdaShell.HD.png"
                Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" IsHitTestVisible="False"/>
 
         <Grid Margin="120,98,172,100" ClipToBounds="True" Background="#F0080C13">
@@ -322,8 +322,13 @@
 
             <Grid Grid.Row="0" Background="#EA101722">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="50"/><ColumnDefinition Width="32"/></Grid.ColumnDefinitions>
-                <TextBlock Text="S.T.A.L.K.E.R. MOD LAUNCHER" Margin="10,0,8,0" VerticalAlignment="Center"
-                           FontFamily="Bahnschrift SemiCondensed" FontSize="12" Foreground="#7E887B"/>
+                <TextBlock Margin="10,0,8,0"
+                           VerticalAlignment="Center"
+                           FontFamily="Bahnschrift SemiCondensed"
+                           TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis">
+                    <Run Text="CORDON" FontSize="14" FontWeight="SemiBold" Foreground="#AAB1A4"/><Run Text="&#x00A0;&#x00A0;" FontSize="11"/><Run Text="S.T.A.L.K.E.R. Mod Launcher" FontSize="11" Foreground="#7E887B"/>
+                </TextBlock>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button Content="Запустить" Command="{Binding LaunchCommand}" Style="{StaticResource PdaLaunchTabStyle}"/>
                     <Button Content="Профиль" Style="{StaticResource PdaTopTabStyle}" Click="ProfileTab_OnClick"/>

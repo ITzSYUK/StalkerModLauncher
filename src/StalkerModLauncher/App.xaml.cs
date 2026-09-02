@@ -31,7 +31,7 @@ public sealed partial class App : Application, IDisposable
         {
             MessageBox.Show(
                 "Лаунчер уже запущен. Используйте открытое окно программы.",
-                "S.T.A.L.K.E.R. Mod Launcher",
+                "CORDON",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
             Shutdown();
@@ -53,7 +53,7 @@ public sealed partial class App : Application, IDisposable
         {
             var asm = typeof(App).Assembly;
             var name = asm.GetManifestResourceNames()
-                .FirstOrDefault(n => n.EndsWith("ModLauncherLogo.png", StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(n => n.EndsWith("ModLauncherLoadingLogo.png", StringComparison.OrdinalIgnoreCase));
             if (name is not null)
             {
                 using var stream = asm.GetManifestResourceStream(name);

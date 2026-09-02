@@ -41,7 +41,7 @@ public sealed class StartupRegistrationService : IStartupRegistrationService
 
     private static string ResolveExecutablePath()
     {
-        var packagedExecutable = Path.Combine(AppContext.BaseDirectory, "StalkerModLauncher.exe");
+        var packagedExecutable = Path.Combine(AppContext.BaseDirectory, "CORDON.exe");
         if (File.Exists(packagedExecutable))
         {
             return packagedExecutable;

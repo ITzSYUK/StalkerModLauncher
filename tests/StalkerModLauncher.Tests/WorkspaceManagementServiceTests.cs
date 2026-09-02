@@ -136,7 +136,7 @@ public sealed class WorkspaceManagementServiceTests : IDisposable
         Directory.CreateDirectory(oldRoot);
         File.WriteAllText(
             Path.Combine(oldRoot, ".stalker-launcher-workspace-root"),
-            "Managed workspace root created by Stalker Mod Launcher.");
+            "Managed workspace root created by CORDON.");
         var profile = new ModProfile
         {
             Id = "managed-destination-profile",

@@ -5,8 +5,8 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/StalkerModLauncher;component/Themes/Palette.xaml"/>
-                <ResourceDictionary Source="/StalkerModLauncher;component/Themes/SharedStyles.xaml"/>
+                <ResourceDictionary Source="/CORDON;component/Themes/Palette.xaml"/>
+                <ResourceDictionary Source="/CORDON;component/Themes/SharedStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         <Style x:Key="OverviewLabelStyle" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}"/>

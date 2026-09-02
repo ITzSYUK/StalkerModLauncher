@@ -215,7 +215,7 @@
                                 </ComboBox>
                             </StackPanel>
                             <StackPanel Grid.Column="2" VerticalAlignment="Bottom">
-                                <TextBlock Text="Папка настроек" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,6"/>
+                                <TextBlock Text="Настройки" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,6"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -225,7 +225,9 @@
                                             BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
                                             CornerRadius="4" Padding="10,7" Margin="0,0,8,0">
                                         <TextBlock Text="{Binding SettingsDirectory}" Foreground="{DynamicResource MutedTextBrush}"
-                                                   TextTrimming="CharacterEllipsis"/>
+                                                   TextWrapping="NoWrap"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center"/>
                                     </Border>
                                     <Button Grid.Column="1" Content="Открыть" Command="{Binding OpenSettingsFolderCommand}" MinWidth="82"/>
                                 </Grid>

@@ -6,7 +6,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>StalkerModLauncher</AssemblyName>
+    <AssemblyName>CORDON</AssemblyName>
     <RootNamespace>StalkerModLauncher</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>..\..\assets\app\icon.ico</ApplicationIcon>
@@ -16,7 +16,7 @@
     <AssemblyVersion>1.4.0.0</AssemblyVersion>
     <InformationalVersion>1.4.0</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
-    <Product>S.T.A.L.K.E.R. Mod Launcher</Product>
+    <Product>CORDON</Product>
     <Authors>ITzSYUK</Authors>
     <Description>Profile-based launcher for local S.T.A.L.K.E.R. games and modifications.</Description>
   </PropertyGroup>
@@ -28,7 +28,7 @@
     <Resource Include="..\..\assets\ui\pda\PdaShell.HD.png" Link="Resources\PdaShell.HD.png" />
     <Resource Include="..\..\assets\ui\pda\PdaUiAtlas.png" Link="Resources\PdaUiAtlas.png" />
     <Resource Include="..\..\assets\ui\pda\PdaDialogAtlas.png" Link="Resources\PdaDialogAtlas.png" />
-    <EmbeddedResource Include="Resources\ModLauncherLogo.png" />
+    <EmbeddedResource Include="Resources\ModLauncherLoadingLogo.png" />
     <EmbeddedResource Include="..\..\assets\sounds\pda\pda_btn_press.ogg" LogicalName="StalkerModLauncher.Resources.Sounds.pda_btn_press.ogg" />
     <EmbeddedResource Include="..\..\assets\sounds\pda\pda_guide.ogg" LogicalName="StalkerModLauncher.Resources.Sounds.pda_guide.ogg" />
     <EmbeddedResource Include="..\..\assets\sounds\pda\pda_guide_2.ogg" LogicalName="StalkerModLauncher.Resources.Sounds.pda_guide_2.ogg" />

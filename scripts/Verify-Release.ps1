@@ -44,7 +44,7 @@ function Invoke-DotNet {
     }
 }
 
-Write-Host "Verifying S.T.A.L.K.E.R. Mod Launcher v$projectVersion..."
+Write-Host "Verifying CORDON v$projectVersion..."
 Test-UsvfsSourceProvenance -SourceRoot $usvfsRoot -Manifest $usvfsManifest -PatchPath $usvfsPatchPath
 Test-UsvfsRuntimeIntegrity -RuntimeRoot $usvfsRoot -Manifest $usvfsManifest
 Invoke-DotNet -Arguments @("restore", $solution) -FailureMessage "dotnet restore failed."

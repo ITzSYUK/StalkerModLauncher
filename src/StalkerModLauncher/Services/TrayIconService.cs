@@ -35,7 +35,7 @@ public sealed class TrayIconService : IDisposable
         _notifyIcon = new Forms.NotifyIcon
         {
             Icon = _ownedIcon ?? SystemIcons.Application,
-            Text = "S.T.A.L.K.E.R. Mod Launcher",
+            Text = "CORDON — S.T.A.L.K.E.R. Mod Launcher",
             Visible = viewModel.ShowTrayIcon,
             ContextMenuStrip = CreateContextMenu()
         };

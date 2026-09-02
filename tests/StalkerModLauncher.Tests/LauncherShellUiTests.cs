@@ -23,7 +23,8 @@ public sealed class LauncherShellUiTests
         Assert.Contains("FontSize=\"12\"", settings.ToString());
         Assert.Contains("Width=\"20\" Height=\"20\"", settings.ToString());
         Assert.Contains("Уровень записи launcher.log", settings.ToString());
-        Assert.Contains("Папка настроек", settings.ToString());
+        Assert.Contains("Text=\"Настройки\"", settings.ToString());
+        Assert.Contains("TextWrapping=\"NoWrap\"", settings.ToString());
         Assert.Contains("ОБНОВЛЕНИЕ", settings.ToString());
         Assert.Contains("Проверить обновления", settings.ToString());
         Assert.Contains("CheckForUpdatesCommand", settings.ToString());
@@ -332,9 +333,36 @@ public sealed class LauncherShellUiTests
         var classicAbout = LoadProjectXaml("Views", "AboutWindow.xaml");
         var pdaAbout = LoadProjectXaml("Views", "Controls", "PdaAboutView.xaml");
 
+        Assert.Contains("Text=\"CORDON\"", classicAbout.ToString());
+        Assert.Contains("S.T.A.L.K.E.R. Mod Launcher", classicAbout.ToString());
+        Assert.Contains("Text=\"CORDON\"", pdaAbout.ToString());
+        Assert.Contains("S.T.A.L.K.E.R. Mod Launcher", pdaAbout.ToString());
         Assert.DoesNotContain("Проверить обновления", classicAbout.ToString());
         Assert.DoesNotContain("Интерфейс КПК", classicAbout.ToString());
         Assert.DoesNotContain("Проверить обновления", pdaAbout.ToString());
+    }
+
+    [Fact]
+    public void LauncherBrandingUsesLargerClassicTextAndSingleLinePdaText()
+    {
+        var classicBrand = LoadProjectXaml("Views", "Controls", "LauncherBrand.xaml");
+        var pdaMain = LoadProjectXaml("Views", "Controls", "PdaMainView.xaml");
+        XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+
+        var classicTitle = Assert.Single(classicBrand.Descendants(presentation + "TextBlock"), element =>
+            (string?)element.Attribute("Text") == "CORDON");
+        var classicSubtitle = Assert.Single(classicBrand.Descendants(presentation + "TextBlock"), element =>
+            (string?)element.Attribute("Text") == "S.T.A.L.K.E.R. Mod Launcher");
+        Assert.Equal("28", (string?)classicTitle.Attribute("FontSize"));
+        Assert.Equal("12.5", (string?)classicSubtitle.Attribute("FontSize"));
+
+        var pdaTitle = Assert.Single(pdaMain.Descendants(presentation + "TextBlock"), element =>
+            element.Descendants(presentation + "Run").Any(run => (string?)run.Attribute("Text") == "CORDON"));
+        Assert.Equal("NoWrap", (string?)pdaTitle.Attribute("TextWrapping"));
+        Assert.Contains("S.T.A.L.K.E.R. Mod Launcher", pdaTitle.ToString());
+        Assert.DoesNotContain(" — ", pdaTitle.ToString());
+        Assert.Contains(pdaTitle.Descendants(presentation + "Run"), run =>
+            (string?)run.Attribute("Text") == "\u00A0\u00A0");
     }
 
     private static Grid CreateThemeHost()
@@ -342,11 +370,11 @@ public sealed class LauncherShellUiTests
         var host = new Grid { Width = 600, Height = 480 };
         host.Resources.MergedDictionaries.Add(new ResourceDictionary
         {
-            Source = new Uri("/StalkerModLauncher;component/Themes/Palette.xaml", UriKind.RelativeOrAbsolute)
+            Source = new Uri("/CORDON;component/Themes/Palette.xaml", UriKind.RelativeOrAbsolute)
         });
         host.Resources.MergedDictionaries.Add(new ResourceDictionary
         {
-            Source = new Uri("/StalkerModLauncher;component/Themes/SharedStyles.xaml", UriKind.RelativeOrAbsolute)
+            Source = new Uri("/CORDON;component/Themes/SharedStyles.xaml", UriKind.RelativeOrAbsolute)
         });
         return host;
     }
@@ -356,7 +384,7 @@ public sealed class LauncherShellUiTests
         var host = new Grid { Width = 908, Height = 521 };
         host.Resources.MergedDictionaries.Add(new ResourceDictionary
         {
-            Source = new Uri("/StalkerModLauncher;component/Themes/PdaTheme.xaml", UriKind.RelativeOrAbsolute)
+            Source = new Uri("/CORDON;component/Themes/PdaTheme.xaml", UriKind.RelativeOrAbsolute)
         });
         return host;
     }

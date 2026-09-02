@@ -9,14 +9,14 @@
             Padding="14">
         <StackPanel Cursor="Hand"
                     HorizontalAlignment="Center">
-            <TextBlock Text="S.T.A.L.K.E.R."
-                       FontSize="25"
+            <TextBlock Text="CORDON"
+                       FontSize="28"
                        FontWeight="Black"
                        Foreground="{StaticResource AccentBrush}"
                        HorizontalAlignment="Center"/>
-            <TextBlock Text="MOD LAUNCHER"
+            <TextBlock Text="S.T.A.L.K.E.R. Mod Launcher"
                        Foreground="{StaticResource MutedTextBrush}"
-                       FontSize="13"
+                       FontSize="12.5"
                        Margin="0,1,0,0"
                        HorizontalAlignment="Center"/>
         </StackPanel>

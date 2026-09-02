@@ -201,7 +201,7 @@
           "xunit.extensibility.core": "[2.9.2]"
         }
       },
-      "stalkermodlauncher": {
+      "CORDON": {
         "type": "Project",
         "dependencies": {
           "AngleSharp": "[1.5.2, )",

@@ -1,5 +1,9 @@
+<h1 align="center">CORDON</h1>
+
+<p align="center"><strong>S.T.A.L.K.E.R. Mod Launcher</strong></p>
+
 <p align="center">
-  <img src="assets/logo/ml_logo.png" alt="S.T.A.L.K.E.R. Mod Launcher" width="900">
+  <img src="src/StalkerModLauncher/Resources/ModLauncherLoadingLogo.png" alt="CORDON" width="900">
 </p>
 
 <p align="center">
@@ -23,7 +27,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/screenshots/PDAUI_main_window.png" alt="Главное окно S.T.A.L.K.E.R. Mod Launcher" width="900">
+  <img src="docs/assets/screenshots/PDAUI_main_window.png" alt="Главное окно CORDON" width="900">
 </p>
 
 ---
@@ -32,7 +36,7 @@
 
 ## Зачем нужен этот лаунчер
 
-S.T.A.L.K.E.R. Mod Launcher помогает держать несколько модификаций и наборов аддонов рядом, не переустанавливая игру и не смешивая их файлы.
+CORDON помогает держать несколько модификаций и наборов аддонов рядом, не переустанавливая игру и не смешивая их файлы.
 
 - Множество сборок: создавайте профили с разными модами, патчами и движками.
 - Раздельные данные: у каждого профиля свои сохранения, настройки, логи и скриншоты.
@@ -120,7 +124,7 @@ dotnet run --project .\src\StalkerModLauncher\StalkerModLauncher.csproj
 
 **Run multiple S.T.A.L.K.E.R. setups from one game installation — with isolated mods, saves and settings.**
 
-S.T.A.L.K.E.R. Mod Launcher is an open-source Windows launcher for the original trilogy, Anomaly, OGSR, iX-Ray, other X-Ray-based projects and standalone mod builds. It keeps profiles separate without modifying the original game or mod directories.
+CORDON is an open-source Windows profile launcher for the original trilogy, Anomaly, OGSR, iX-Ray, other X-Ray-based projects and standalone mod builds. It keeps profiles separate without modifying the original game or mod directories.
 
 ### Why use it
 

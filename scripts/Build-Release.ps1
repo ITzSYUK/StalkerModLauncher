@@ -107,7 +107,7 @@ function Publish-Package {
         throw "dotnet publish failed for $PackageName."
     }
 
-    Copy-Item -LiteralPath (Join-Path $publishDirectory "StalkerModLauncher.exe") -Destination (Join-Path $packageDirectory $ExecutableName)
+    Copy-Item -LiteralPath (Join-Path $publishDirectory "CORDON.exe") -Destination (Join-Path $packageDirectory $ExecutableName)
     foreach ($entry in $runtimeFiles.GetEnumerator()) {
         Copy-Item -LiteralPath $entry.Value -Destination (Join-Path $packageDirectory $entry.Key)
     }
@@ -141,12 +141,12 @@ function Publish-Package {
 Publish-Package `
     -PackageName "StalkerModLauncher-v$Version-win-x64" `
     -SelfContained $false `
-    -ExecutableName "StalkerModLauncher.exe"
+    -ExecutableName "CORDON.exe"
 
 Publish-Package `
     -PackageName "StalkerModLauncher-v$Version-win-x64-standalone" `
     -SelfContained $true `
-    -ExecutableName "StalkerModLauncher-Standalone.exe"
+    -ExecutableName "CORDON-Standalone.exe"
 
 $archives = Get-ChildItem -LiteralPath $releaseRoot -Filter '*.zip' -File |
     Select-Object -ExpandProperty FullName

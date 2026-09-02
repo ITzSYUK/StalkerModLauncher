@@ -51,7 +51,7 @@ public sealed class DiscordPresenceService : IDisposable
                 State = null,
                 Assets = new Assets
                 {
-                    LargeImageText = "S.T.A.L.K.E.R. Mod Launcher"
+                    LargeImageText = "CORDON — S.T.A.L.K.E.R. Mod Launcher"
                 }
             });
         }

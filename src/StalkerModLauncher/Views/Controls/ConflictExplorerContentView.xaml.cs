@@ -49,7 +49,7 @@ public partial class ConflictExplorerContentView : UserControl
         {
             _pdaTheme = new ResourceDictionary
             {
-                Source = new Uri("/StalkerModLauncher;component/Themes/PdaTheme.xaml", UriKind.RelativeOrAbsolute)
+                Source = new Uri("/CORDON;component/Themes/PdaTheme.xaml", UriKind.RelativeOrAbsolute)
             };
             Resources.MergedDictionaries.Add(_pdaTheme);
         }

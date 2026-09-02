@@ -95,7 +95,7 @@ public sealed class WorkspaceManagementService
         Directory.CreateDirectory(destinationRoot);
         File.WriteAllText(
             Path.Combine(destinationRoot, WorkspaceBuilder.RootMarkerFileName),
-            "Managed workspace root created by Stalker Mod Launcher.");
+            "Managed workspace root created by CORDON.");
         var destination = Path.Combine(destinationRoot, ProfileManager.CreateWorkspaceDirectoryName(profile));
         var oldWorkspace = profile.WorkspacePath;
         if (!string.IsNullOrWhiteSpace(oldWorkspace) && FileSystemSafety.IsSameDirectory(oldWorkspace, destination))
@@ -121,7 +121,7 @@ public sealed class WorkspaceManagementService
         {
             File.WriteAllText(
                 Path.Combine(temporary, ".stalker-launcher-workspace"),
-                "Managed by Stalker Mod Launcher. It is safe for the launcher to recreate the 'current' subfolder.");
+                "Managed by CORDON. It is safe for the launcher to recreate the 'current' subfolder.");
 
             var sourceUserData = string.IsNullOrWhiteSpace(oldWorkspace) ? string.Empty : Path.Combine(oldWorkspace, "userdata");
             var targetUserData = Path.Combine(temporary, "userdata");

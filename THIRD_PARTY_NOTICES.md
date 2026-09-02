@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-S.T.A.L.K.E.R. Mod Launcher includes or uses the following third-party components. Their original licenses remain in effect.
+CORDON includes or uses the following third-party components. Their original licenses remain in effect.
 
 ## Mod Organizer 2 USVFS
 
