@@ -11,6 +11,7 @@ public sealed class LauncherSettingsViewModel : ObservableObject
     private readonly Func<LauncherPreferences, Task> _save;
     private readonly DialogService _dialogService;
     private readonly Func<Task<LauncherUpdateResult>>? _checkForUpdates;
+    private readonly Func<string, string, LauncherReleasePackage, Task<string>> _downloadReleasePackage;
     private readonly Func<bool> _confirmReset;
     private bool _showTrayIcon;
     private bool _startWithWindows;
@@ -23,6 +24,9 @@ public sealed class LauncherSettingsViewModel : ObservableObject
     private bool _isSaving;
     private string _updateStatus = string.Empty;
     private string? _releaseUrl;
+    private string? _releaseTag;
+    private bool _areDownloadOptionsVisible;
+    private string? _downloadedReleaseDirectory;
 
     public LauncherSettingsViewModel(
         LauncherPreferences preferences,
@@ -30,7 +34,8 @@ public sealed class LauncherSettingsViewModel : ObservableObject
         Func<LauncherPreferences, Task> save,
         DialogService dialogService,
         Func<Task<LauncherUpdateResult>>? checkForUpdates = null,
-        Func<bool>? confirmReset = null)
+        Func<bool>? confirmReset = null,
+        Func<string, string, LauncherReleasePackage, Task<string>>? downloadReleasePackage = null)
     {
         _isPdaInterfaceEnabled = preferences.IsPdaInterfaceEnabled;
         _showTrayIcon = preferences.ShowTrayIcon;
@@ -45,6 +50,11 @@ public sealed class LauncherSettingsViewModel : ObservableObject
         _save = save;
         _dialogService = dialogService;
         _checkForUpdates = checkForUpdates;
+        _downloadReleasePackage = downloadReleasePackage ??
+            ((releaseUrl, releaseTag, package) => LauncherReleaseDownloadService.DownloadAsync(
+                releaseUrl,
+                releaseTag,
+                package));
         _confirmReset = confirmReset ?? (() => DialogService.Confirm(
             "Сбросить настройки лаунчера?",
             "Будут восстановлены настройки интерфейса, поведения, журналирования и обновлений.\n\n" +
@@ -52,6 +62,14 @@ public sealed class LauncherSettingsViewModel : ObservableObject
         OpenSettingsFolderCommand = new RelayCommand(OpenSettingsFolder);
         CheckForUpdatesCommand = new AsyncRelayCommand(CheckForUpdatesAsync, () => _checkForUpdates is not null);
         OpenReleaseCommand = new RelayCommand(OpenRelease, () => HasAvailableUpdate);
+        ShowDownloadOptionsCommand = new RelayCommand(ShowDownloadOptions, () => CanShowDownloadButton);
+        DownloadMinimalCommand = new AsyncRelayCommand(
+            () => DownloadReleasePackageAsync(LauncherReleasePackage.Minimal),
+            () => HasAvailableUpdate);
+        DownloadStandaloneCommand = new AsyncRelayCommand(
+            () => DownloadReleasePackageAsync(LauncherReleasePackage.Standalone),
+            () => HasAvailableUpdate);
+        OpenDownloadsCommand = new RelayCommand(OpenDownloadsFolder, () => HasDownloadedRelease);
         ResetCommand = new RelayCommand(ResetToDefaults);
     }
 
@@ -159,9 +177,28 @@ public sealed class LauncherSettingsViewModel : ObservableObject
     }
 
     public bool HasAvailableUpdate => !string.IsNullOrWhiteSpace(_releaseUrl);
+    public bool AreDownloadOptionsVisible
+    {
+        get => _areDownloadOptionsVisible;
+        private set
+        {
+            if (SetProperty(ref _areDownloadOptionsVisible, value))
+            {
+                OnPropertyChanged(nameof(CanShowDownloadButton));
+                ShowDownloadOptionsCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public bool CanShowDownloadButton => HasAvailableUpdate && !AreDownloadOptionsVisible;
+    public bool HasDownloadedRelease => !string.IsNullOrWhiteSpace(_downloadedReleaseDirectory);
     public RelayCommand OpenSettingsFolderCommand { get; }
     public AsyncRelayCommand CheckForUpdatesCommand { get; }
     public RelayCommand OpenReleaseCommand { get; }
+    public RelayCommand ShowDownloadOptionsCommand { get; }
+    public AsyncRelayCommand DownloadMinimalCommand { get; }
+    public AsyncRelayCommand DownloadStandaloneCommand { get; }
+    public RelayCommand OpenDownloadsCommand { get; }
     public RelayCommand ResetCommand { get; }
 
     public async Task CheckForUpdatesAsync()
@@ -171,7 +208,7 @@ public sealed class LauncherSettingsViewModel : ObservableObject
             return;
         }
 
-        SetReleaseUrl(null);
+        SetRelease(null);
         UpdateStatus = "Проверяем GitHub...";
 
         try
@@ -179,7 +216,7 @@ public sealed class LauncherSettingsViewModel : ObservableObject
             var result = await _checkForUpdates();
             if (result.IsUpdateAvailable)
             {
-                SetReleaseUrl(result.ReleaseUrl);
+                SetRelease(result.ReleaseUrl, result.LatestVersion);
                 UpdateStatus = $"Доступна версия {result.LatestVersion}. Установлена {result.CurrentVersion}.";
             }
             else
@@ -281,11 +318,72 @@ public sealed class LauncherSettingsViewModel : ObservableObject
         }
     }
 
-    private void SetReleaseUrl(string? value)
+    private void ShowDownloadOptions() => AreDownloadOptionsVisible = true;
+
+    private async Task DownloadReleasePackageAsync(LauncherReleasePackage package)
     {
-        _releaseUrl = value;
+        if (string.IsNullOrWhiteSpace(_releaseUrl) || string.IsNullOrWhiteSpace(_releaseTag))
+        {
+            return;
+        }
+
+        var packageName = package == LauncherReleasePackage.Minimal
+            ? "Minimal version"
+            : "Standalone version";
+        UpdateStatus = $"Скачивается {packageName}...";
+
+        try
+        {
+            var path = await _downloadReleasePackage(_releaseUrl, _releaseTag, package);
+            SetDownloadedReleaseDirectory(Path.GetDirectoryName(path));
+            UpdateStatus = $"{packageName} сохранена в Загрузки: {Path.GetFileName(path)}.";
+        }
+        catch (HttpRequestException)
+        {
+            UpdateStatus = $"Не удалось скачать {packageName}. Проверьте подключение к интернету.";
+        }
+        catch (Exception ex)
+        {
+            UpdateStatus = $"Не удалось скачать {packageName}: {ex.Message}";
+        }
+    }
+
+    private void SetRelease(string? releaseUrl, string? releaseTag = null)
+    {
+        _releaseUrl = releaseUrl;
+        _releaseTag = releaseTag;
+        SetDownloadedReleaseDirectory(null);
+        AreDownloadOptionsVisible = false;
         OnPropertyChanged(nameof(HasAvailableUpdate));
+        OnPropertyChanged(nameof(CanShowDownloadButton));
         OpenReleaseCommand.RaiseCanExecuteChanged();
+        ShowDownloadOptionsCommand.RaiseCanExecuteChanged();
+        DownloadMinimalCommand.RaiseCanExecuteChanged();
+        DownloadStandaloneCommand.RaiseCanExecuteChanged();
+    }
+
+    private void SetDownloadedReleaseDirectory(string? directory)
+    {
+        _downloadedReleaseDirectory = directory;
+        OnPropertyChanged(nameof(HasDownloadedRelease));
+        OpenDownloadsCommand.RaiseCanExecuteChanged();
+    }
+
+    private void OpenDownloadsFolder()
+    {
+        if (string.IsNullOrWhiteSpace(_downloadedReleaseDirectory))
+        {
+            return;
+        }
+
+        try
+        {
+            DialogService.OpenFolder(_downloadedReleaseDirectory);
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowError("Не удалось открыть Загрузки", ex.Message);
+        }
     }
 
     private void SetPdaInterface(bool value)

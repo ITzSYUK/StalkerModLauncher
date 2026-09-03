@@ -64,6 +64,14 @@ public sealed class LauncherSettingsViewModelTests
         Assert.True(viewModel.HasAvailableUpdate);
         Assert.Contains("v1.1.0", viewModel.UpdateStatus);
         Assert.True(viewModel.OpenReleaseCommand.CanExecute(null));
+        Assert.True(viewModel.CanShowDownloadButton);
+
+        viewModel.ShowDownloadOptionsCommand.Execute(null);
+
+        Assert.True(viewModel.AreDownloadOptionsVisible);
+        Assert.False(viewModel.CanShowDownloadButton);
+        Assert.True(viewModel.DownloadMinimalCommand.CanExecute(null));
+        Assert.True(viewModel.DownloadStandaloneCommand.CanExecute(null));
     }
 
     [Fact]
@@ -81,6 +89,33 @@ public sealed class LauncherSettingsViewModelTests
         Assert.False(viewModel.HasAvailableUpdate);
         Assert.Contains("Не удалось подключиться", viewModel.UpdateStatus);
         Assert.False(viewModel.OpenReleaseCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task DownloadedReleaseEnablesOpeningDownloadsFolder()
+    {
+        var viewModel = new LauncherSettingsViewModel(
+            LauncherPreferences.Default,
+            @"C:\Logs",
+            _ => Task.CompletedTask,
+            new DialogService(),
+            () => Task.FromResult(new LauncherUpdateResult(
+                "1.0.0",
+                "v1.1.0",
+                "https://github.com/ITzSYUK/CORDON/releases/tag/v1.1.0",
+                IsUpdateAvailable: true)),
+            downloadReleasePackage: (_, _, package) =>
+            {
+                Assert.Equal(LauncherReleasePackage.Minimal, package);
+                return Task.FromResult(@"C:\Users\Tester\Downloads\CORDON-v1.1.0-win-x64.zip");
+            });
+
+        await viewModel.CheckForUpdatesAsync();
+        viewModel.DownloadMinimalCommand.Execute(null);
+
+        Assert.True(viewModel.HasDownloadedRelease);
+        Assert.True(viewModel.OpenDownloadsCommand.CanExecute(null));
+        Assert.Contains("сохранена в Загрузки", viewModel.UpdateStatus);
     }
 
     [Fact]

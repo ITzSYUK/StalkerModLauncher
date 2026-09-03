@@ -258,27 +258,50 @@
                     <StackPanel Grid.Row="4">
                         <TextBlock Text="ОБНОВЛЕНИЕ" FontSize="16" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
-                        <Button Content="Проверить обновления"
-                                Command="{Binding CheckForUpdatesCommand}"
-                                HorizontalAlignment="Left"
-                                MinWidth="170"
-                                Margin="0,0,0,10"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <Button Content="Проверить обновления"
+                                    Command="{Binding CheckForUpdatesCommand}"
+                                    MinWidth="155"/>
+                            <Button x:Name="OpenReleaseButton"
+                                    Content="Открыть релиз"
+                                    Command="{Binding OpenReleaseCommand}"
+                                    Margin="8,0,0,0"
+                                    Opacity="0"
+                                    Visibility="{Binding HasAvailableUpdate, Converter={StaticResource SettingsBooleanToVisibilityConverter}}"/>
+                            <Grid Margin="8,0,0,0">
+                                <Button x:Name="DownloadToDownloadsButton"
+                                        Content="Скачать в Загрузки"
+                                        Click="DownloadToDownloadsButton_OnClick"
+                                        Opacity="0"
+                                        Visibility="{Binding CanShowDownloadButton, Converter={StaticResource SettingsBooleanToVisibilityConverter}}"/>
+                                <StackPanel x:Name="DownloadOptionsPanel"
+                                            Orientation="Horizontal"
+                                            Opacity="0"
+                                            Visibility="{Binding AreDownloadOptionsVisible, Converter={StaticResource SettingsBooleanToVisibilityConverter}}">
+                                    <Button Content="Minimal version"
+                                            Command="{Binding DownloadMinimalCommand}"/>
+                                    <Button Content="Standalone version"
+                                            Command="{Binding DownloadStandaloneCommand}"
+                                            Margin="8,0,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
                         <CheckBox Content="Автоматически проверять обновления при запуске"
-                                  Style="{StaticResource SettingsCheckBoxStyle}"
-                                  IsChecked="{Binding AutoCheckForUpdates}"
-                                  Margin="0,0,0,9"/>
+                                      Style="{StaticResource SettingsCheckBoxStyle}"
+                                      IsChecked="{Binding AutoCheckForUpdates}"
+                                      Margin="0,0,0,9"/>
                         <CheckBox Content="Показывать системное уведомление о доступном обновлении"
-                                  Style="{StaticResource SettingsCheckBoxStyle}"
-                                  IsChecked="{Binding ShowUpdateNotifications}"
-                                  IsEnabled="{Binding AutoCheckForUpdates}"/>
+                                      Style="{StaticResource SettingsCheckBoxStyle}"
+                                      IsChecked="{Binding ShowUpdateNotifications}"
+                                      IsEnabled="{Binding AutoCheckForUpdates}"/>
                         <TextBlock Text="{Binding UpdateStatus}"
-                                   Foreground="{DynamicResource MutedTextBrush}"
-                                   Margin="0,10,0,0"/>
-                        <Button Content="Открыть релиз"
-                                Command="{Binding OpenReleaseCommand}"
+                                       Foreground="{DynamicResource MutedTextBrush}"
+                                       Margin="0,10,0,0"/>
+                        <Button Content="Открыть Загрузки"
+                                Command="{Binding OpenDownloadsCommand}"
                                 HorizontalAlignment="Left"
                                 Margin="0,8,0,0"
-                                Visibility="{Binding HasAvailableUpdate, Converter={StaticResource SettingsBooleanToVisibilityConverter}}"/>
+                                Visibility="{Binding HasDownloadedRelease, Converter={StaticResource SettingsBooleanToVisibilityConverter}}"/>
                     </StackPanel>
                 </Grid>
             </ScrollViewer>
