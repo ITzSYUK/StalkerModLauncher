@@ -26,8 +26,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel Margin="0,0,0,12">
-            <TextBlock Text="Перенести сборку из Mod Organizer 2" FontSize="24" FontWeight="SemiBold"/>
-            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,4,0,0">
+            <TextBlock Text="{Binding Message}" TextWrapping="Wrap">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">
                         <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}"/>
@@ -55,21 +54,24 @@
                             </Style.Triggers>
                         </Style>
                     </StackPanel.Style>
-                    <TextBlock Text="1. Источник MO2" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <TextBlock Text="Источник MO2" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,10"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox Text="{Binding SourcePath, Mode=OneWay}" IsReadOnly="True"/>
-                        <Button Grid.Column="1" Content="Выбрать папку" Command="{Binding BrowseSourceFolderCommand}" Margin="8,0,0,0"/>
-                        <Button Grid.Column="2" Content="Выбрать modlist.txt" Command="{Binding BrowseModListCommand}" Margin="8,0,0,0"/>
+                        <TextBox x:Name="SourcePathTextBox" Text="{Binding SourcePath, Mode=OneWay}" IsReadOnly="True"/>
+                        <Button Grid.Column="1" Content="Папка MO2" Command="{Binding BrowseSourceFolderCommand}" Margin="8,0,0,0"/>
+                        <TextBlock Grid.Column="2" Text="или" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        <Button Grid.Column="3" Content="Файл modlist.txt" Command="{Binding BrowseModListCommand}" Margin="8,0,0,0"/>
                     </Grid>
 
-                    <TextBlock Text="Профиль MO2" Foreground="{StaticResource MutedTextBrush}" Margin="0,14,0,5"/>
+                    <TextBlock Text="Профиль MO2" FontSize="17" FontWeight="SemiBold" Margin="0,14,0,10"/>
                     <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedMo2Profile}"
-                              DisplayMemberPath="Name" Style="{StaticResource Mo2ComboBoxStyle}"/>
+                              DisplayMemberPath="Name" Style="{StaticResource Mo2ComboBoxStyle}"
+                              Height="{Binding ActualHeight, ElementName=SourcePathTextBox}"/>
 
                     <TextBlock Text="Обнаруженные пути" FontSize="15" FontWeight="SemiBold" Margin="0,18,0,8"/>
                     <Grid>
@@ -191,7 +193,7 @@
             <Button Content="Отмена" Click="CancelButton_OnClick" HorizontalAlignment="Left"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button Content="Назад" Command="{Binding BackCommand}" Margin="0,0,8,0"/>
-                <Button Content="Предпросмотр" Command="{Binding NextCommand}" Margin="0,0,8,0">
+                <Button Content="Предпросмотр" Command="{Binding NextCommand}">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
                             <Style.Triggers>

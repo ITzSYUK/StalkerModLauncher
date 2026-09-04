@@ -12,6 +12,7 @@
                 <Setter Property="Background" Value="#0A1019"/>
                 <Setter Property="BorderBrush" Value="#3B4755"/>
                 <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="MinHeight" Value="72"/>
                 <Setter Property="Padding" Value="13"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -24,14 +25,14 @@
                                     BorderThickness="{TemplateBinding BorderThickness}"
                                     CornerRadius="2"
                                     Padding="{TemplateBinding Padding}">
-                                <Grid>
+                                <Grid VerticalAlignment="Center">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="18"/>
+                                        <ColumnDefinition Width="26"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <Grid Width="13" Height="13" VerticalAlignment="Top" Margin="0,3,0,0">
+                                    <Grid Width="16" Height="16" VerticalAlignment="Center">
                                         <Ellipse x:Name="Outer" Fill="#080D14" Stroke="#75818A" StrokeThickness="1"/>
-                                        <Ellipse x:Name="Inner" Width="6" Height="6" Fill="{StaticResource AccentBrush}" Visibility="Collapsed"/>
+                                        <Ellipse x:Name="Inner" Width="8" Height="8" Fill="{StaticResource AccentBrush}" Visibility="Collapsed"/>
                                     </Grid>
                                     <ContentPresenter Grid.Column="1"/>
                                 </Grid>
@@ -132,10 +133,6 @@
                             </Style.Triggers>
                         </Style>
                     </StackPanel.Style>
-                    <TextBlock Text="ВЫБЕРИТЕ ВАРИАНТ"
-                               FontFamily="Bahnschrift SemiCondensed"
-                               FontSize="16"
-                               Margin="0,0,0,9"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -147,9 +144,7 @@
                                      IsChecked="{Binding IsOverlay}"
                                      Style="{StaticResource PdaProfileTypeCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="Мод поверх базовой игры" FontSize="14" FontWeight="SemiBold"/>
-                                <TextBlock Text="Отдельная папка игры и один или несколько модов."
-                                           Foreground="{StaticResource MutedTextBrush}" FontSize="11" Margin="0,4,0,0"/>
+                                <TextBlock Text="Игра с модами" FontFamily="Bahnschrift SemiCondensed" FontSize="17" FontWeight="SemiBold"/>
                             </StackPanel>
                         </RadioButton>
                         <RadioButton Grid.Column="2"
@@ -157,9 +152,7 @@
                                      IsChecked="{Binding IsStandalone}"
                                      Style="{StaticResource PdaProfileTypeCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="Автономная сборка" FontSize="14" FontWeight="SemiBold"/>
-                                <TextBlock Text="Готовая сборка со своим движком и игровыми файлами."
-                                           Foreground="{StaticResource MutedTextBrush}" FontSize="11" Margin="0,4,0,0"/>
+                                <TextBlock Text="Автономная сборка" FontFamily="Bahnschrift SemiCondensed" FontSize="17" FontWeight="SemiBold"/>
                             </StackPanel>
                         </RadioButton>
                     </Grid>

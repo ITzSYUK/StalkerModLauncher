@@ -63,7 +63,7 @@ public partial class PdaWindow : Window
         var page = new PdaMo2ImportView { DataContext = importViewModel };
         importViewModel.Completed += (_, _) => PdaView.ShowProfilePage();
         page.Cancelled += (_, _) => PdaView.ShowProfilePage();
-        PdaView.ShowPage(page, "Перенос сборки из MO2", "Mod Organizer 2");
+        PdaView.ShowPage(page, "Перенести сборку из Mod Organizer 2", "Mod Organizer 2");
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;

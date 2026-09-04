@@ -56,6 +56,17 @@ public static class AnomalyLauncherLocator
                    StringComparison.OrdinalIgnoreCase);
     }
 
+    public static bool IsLauncherExecutable(string executablePath)
+    {
+        if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath))
+        {
+            return false;
+        }
+
+        return IsLauncherFileName(Path.GetFileName(executablePath)) ||
+               HasAnomalyLauncherMetadata(executablePath);
+    }
+
     private static bool HasAnomalyLauncherMetadata(string executablePath)
     {
         try

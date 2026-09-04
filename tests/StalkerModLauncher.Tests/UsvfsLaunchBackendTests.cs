@@ -296,7 +296,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
         File.WriteAllLines(Path.Combine(game, "AnomalyLauncher.cfg"), ["DX11", "AVX", "1"]);
         File.Copy(
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "SysWOW64", "cmd.exe"),
-            Path.Combine(game, "AnomalyLauncher.exe"));
+            Path.Combine(mod, "AnomalyLauncher.exe"));
         File.WriteAllText(Path.Combine(game, "commandline.txt"), "-smap2048");
         Directory.CreateDirectory(Path.Combine(game, "bin"));
         Directory.CreateDirectory(Path.Combine(mod, "bin"));
@@ -381,7 +381,7 @@ public sealed class UsvfsLaunchBackendTests : IDisposable
             runtime.MappingPlan.Operations,
             operation => FileSystemSafety.IsSameDirectory(operation.SourcePath, Path.Combine(mod, "db")));
         Assert.Equal(
-            File.ReadAllBytes(Path.Combine(game, "AnomalyLauncher.exe")),
+            File.ReadAllBytes(Path.Combine(mod, "AnomalyLauncher.exe")),
             File.ReadAllBytes(plan.ExecutablePath));
         Assert.Equal(
             File.ReadAllBytes(engine),

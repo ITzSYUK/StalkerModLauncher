@@ -40,9 +40,9 @@ Each profile is stored as a separate launch recipe. It contains:
 
 Calculated values such as the current running state and formatted dates are not written to JSON.
 
-### Standard profile
+### “Game with mods” (standard profile)
 
-A standard profile creates this layer order:
+A “Game with mods” profile creates this layer order:
 
 ```text
 base game -> mod 1 -> mod 2 -> ... -> profile writable data
@@ -50,9 +50,9 @@ base game -> mod 1 -> mod 2 -> ... -> profile writable data
 
 A mod lower in the UI has higher priority. When several enabled layers contain the same relative path, the last layer wins.
 
-### Standalone profile
+### “Standalone build” (standalone profile)
 
-A standalone profile starts an already assembled game or mod from its own folder. It does not create a layer plan, `current`, or a separate mod overlay. Save and log locations are controlled by that build through `fsgame.ltx` and its usual data directories.
+A “Standalone build” profile starts an already assembled game or mod from its own folder without additional mods. It does not create a layer plan, `current`, or a separate mod overlay. Save and log locations are controlled by that build through `fsgame.ltx` and its usual data directories.
 
 ## 3. Launch pipeline
 
@@ -497,6 +497,6 @@ The `.github\workflows\usvfs.yml` workflow repeats the complete build and smoke 
 - USVFS requires the Microsoft Visual C++ 2015-2022 Redistributable matching the target game's architecture.
 - Cross-drive symbolic links depend on Windows configuration.
 - Absolute game and mod paths are not repaired automatically after folders are moved.
-- A standalone profile cannot guarantee separate saves if the build itself writes to a shared external folder.
+- A “Standalone build” profile cannot guarantee separate saves if the build itself writes to a shared external folder.
 - Automatic EXE and mod-root detection cannot replace the instructions supplied by a specific mod author.
 - The modification browser depends on AP-PRO availability and HTML structure.

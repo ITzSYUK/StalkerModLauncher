@@ -16,6 +16,7 @@
             <Setter Property="Background" Value="{StaticResource FieldBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="MinHeight" Value="80"/>
             <Setter Property="Padding" Value="16"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -28,22 +29,21 @@
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="6"
                                 Padding="{TemplateBinding Padding}">
-                            <Grid>
+                            <Grid VerticalAlignment="Center">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="22"/>
+                                    <ColumnDefinition Width="30"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <Border x:Name="Indicator"
-                                        Width="15"
-                                        Height="15"
-                                        CornerRadius="8"
+                                        Width="18"
+                                        Height="18"
+                                        CornerRadius="9"
                                         BorderBrush="{StaticResource MutedTextBrush}"
                                         BorderThickness="2"
-                                        VerticalAlignment="Top"
-                                        Margin="0,3,0,0">
+                                        VerticalAlignment="Center">
                                     <Ellipse x:Name="IndicatorFill"
                                              Fill="{StaticResource AccentBrush}"
-                                             Margin="2"
+                                             Margin="3"
                                              Opacity="0"/>
                                 </Border>
                                 <ContentPresenter Grid.Column="1"/>
@@ -165,10 +165,6 @@
                             <Style.Triggers><DataTrigger Binding="{Binding IsStepOne}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
                         </Style>
                     </StackPanel.Style>
-                    <TextBlock Text="Выберите вариант"
-                               FontSize="15"
-                               FontWeight="SemiBold"
-                               Margin="0,0,0,10"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -180,13 +176,9 @@
                                      IsChecked="{Binding IsOverlay}"
                                      Style="{StaticResource ProfileTypeCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="Мод поверх базовой игры"
-                                           FontSize="15"
+                                <TextBlock Text="Игра с модами"
+                                           FontSize="18"
                                            FontWeight="SemiBold"/>
-                                <TextBlock Text="Отдельная папка игры и один или несколько модов."
-                                           Foreground="{StaticResource MutedTextBrush}"
-                                           FontSize="12"
-                                           Margin="0,5,0,0"/>
                             </StackPanel>
                         </RadioButton>
                         <RadioButton Grid.Column="2"
@@ -195,12 +187,8 @@
                                      Style="{StaticResource ProfileTypeCardStyle}">
                             <StackPanel>
                                 <TextBlock Text="Автономная сборка"
-                                           FontSize="15"
+                                           FontSize="18"
                                            FontWeight="SemiBold"/>
-                                <TextBlock Text="Готовая сборка со своим движком и игровыми файлами."
-                                           Foreground="{StaticResource MutedTextBrush}"
-                                           FontSize="12"
-                                           Margin="0,5,0,0"/>
                             </StackPanel>
                         </RadioButton>
                     </Grid>

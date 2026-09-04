@@ -23,8 +23,9 @@ internal static class AnomalyUsvfsLaunchTargetResolver
             ?? throw new InvalidOperationException("USVFS launch executable is not ready.");
 
         var isLauncher = AnomalyLauncherLocator.IsBaseGameLauncher(
-            profile.GameInstallPath,
-            plan.ExecutablePath);
+                             profile.GameInstallPath,
+                             plan.ExecutablePath) ||
+                         AnomalyLauncherLocator.IsLauncherExecutable(plan.ExecutablePath);
         if (!string.IsNullOrWhiteSpace(profile.UsvfsExecutableOverrideRelativePath))
         {
             if (!AnomalyUsvfsEngineSelection.TryParseRelativePath(

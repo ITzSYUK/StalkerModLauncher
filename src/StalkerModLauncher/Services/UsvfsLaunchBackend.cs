@@ -83,8 +83,10 @@ public sealed class UsvfsLaunchBackend : IProfileLaunchBackend
             : "USVFS architecture: x64 target.");
 
         var useAnomalyLauncherBootstrap = AnomalyLauncherLocator.IsBaseGameLauncher(
-            profile.GameInstallPath,
-            launchTarget.ExecutablePath);
+                                             profile.GameInstallPath,
+                                             launchTarget.ExecutablePath) ||
+                                         AnomalyLauncherLocator.IsLauncherExecutable(
+                                             launchTarget.ExecutablePath);
         var usePhysicalAnomalyRoot = IsAnomalyEngine(launchTarget.ExecutableRelativePath);
         var usePhysicalBaseGameRoot = !useAnomalyLauncherBootstrap &&
                                       ShouldUsePhysicalBaseGameRoot(context.FileLayerPlan, launchTarget);
